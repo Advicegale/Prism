@@ -40,11 +40,13 @@ Persist AI narrative independently of deterministic graph
 
 ## Stable data shape
 
-`Report` contains `meta`, `stats`, `files` (old/new hunk ranges + capped patch), `overview` (`nodes`/`edges`), `groups` (`id`, `title`, `changed_ids`, `files`, contextual `graph`), `topics` (a parent roll-up over existing groups with topic-scoped subgraphs), and `evidence` (line-numbered source excerpts from the actual base/head revisions), plus optional `ai` (overall summary, per-group review order, per-symbol rationale and how-it-works explanation, and suggested topic memberships). Node IDs are from Graphify or prefixed `ast:` if a Tree-sitter declaration can't be associated to an existing graph node.
+`Report` contains `meta`, `stats`, `files` (old/new hunk ranges + capped patch), `overview` (`nodes`/`edges`), `groups` (`id`, `title`, `changed_ids`, `files`, contextual `graph`), `topics` (a parent roll-up over existing groups with topic-scoped subgraphs), and `evidence` (line-numbered source excerpts from the actual base/head revisions), plus optional `ai` (a concise diff-grounded statement per changed symbol, optional reviewer notes and rationale, file review order, and suggested topic memberships). Legacy cached AI reports may also contain longer how-it-works and snippet explanations; the frontend keeps those fields readable as collapsed implementation detail. Node IDs are from Graphify or prefixed `ast:` if a Tree-sitter declaration can't be associated to an existing graph node.
 
 A change group is a *cluster of changed symbols*, not necessarily a list of changed files. This makes multi-file feature refactors a single group when relationships support it. Source context can be displayed in several graphs. For oversized connected clusters, greedy modularity identifies candidate splits, followed by bounded connected neighborhoods.
 
-Topics reduce overview density without changing structural groups. Graph-only reports roll groups up by path family. When AI explanations are generated, the report synthesis may suggest more semantic topics, but every group ID must appear exactly once and unknown IDs invalidate the suggestion. Topic graphs and cross-topic links are projections of verified report nodes and edges; the model cannot add graph entities or relationships. Unchanged topic context excludes structural containment edges such as `contains`, which otherwise surface neighboring declarations without indicating a dependency. Cached reports receive the current deterministic topic graph when the topic rules change.
+Topics reduce overview density without changing structural groups. Graph-only reports roll groups up by path family. AI report schema version 6 allows the synthesis to suggest specific reviewer topics and an optional one-sentence focus. The synthesis sees validated group summaries, paths, diff summaries, risks, and review routes; every group ID must appear exactly once and unknown IDs invalidate the suggestion. A malformed or overlong focus is discarded without losing a valid group partition. Topic graphs and cross-topic links are projections of verified report nodes and edges; the model cannot add graph entities or relationships. Unchanged topic context excludes structural containment edges such as `contains`, which otherwise surface neighboring declarations without indicating a dependency. Cached reports receive the current deterministic topic graph when the topic rules change, preserving valid saved AI titles and focus.
+
+The detailed walkthrough uses the same validated topic partition and topic order as the change map. Topics follow the earliest file they contain in the validated PR-wide review route, with their previous order retained for ties; member-group symbols follow that file order as well. Each symbol keeps its original group for graph navigation. The optional topic focus appears once in this walkthrough. Reports without a valid AI topic partition use the deterministic path-based topics.
 
 ## Cache details
 
@@ -61,15 +63,17 @@ Scanning doesn't execute repository scripts, tests, post-checkout hooks or depen
 
 Only the backend accesses Git/processes or local report data. Frontend never executes shell commands. The app listens on loopback; cross-origin POSTs from unrelated web origins are blocked.
 
-## Detailed review generation (v0.2)
+## Reviewer-focused AI reports
 
-- A review explanation is generated **per PR change group**, so long PRs do not lose entire segments to prompt truncation.
+- A review explanation is generated **per PR change group**, so long PRs do not lose entire segments to prompt truncation. The default per-symbol output is one short statement grounded in that symbol's actual diff hunks.
 - Prompts include every changed symbol ID, Graphify relationships, diff hunks, and bounded exact code excerpts (source material, treated as untrusted data).
-- The AI returns one explanation per symbol: inferred/author-stated reason, operation of new code, and commentary on an actual snippet. The displayed code always comes from the worktree, not the model's imagination.
-- It also returns an ordered list of the group's files with concrete review rationale. The server verifies every path belongs to the group and inserts any omitted paths, ensuring the route is complete.
-- Reports with multiple groups have a separate overall synthesis, which can suggest a global cross-group file order. All returned paths and symbol IDs are validated against the deterministic report graph.
+- Intent is included only when the PR text states it or the diff strongly supports it. Up to two symbol-level reviewer notes are included only for actionable behavior, security, compatibility, correctness, or validation concerns; small diffs still receive a risk review.
+- Group and PR summaries, risks, and test suggestions are omitted when they add no distinct reviewer value. Group routes are omitted for one-file groups; the global route lists each affected file once and includes a reason only where the order is not self-evident.
+- The server verifies symbol IDs and file paths against the deterministic report. It fills omitted route paths without inventing rationale, preserving a complete review path.
+- The frontend shows each route once for the current view, hides empty prose, keeps exact diff lines visible, and collapses fallback source context and legacy long-form explanations by default. The displayed code always comes from the worktree, not the model's imagination.
+- Reports with multiple groups have a separate overall synthesis, which can suggest a global cross-group file order and semantic topic partition. All returned paths and symbol IDs are validated against the deterministic report graph.
 - The map renders that validated file order as a numbered review path. Selecting a file highlights its changed symbols and directly linked context; the route is a reading recommendation, not a new graph edge.
-- The same synthesis may suggest a small topic partition over the supplied structural group IDs. Invalid, incomplete, duplicated, or overly fragmented partitions fall back to path-based topics; the renderer builds each topic subgraph from existing groups and graph edges.
+- Invalid, incomplete, duplicated, or overly fragmented topic partitions fall back to path-based topics; the renderer builds each topic subgraph from existing groups and graph edges.
 - Source excerpts are bounded to avoid persisting huge class bodies; if truncated or unavailable, the UI clearly labels that. AI motivations are not proven author intent unless grounded in the PR description.
 
 ## Expansion opportunities

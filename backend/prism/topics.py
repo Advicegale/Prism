@@ -87,16 +87,21 @@ def _validated_suggestions(suggestions: object, groups: list[dict]) -> list[dict
         if not isinstance(topic, dict):
             return None
         title = topic.get("title")
+        focus = topic.get("focus", "")
         members = topic.get("group_ids")
         if not isinstance(title, str) or not title.strip() or len(title.strip()) > 80 or not isinstance(members, list) or not members:
             return None
+        # A bad optional explanation must not discard an otherwise valid partition.
+        focus = focus.strip() if isinstance(focus, str) else ""
+        if len(focus) > 180 or "\n" in focus or "\r" in focus:
+            focus = ""
         normalized = []
         for group_id in members:
             if not isinstance(group_id, str) or group_id not in group_ids or group_id in assigned:
                 return None
             assigned.add(group_id)
             normalized.append(group_id)
-        result.append({"title": title.strip(), "group_ids": sorted(normalized), "source": "ai"})
+        result.append({"title": title.strip(), "focus": focus, "group_ids": sorted(normalized), "source": "ai"})
     if assigned != group_ids:
         return None
     return result
@@ -161,6 +166,7 @@ def _make_topic(assignment: dict, by_group_id: dict[str, dict], overview: dict) 
     return {
         "id": _stable_id(assignment["group_ids"]),
         "title": assignment["title"],
+        "focus": assignment.get("focus", ""),
         "source": assignment["source"],
         "group_ids": sorted(assignment["group_ids"]),
         "changed_count": len(changed_ids),
@@ -214,12 +220,19 @@ def _topic_connections(topics: list[dict], overview: dict) -> None:
         topic["connections"].sort(key=lambda item: (-item["count"], topic_by_id[item["topic_id"]]["title"]))
 
 
-def build_topics(groups: list[dict], overview: dict, suggestions: object = None) -> list[dict]:
+def build_topics(groups: list[dict], overview: dict, suggestions: object = None,
+                 review_order: object = None) -> list[dict]:
     """Build a compact parent layer; only accepted suggestions can change membership."""
     if not groups:
         return []
     assignments = _validated_suggestions(suggestions, groups) or _fallback_assignments(groups)
     by_group_id = {group["id"]: group for group in groups}
     topics = [_make_topic(assignment, by_group_id, overview) for assignment in assignments]
+    if isinstance(review_order, list):
+        ranks = {
+            step["path"]: index for index, step in enumerate(review_order)
+            if isinstance(step, dict) and isinstance(step.get("path"), str)
+        }
+        topics.sort(key=lambda topic: min((ranks.get(path, float("inf")) for path in topic["files"]), default=float("inf")))
     _topic_connections(topics, overview)
     return topics

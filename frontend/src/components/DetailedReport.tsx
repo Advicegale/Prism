@@ -1,12 +1,14 @@
 import { useState } from 'react'
-import { ArrowRight, Check, ChevronRight, Code2, FileCode2, GitCompareArrows, ListOrdered } from 'lucide-react'
+import { Check, ChevronRight, Code2, FileCode2 } from 'lucide-react'
 import type { AIChange, ChangeGroup, GraphNode, Report, ReviewStep } from '../types'
 import { CodeDiff, SyntaxCode } from './CodeDiff'
+import { InlineMarkdown } from './InlineMarkdown'
 
 interface Props {
   report: Report
   activeGroup: ChangeGroup | null
   groupTitles: Record<string, string>
+  showRoute: boolean
   onNavigate: (groupId:string, symbolId:string)=>void
 }
 
@@ -81,7 +83,7 @@ function Excerpt({ node, report }: {node:GraphNode,report:Report}) {
   const removed=patch.split('\n').filter(line=>line.startsWith('-')&&!line.startsWith('---')).length
   const code=evidence?.code || file?.patch?.split('\n').filter(line=>line.startsWith('+')&&!line.startsWith('+++')).slice(0,25).map(line=>line.slice(1)).join('\n') || ''
   const [copied,setCopied]=useState(false)
-  if(!code&&!patch)return <p className="evidence-missing">No source excerpt is available for this symbol. Open its file diff to inspect the changes.</p>
+  if(!code&&!patch)return null
   const line=evidence?.start_line ?? node.line
   const path=evidence?.path||file?.path||file?.old_path||node.path
   const sourceLabel=evidence?.side==='base'||node.status==='deleted'?'Previous implementation':'PR implementation'
@@ -101,57 +103,98 @@ function Excerpt({ node, report }: {node:GraphNode,report:Report}) {
   </>
 }
 
-function ReviewRoute({steps,paths,generated}:{steps?:ReviewStep[],paths:string[],generated:boolean}){
+function ReviewRoute({steps,paths}:{steps?:ReviewStep[],paths:string[]}){
  const seen=new Set<string>()
- const listed=(steps?.length?steps.map(s=>({...s})):paths.map(path=>({path,reason:''}))).filter(s=>paths.includes(s.path)&&!seen.has(s.path)&&!!seen.add(s.path))
- const missing=paths.filter(path=>!seen.has(path)).map(path=>({path,reason:''}))
- return <section className="review-route">
-  <div className="detail-section-title"><ListOrdered size={17}/><div><h4>Recommended file review order</h4><p>{generated?'Read these files in sequence to follow the change from its foundations to its consumers.':'Choose Claude Code or Codex to generate a dependency-aware review order. Files are listed for reference.'}</p></div></div>
-  <div className="review-steps">{[...listed,...missing].map((step,i)=><div className="review-step" key={step.path}>
-   <span className="review-position">{String(i+1).padStart(2,'0')}</span>
-   <div><strong>{step.path}</strong>{step.reason&&<p>{step.reason}</p>}</div>
-   {i<listed.length+missing.length-1&&<ArrowRight size={15} className="review-arrow"/>}
-  </div>)}</div>
- </section>
+ const listed=(steps||[]).filter(s=>paths.includes(s.path)&&!seen.has(s.path)&&!!seen.add(s.path))
+ const ordered=[...listed,...paths.filter(path=>!seen.has(path)).map(path=>({path,reason:''}))]
+ if(!ordered.length)return null
+ return <details className="review-order">
+  <summary><span>Review order</span><small>{ordered.length} {ordered.length===1?'file':'files'}</small><ChevronRight size={15}/></summary>
+  <ol>{ordered.map((step,i)=><li key={step.path}>
+   <span className="review-order-number">{String(i+1).padStart(2,'0')}</span>
+   <div className="review-order-file"><code>{step.path}</code>{step.reason?.trim()&&<details className="review-order-reason"><summary>Why</summary><p><InlineMarkdown text={step.reason}/></p></details>}</div>
+  </li>)}</ol>
+ </details>
 }
 
 function ChangeCard({node,change,report,onNavigate,groupId}:{node:GraphNode,change?:AIChange,report:Report,onNavigate:Props['onNavigate'],groupId:string}) {
- return <article id={'change-'+node.id} className="change-card">
-   <div className="change-card-header">
-    <div className="change-card-name"><span className={'change-kind '+node.status}>{node.status}</span><div><h5>{node.qualified||node.label}</h5><span>{node.kind} · {node.path}:{node.line}</span></div></div>
-    <button className="small-btn" type="button" onClick={()=>onNavigate(groupId,node.id)}>View in graph <ChevronRight size={14}/></button>
-   </div>
-   <div className="change-diff-summary"><div className="explanation-label">WHAT CHANGED IN THE DIFF</div><p>{change?.diff_summary||'No symbol-specific diff summary was generated. Regenerate the explanation to include the relevant patch details.'}</p></div>
-   <div className="change-explanation">
-    <div><div className="explanation-label">WHY IT CHANGED</div><p>{change?.why||'No rationale generated yet. Select an AI harness and generate a detailed explanation.'}</p></div>
-    <div><div className="explanation-label">HOW THE NEW IMPLEMENTATION WORKS</div><p>{change?.how_it_works||'The implementation is available below. AI analysis can explain its behavior and dependencies.'}</p></div>
-   </div>
-   <div className="explanation-label snippet-label">SOURCE EVIDENCE</div>
-   <Excerpt node={node} report={report}/>
-   {change?.snippet_explanation&&<p className="snippet-interpretation">{change.snippet_explanation}</p>}
+ const legacyAI=(report.ai?.schema_version||0)<5
+ const file=report.files.find(file=>file.path===node.path||file.old_path===node.path)
+ const evidence=report.evidence?.[node.id]
+ const hasPatch=!!file&&!!diffForSymbol(file.patch,node,evidence)
+ const hasEvidence=!!evidence?.code||!!file?.patch
+ return <article id={'change-'+node.id} className="review-symbol">
+   <header className="review-symbol-heading">
+    <span className={'change-kind '+node.status}>{node.status}</span>
+    <div className="review-symbol-title"><h5>{node.qualified||node.label}</h5><div><span>{node.kind}</span><code>{node.path}:{node.line}</code></div></div>
+    <button className="review-graph-link" type="button" onClick={()=>onNavigate(groupId,node.id)}>Map <ChevronRight size={14}/></button>
+   </header>
+   {change?.diff_summary?.trim()&&<p className="review-change-summary"><InlineMarkdown text={change.diff_summary}/></p>}
+   {change?.why?.trim()&&!legacyAI&&<details className="review-secondary"><summary>Why it changed</summary><p><InlineMarkdown text={change.why}/></p></details>}
+   {!!change?.review_notes?.length&&<div className="review-action-note"><span>Check</span><ul>{change.review_notes.map((note,index)=><li key={index}><InlineMarkdown text={note}/></li>)}</ul></div>}
+   {hasPatch&&<Excerpt node={node} report={report}/>}
+   {!hasPatch&&hasEvidence&&<details className="review-secondary"><summary>Source context</summary><Excerpt node={node} report={report}/></details>}
  </article>
 }
 
-export function DetailedReport({report,activeGroup,groupTitles,onNavigate}:Props){
- const hasDetailedAI=!!report.ai?.groups.some(g=>g.changes?.length)
- const groups=activeGroup?[activeGroup]:report.groups
+interface ReviewTopic {id:string;title:string;focus?:string;source:'ai'|'paths';group_ids:string[];files:string[]}
+
+function countLabel(count:number,label:string){return `${count} ${label}${count===1?'':'s'}`}
+
+function reportTopics(report:Report):ReviewTopic[]{
+ const groupsById=new Map(report.groups.map(group=>[group.id,group]))
+ const availableIds=new Set(groupsById.keys())
+ const sourceTopics=(report.ai?.topics?.length?report.ai.topics:report.topics)||[]
+ const topics:ReviewTopic[]=[]
+ const covered=new Set<string>()
+ for(const topic of sourceTopics){
+  const group_ids=(Array.isArray(topic.group_ids)?topic.group_ids:[]).filter(id=>availableIds.has(id)&&!covered.has(id))
+  if(!group_ids.length)continue
+  group_ids.forEach(id=>covered.add(id))
+  topics.push({id:topic.id,title:topic.title,focus:topic.focus,source:topic.source,group_ids,files:[...new Set(group_ids.flatMap(id=>groupsById.get(id)?.files||[]))]})
+ }
+ const uncovered=report.groups.filter(group=>!covered.has(group.id))
+ if(uncovered.length)topics.push({id:'other-changes',title:topics.length?'Other changes':'All changes',source:'paths',group_ids:uncovered.map(group=>group.id),files:[...new Set(uncovered.flatMap(group=>group.files))]})
+ return topics
+}
+
+export function DetailedReport({report,activeGroup,groupTitles,showRoute,onNavigate}:Props){
+ const [selectedTopicId,setSelectedTopicId]=useState<string|null>(null)
  const globalRoute=report.ai?.review_order
+ const reviewRanks=new Map((globalRoute||[]).map((step,index)=>[step.path,index]))
+ const topics=reportTopics(report)
+ const selectedTopic=topics.find(topic=>topic.id===selectedTopicId)||topics[0]
+ const sortedChanges=(groups:ChangeGroup[])=>groups.flatMap((group,groupIndex)=>group.changed_ids.map(id=>({group,node:group.graph.nodes.find(item=>item.id===id),groupIndex})).filter((item):item is {group:ChangeGroup,node:GraphNode,groupIndex:number}=>!!item.node)).sort((a,b)=>(reviewRanks.get(a.node.path)??Number.POSITIVE_INFINITY)-(reviewRanks.get(b.node.path)??Number.POSITIVE_INFINITY)||a.groupIndex-b.groupIndex||a.node.line-b.node.line)
+ const selectedTopicGroups=selectedTopic?.group_ids.map(id=>report.groups.find(group=>group.id===id)).filter((group):group is ChangeGroup=>!!group)||[]
+ const topicChanges=selectedTopic?sortedChanges(selectedTopicGroups):[]
+ const activeChanges=activeGroup?sortedChanges([activeGroup]):[]
+ const changedCount=sortedChanges(report.groups).length
+ const reportPaths=Array.from(new Set(report.files.map(file=>file.path||file.old_path).filter((path):path is string=>!!path)))
  return <section className="detailed-report" aria-label="Detailed change review">
-   <div className="detailed-heading"><div className="page-eyebrow"><GitCompareArrows size={14}/> DETAILED REVIEW</div><h3>{activeGroup?`${groupTitles[activeGroup.id]||activeGroup.title} · change-by-change`:'Change-by-change walkthrough'}</h3><p>Inspect each modified symbol, the code that implements it, and the most useful path through the affected files.</p></div>
-   {!activeGroup&&<ReviewRoute steps={globalRoute} paths={Array.from(new Set(report.files.map(f=>f.path||f.old_path)))} generated={hasDetailedAI}/>}
-   {groups.map(group=>{
-      const groupAI=report.ai?.groups.find(g=>g.id===group.id)
-      const title=groupTitles[group.id]||group.title
-      const changed=group.changed_ids.map(id=>group.graph.nodes.find(n=>n.id===id)).filter((n):n is GraphNode=>!!n)
-      const content=<div className="group-deep-content">
-       <p className="group-deep-summary">{groupAI?.summary||`This segment contains ${changed.length} changed symbols across ${group.files.length} files.`}</p>
-       <ReviewRoute steps={groupAI?.review_order} paths={group.files} generated={!!groupAI?.review_order?.length}/>
-       <div className="change-cards">{changed.map(node=><ChangeCard key={node.id} node={node} change={groupAI?.changes?.find(c=>c.symbol_id===node.id)} report={report} onNavigate={onNavigate} groupId={group.id}/>)}</div>
-      </div>
-      return activeGroup?<div key={group.id}>{content}</div>:<details className="change-group-fold" key={group.id} open={groups.length===1}>
-       <summary><div><span className="change-fold-label">CHANGE GROUP</span><strong>{title}</strong><small>{changed.length} changed symbols · {group.files.length} files</small></div><ChevronRight size={18}/></summary>
-       {content}
-      </details>
-   })}
+   <div className="review-heading"><h3>{activeGroup?'Review this group':'Review changes'}</h3><span>{activeGroup?`${countLabel(activeChanges.length,'symbol')} across ${countLabel(activeGroup.files.length,'file')}`:`${countLabel(changedCount,'changed symbol')} across ${countLabel(topics.length,'topic')}`}</span></div>
+   {showRoute&&!activeGroup&&<ReviewRoute steps={globalRoute} paths={reportPaths}/>}
+   <div className={'review-workbench'+(activeGroup?' group-review':'')}>
+    {!activeGroup&&topics.length>0&&<nav className="review-topic-rail" aria-label="Review topics">
+     <div className="review-topic-rail-heading"><span>Topics</span></div>
+     <div className="review-topic-links">{topics.map((topic,index)=>{
+      const topicGroups=topic.group_ids.map(id=>report.groups.find(group=>group.id===id)).filter((group):group is ChangeGroup=>!!group)
+      const count=sortedChanges(topicGroups).length
+      const selected=selectedTopic?.id===topic.id
+      return <button type="button" key={topic.id} className={'review-topic-link'+(selected?' selected':'')} aria-pressed={selected} onClick={()=>setSelectedTopicId(topic.id)}>
+       <span className="review-topic-number">{String(index+1).padStart(2,'0')}</span>
+       <span className="review-topic-link-copy"><strong>{topic.title}</strong><small>{countLabel(count,'symbol')}, {countLabel(topic.files.length,'file')}</small></span>
+      </button>
+     })}</div>
+    </nav>}
+    <div className="review-reading-column">
+     {activeGroup&&<div className="review-reading-title"><h4>{groupTitles[activeGroup.id]||activeGroup.title}</h4><span>{countLabel(activeChanges.length,'symbol')} across {countLabel(activeGroup.files.length,'file')}</span></div>}
+     {!activeGroup&&selectedTopic&&<>
+      <div className="review-reading-title"><h4>{selectedTopic.title}</h4><span>{countLabel(topicChanges.length,'symbol')} across {countLabel(selectedTopic.files.length,'file')}</span></div>
+      {selectedTopic.focus?.trim()&&<p className="review-topic-focus"><InlineMarkdown text={selectedTopic.focus}/></p>}
+      <div className="review-symbol-list">{topicChanges.map(({group,node})=><ChangeCard key={node.id} node={node} change={report.ai?.groups.find(item=>item.id===group.id)?.changes?.find(item=>item.symbol_id===node.id)} report={report} onNavigate={onNavigate} groupId={group.id}/>)}</div>
+     </>}
+     {activeGroup&&<div className="review-symbol-list">{activeChanges.map(({group,node})=><ChangeCard key={node.id} node={node} change={report.ai?.groups.find(item=>item.id===group.id)?.changes?.find(item=>item.symbol_id===node.id)} report={report} onNavigate={onNavigate} groupId={group.id}/>)}</div>}
+    </div>
+   </div>
  </section>
 }

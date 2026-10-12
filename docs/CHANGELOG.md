@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Reworked detailed review into a topic rail and focused patch-reading column; moved file order into one expandable list and removed repeated legacy explanation prompts from cached reports.
+- Asked full-PR synthesis for specific reviewer-facing topics ordered along the suggested file route, with an optional short focus on shared behavior or a concrete review question. Validated and cached the focus alongside the exact group-ID partition; the detailed review shows it once per topic.
+- Organized the detailed review under validated AI-suggested topics, combining their structural groups into one review section and keeping symbols in recommended file order; individual symbols still navigate to their source graph group.
+- Rendered inline Markdown code spans throughout AI report explanations and review guidance with styled inline code.
+- Ordered detailed change-group sections by the first file in the recommended review route, preserving existing order for ties or unranked groups.
+- Simplified generated change-group reviews to concise diff-grounded symbol summaries with optional actionable rationale/risk notes; single-symbol groups omit repeated group prose, routes appear once, exact diffs stay visible, and legacy long-form detail is collapsed by default.
 - Added a map group filter listing every inferred group with per-group visibility toggles and show-all/hide-all controls; hidden groups and their edges are removed in network, tree, and inferred-group layouts. Inferred-layout headings now include only groups and nodes present in the filtered map.
 - Classified nodes from test/spec paths and filenames as Tests before applying component-name suffixes, preventing test suites named after services from appearing in the Service group.
 - Added a topic-first change map: begin with a compact overview, open a topic to inspect its source graph, and retain an all-symbols view. Graph-only reports group by file area; AI synthesis may suggest semantic topic names and membership using validated existing group IDs.

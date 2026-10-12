@@ -76,19 +76,20 @@ def ensure_evidence(report: dict) -> dict:
 
 def ensure_topics(report: dict) -> dict:
     """Build or refresh reviewer topics when their graph-selection rules change."""
-    if report.get("topics_version", 0) < 3:
+    if report.get("topics_version", 0) < 5:
         ai = report.get("ai") or {}
         saved_topics = ai.get("topics") or report.get("topics") or []
         suggestions = [
-            {"title": topic.get("title"), "group_ids": topic.get("group_ids")}
+            {"title": topic.get("title"), "focus": topic.get("focus", ""), "group_ids": topic.get("group_ids")}
             for topic in saved_topics
             if isinstance(topic, dict) and topic.get("source") == "ai"
         ]
-        topics = build_topics(report.get("groups", []), report.get("overview", {}), suggestions or None)
+        topics = build_topics(report.get("groups", []), report.get("overview", {}), suggestions or None,
+                              ai.get("review_order"))
         report["topics"] = topics
         if report.get("ai"):
             report["ai"]["topics"] = topics
-        report["topics_version"] = 3
+        report["topics_version"] = 5
         if not report.get("demo"):
             save_report(report)
     return report
@@ -151,7 +152,7 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
                      "total_graph_nodes":len(nodes),"total_graph_edges":len(edges)},
             "files":files,"groups":groups,"overview":overview,
             "evidence":collect_evidence(groups,files,before,after),"ai":None,
-            "topics":build_topics(groups,overview),"topics_version":3,"demo":False}
+            "topics":build_topics(groups,overview),"topics_version":5,"demo":False}
     save_report(report)
     if req.harness != "none":
         report["ai"]=explain(report,req.harness,req.model,req.effort,progress)
@@ -209,6 +210,8 @@ def explain_report(report_id:str, request:ExplainRequest):
     def work(progress):
         data=ensure_topics(ensure_evidence(read_report(report_id)))
         data["ai"]=explain(data,request.harness,request.model,request.effort,progress)
+        data["topics"]=data["ai"]["topics"]
+        data["topics_version"]=5
         save_report(data)
         return report_id
     return _job("explanation",work)

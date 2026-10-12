@@ -24,7 +24,7 @@ export function ChangeTopicOverview({topics,groupTitles,onSelectTopic,onShowAllG
    return <button className="topic-card" key={topic.id} onClick={()=>onSelectTopic(topic.id)}>
     <div className="topic-card-top"><span className={'topic-source '+(topic.source==='ai'?'ai':'paths')}>{topic.source==='ai'?'AI suggested':'Path based'}</span><ArrowRight size={16}/></div>
     <strong className="topic-card-title">{topic.title}</strong>
-    <span className="topic-card-count"><Layers3 size={13}/>{topic.changed_count} changed symbols <i/> {topic.group_ids.length} groups <i/> {topic.files.length} files</span>
+    <span className="topic-card-count"><Layers3 size={13}/>{topic.changed_count} changed {topic.changed_count===1?'symbol':'symbols'} <i/> {topic.group_ids.length} structural {topic.group_ids.length===1?'group':'groups'} <i/> {topic.files.length} {topic.files.length===1?'file':'files'}</span>
     <span className="topic-card-groups">{visibleGroups.map(name=><span key={name}>{name}</span>)}{extraGroups>0&&<small>+{extraGroups} more groups</small>}</span>
     {links.length>0&&<span className="topic-card-links">{links.map(({connection,other})=><span key={connection.topic_id}><GitBranch size={12}/>{connection.kind==='shared context'?`Shares ${connection.count} context nodes with`:`Has ${connection.count} direct links to`} {other!.title}</span>)}</span>}
    </button>
