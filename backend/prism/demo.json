@@ -1,0 +1,60 @@
+{
+  "id":"demo","demo":true,"created_at":"2026-10-12T00:00:00Z",
+  "meta":{"owner":"example","repo":"sample-app","number":142,"title":"Extract token validation and introduce session persistence","body":"Illustrative sample. No real repository is connected.","url":"","author":"demo","base":"","head":"","merge_base":""},
+  "stats":{"changed_files":5,"changed_symbols":6,"groups":2,"indexed_files":38,"total_graph_nodes":12,"total_graph_edges":12},
+  "files":[
+    {"path":"src/auth/AuthService.ts","old_path":"src/auth/AuthService.ts","status":"modified","new_ranges":[[14,26]],"old_ranges":[[14,20]],"patch":"@@ -14,7 +14,13 @@\n-validateToken(token) { return this.jwt.verify(token) }\n+validateToken(token) { return this.validator.validate(token) }"},
+    {"path":"src/auth/TokenValidator.ts","old_path":"","status":"added","new_ranges":[[1,30]],"old_ranges":[],"patch":"+export class TokenValidator { validate(token) { /* token validation */ } }"},
+    {"path":"src/auth/LoginController.ts","old_path":"src/auth/LoginController.ts","status":"modified","new_ranges":[[6,9]],"old_ranges":[[6,7]],"patch":"-return auth.login(user)\n+return auth.login(user, device)"},
+    {"path":"src/session/SessionStore.ts","old_path":"","status":"added","new_ranges":[[1,44]],"old_ranges":[],"patch":"+export class SessionStore { async save(session) { /* persist */ } }"},
+    {"path":"src/session/SessionManager.ts","old_path":"src/session/SessionManager.ts","status":"modified","new_ranges":[[11,28]],"old_ranges":[[11,15]],"patch":"-this.cache.set(key,value)\n+await this.store.save(value)"}
+  ],
+  "groups":[
+   {"id":"auth","title":"Authentication","changed_count":3,"files":["src/auth/AuthService.ts","src/auth/TokenValidator.ts","src/auth/LoginController.ts"],"changed_ids":["auth","validator","controller"],"graph":{"truncated":false,"nodes":[
+    {"id":"auth","label":"AuthService","kind":"class","status":"modified","path":"src/auth/AuthService.ts","line":4},
+    {"id":"validator","label":"TokenValidator","kind":"class","status":"added","path":"src/auth/TokenValidator.ts","line":1},
+    {"id":"controller","label":"LoginController","kind":"class","status":"modified","path":"src/auth/LoginController.ts","line":3},
+    {"id":"users","label":"UserRepository","kind":"class","status":"context","path":"src/data/UserRepository.ts","line":3},
+    {"id":"jwt","label":"JWTProvider","kind":"class","status":"context","path":"src/security/JWTProvider.ts","line":2}
+   ],"edges":[
+    {"source":"controller","target":"auth","relation":"calls","confidence":"EXTRACTED"},
+    {"source":"auth","target":"validator","relation":"calls","confidence":"EXTRACTED"},
+    {"source":"auth","target":"users","relation":"uses","confidence":"INFERRED"},
+    {"source":"validator","target":"jwt","relation":"calls","confidence":"EXTRACTED"}
+   ]}},
+   {"id":"session","title":"Session persistence","changed_count":3,"files":["src/session/SessionManager.ts","src/session/SessionStore.ts"],"changed_ids":["manager","store","save"],"graph":{"truncated":false,"nodes":[
+    {"id":"manager","label":"SessionManager","kind":"class","status":"modified","path":"src/session/SessionManager.ts","line":3},
+    {"id":"store","label":"SessionStore","kind":"class","status":"added","path":"src/session/SessionStore.ts","line":1},
+    {"id":"save","label":"save","kind":"method","status":"added","path":"src/session/SessionStore.ts","line":8},
+    {"id":"db","label":"DatabaseClient","kind":"class","status":"context","path":"src/db/DatabaseClient.ts","line":2},
+    {"id":"auth","label":"AuthService","kind":"class","status":"modified","path":"src/auth/AuthService.ts","line":4}
+   ],"edges":[
+    {"source":"manager","target":"store","relation":"uses","confidence":"EXTRACTED"},
+    {"source":"store","target":"save","relation":"method","confidence":"EXTRACTED"},
+    {"source":"save","target":"db","relation":"calls","confidence":"EXTRACTED"},
+    {"source":"auth","target":"manager","relation":"calls","confidence":"INFERRED"}
+   ]}}
+  ],
+  "overview":{"truncated":false,"nodes":[
+    {"id":"auth","label":"AuthService","kind":"class","status":"modified","path":"src/auth/AuthService.ts","line":4},
+    {"id":"validator","label":"TokenValidator","kind":"class","status":"added","path":"src/auth/TokenValidator.ts","line":1},
+    {"id":"controller","label":"LoginController","kind":"class","status":"modified","path":"src/auth/LoginController.ts","line":3},
+    {"id":"manager","label":"SessionManager","kind":"class","status":"modified","path":"src/session/SessionManager.ts","line":3},
+    {"id":"store","label":"SessionStore","kind":"class","status":"added","path":"src/session/SessionStore.ts","line":1},
+    {"id":"save","label":"save","kind":"method","status":"added","path":"src/session/SessionStore.ts","line":8},
+    {"id":"users","label":"UserRepository","kind":"class","status":"context","path":"src/data/UserRepository.ts","line":3},
+    {"id":"db","label":"DatabaseClient","kind":"class","status":"context","path":"src/db/DatabaseClient.ts","line":2}
+  ],"edges":[
+    {"source":"controller","target":"auth","relation":"calls","confidence":"EXTRACTED"},
+    {"source":"auth","target":"validator","relation":"calls","confidence":"EXTRACTED"},
+    {"source":"auth","target":"manager","relation":"calls","confidence":"INFERRED"},
+    {"source":"manager","target":"store","relation":"uses","confidence":"EXTRACTED"},
+    {"source":"store","target":"save","relation":"method","confidence":"EXTRACTED"},
+    {"source":"save","target":"db","relation":"calls","confidence":"EXTRACTED"},
+    {"source":"auth","target":"users","relation":"uses","confidence":"INFERRED"}
+  ]},
+  "ai":{"harness":"demo","model":"sample","effort":"sample","overview":"This example refactors token validation out of AuthService and adds a persistent session storage layer. The login controller and session manager are updated to use the new interfaces.","key_changes":["Token validation becomes a separate responsibility.","Sessions move from an in-memory cache to a persistence abstraction.","The login call now carries device context."],"groups":[
+    {"id":"auth","summary":"Authentication logic now delegates JWT validation to a dedicated TokenValidator rather than handling it inside AuthService.","before_after":"Previously AuthService verified tokens directly. It now calls TokenValidator, introducing an explicit validation boundary.","impact":"LoginController continues to call AuthService; JWTProvider sits behind TokenValidator.","risks":["Confirm error mapping remains consistent for expired and malformed tokens."],"tests":["Add unit tests for TokenValidator and authentication failures."]},
+    {"id":"session","summary":"SessionManager now writes through SessionStore instead of only mutating an in-memory cache.","before_after":"The old code updated a local cache; the new code awaits persistent storage.","impact":"SessionStore depends on DatabaseClient and adds asynchronous failure modes.","risks":["Database failures may now affect logins.","Review latency of the persistence path."],"tests":["Test storage failures and concurrent session updates."]}
+  ]}
+}
