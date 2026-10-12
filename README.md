@@ -46,7 +46,7 @@ Prism **does not install or sign you in** to third-party coding harnesses. Insta
 
 The Configuration page detects available executables on the backend's `PATH`. Codex model and effort selections are populated from the installed app-server's `model/list` response when available. Claude Code doesn't offer a verified stable account-level CLI model-list interface; Prism uses CLI aliases / custom model IDs with user-selectable effort. When an API isn't available, fields remain editable/defaultable rather than pretending to know your account's models.
 
-**Privacy:** Graph construction and symbol mapping run locally. Selecting Codex/Claude sends bounded PR context to the provider via that CLI. PR questions include the PR body, report summaries, and verified excerpts/diffs for changed symbols; inline questions also include the selected line-anchored diff excerpt. Prism doesn't independently contact LLM APIs.
+**Privacy:** Graph construction and symbol mapping run locally. Selecting Codex/Claude sends bounded PR context to the provider via that CLI. PR questions include the PR body, report summaries, and verified excerpts/diffs for changed symbols; inline questions also include the selected line-anchored diff excerpt. If **Allow repository browsing** is checked, the selected CLI can request tracked source from the exact PR-head commit through Prism's read-only file, symbol, relationship, and source tools. Prism sends only the requested excerpts; it does not give the CLI shell or `gh` access. Prism doesn't independently contact LLM APIs.
 
 ## Interface
 

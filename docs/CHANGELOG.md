@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added opt-in repository browsing to PR-wide and inline questions. The selected CLI can inspect tracked files at the exact PR head through bounded read-only file, Tree-sitter symbol, Graphify relationship and source-range tools; source citations are checked against tool-read audit records.
 - Added GitHub viewed-file controls backed by the authenticated GitHub CLI; file state can be refreshed and hidden consistently from the topic overview, graph, suggested route, and code walkthrough.
 - Added in-report PR questions for Codex and Claude Code, with selectable model/reasoning effort, bounded report-grounded context, follow-up questions, and validated source citations that navigate to changed symbols.
 - Added GitHub-style inline chats to changed-code excerpts: ask about a selected diff line, Shift-click within the same hunk to include a range, and continue a focused thread. Each inline composer exposes model and effort pickers synchronized with the PR chat. Anchors are checked against Prism's cached patch before being sent to the CLI.

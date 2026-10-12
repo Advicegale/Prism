@@ -46,6 +46,7 @@ export function InlineDiffChat({ reportId, anchor, assistant, harnesses, onAssis
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState('')
   const [error, setError] = useState('')
+  const [includeRepositoryContext, setIncludeRepositoryContext] = useState(false)
   const [editingCustomModel, setEditingCustomModel] = useState(false)
   const reportIdRef = useRef(reportId)
   reportIdRef.current = reportId
@@ -67,7 +68,7 @@ export function InlineDiffChat({ reportId, anchor, assistant, harnesses, onAssis
     setQuestion('')
     setError('')
     setBusy(true)
-    setProgress('Sending the selected diff lines to the assistant')
+    setProgress(includeRepositoryContext ? 'Opening read-only repository tools' : 'Sending the selected diff lines to the assistant')
     try {
       const response = await call<{ job_id: string }>(`/reports/${reportId}/questions`, {
         method: 'POST',
@@ -76,6 +77,7 @@ export function InlineDiffChat({ reportId, anchor, assistant, harnesses, onAssis
           model: assistant.model.trim() || 'default',
           effort: assistant.effort,
           question: text,
+          include_repository_context: includeRepositoryContext,
           anchor,
           history: history.map(turn => ({ question: turn.question, answer: turn.answer!.answer })),
         }),
@@ -140,6 +142,12 @@ export function InlineDiffChat({ reportId, anchor, assistant, harnesses, onAssis
         <button type="submit" disabled={!installed || busy || !question.trim()}>{busy ? <LoaderCircle size={13} className="spinning"/> : <ArrowUp size={13}/>}<span>{busy ? 'Thinking' : 'Ask'}</span></button>
       </div>
     </form>
-    <p className="inline-diff-chat-hint">This question stays focused on the selected diff lines.</p>
+    <div className="inline-diff-chat-hint">
+      <label title="Allow the selected CLI to browse tracked source files at this PR revision through read-only Prism tools. Retrieved code is sent to that CLI.">
+        <input type="checkbox" checked={includeRepositoryContext} disabled={!installed || busy} onChange={event => setIncludeRepositoryContext(event.target.checked)}/>
+        <span>Allow repository browsing</span>
+      </label>
+      <span>Retrieved source goes to the selected CLI; diff lines stay in focus.</span>
+    </div>
   </section>
 }

@@ -20,6 +20,7 @@ from .graph import snapshot, identify_changes, segment
 from .harness import available_harnesses, explain, answer_question
 from .evidence import collect_evidence
 from .topics import build_topics
+from .repository_tools import head_worktree
 
 app = FastAPI(title="Prism PR Review", version="0.2.0", docs_url="/api/docs", openapi_url="/api/openapi.json")
 executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="prism-job")
@@ -57,6 +58,7 @@ class QuestionRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
     history: list[QuestionTurn] = Field(default_factory=list, max_length=6)
     anchor: DiffLineAnchor | None = None
+    include_repository_context: bool = False
 
 
 _QUESTION_HUNK_HEADER = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
@@ -337,7 +339,8 @@ def ask_question(report_id:str, request:QuestionRequest):
     anchor = _verified_diff_anchor(read_report(report_id), request.anchor) if request.anchor else None
     def work(progress):
         data=ensure_topics(ensure_evidence(read_report(report_id)))
-        return answer_question(data,request.harness,request.model,request.effort,question,history,progress,anchor)
+        repository_root = head_worktree(data) if request.include_repository_context else None
+        return answer_question(data,request.harness,request.model,request.effort,question,history,progress,anchor,repository_root)
     return _job("question",work)
 
 @app.post("/api/reports/{report_id}/explain",status_code=202)

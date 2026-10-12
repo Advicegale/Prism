@@ -24,7 +24,16 @@ def scan_symbols(root: Path, path: str) -> list[dict]:
     full_path = root / path
     if not full_path.is_file() or full_path.is_symlink() or full_path.stat().st_size > 600_000:
         return []
-    definition = LANGUAGES.get(full_path.suffix.lower())
+    try:
+        source = full_path.read_bytes()
+    except OSError:
+        return []
+    return scan_source(source, path)
+
+
+def scan_source(source: bytes, path: str) -> list[dict]:
+    """Return Tree-sitter declarations from source bytes, independent of the worktree."""
+    definition = LANGUAGES.get(Path(path).suffix.lower())
     if not definition:
         return []
     try:
@@ -32,7 +41,6 @@ def scan_symbols(root: Path, path: str) -> list[dict]:
         module = importlib.import_module(definition[0])
         language = Language(getattr(module, definition[1])())
         parser = Parser(language)
-        source = full_path.read_bytes()
         root_node = parser.parse(source).root_node
     except (ImportError, AttributeError, TypeError, ValueError, OSError):
         return []

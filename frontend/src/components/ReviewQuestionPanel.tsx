@@ -33,6 +33,7 @@ function label(harness: string) { return harness === 'claude' ? 'Claude Code' : 
 export function ReviewQuestionPanel({ report, harnesses, assistant, onAssistantChange, onCitationClick }: Props) {
   const [turns, setTurns] = useState<Turn[]>([])
   const [question, setQuestion] = useState('')
+  const [includeRepositoryContext, setIncludeRepositoryContext] = useState(false)
   const { harness, model, effort } = assistant
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState('')
@@ -59,6 +60,7 @@ export function ReviewQuestionPanel({ report, harnesses, assistant, onAssistantC
   useEffect(() => {
     setTurns([])
     setQuestion('')
+    setIncludeRepositoryContext(false)
     setBusy(false)
     setProgress('')
     setError('')
@@ -80,13 +82,14 @@ export function ReviewQuestionPanel({ report, harnesses, assistant, onAssistantC
     setQuestion('')
     setError('')
     setBusy(true)
-    setProgress('Sending report context to the selected CLI')
+    setProgress(includeRepositoryContext ? 'Opening read-only repository tools' : 'Sending report context to the selected CLI')
     try {
       const response = await call<{ job_id: string }>(`/reports/${report.id}/questions`, {
         method: 'POST',
         body: JSON.stringify({
           harness, model: model.trim() || 'default', effort,
           question: text,
+          include_repository_context: includeRepositoryContext,
           history: turns.filter(turn => turn.answer).slice(-6).map(turn => ({ question: turn.question, answer: turn.answer!.answer })),
         }),
       })
@@ -128,7 +131,7 @@ export function ReviewQuestionPanel({ report, harnesses, assistant, onAssistantC
     <div className="review-questions-heading">
       <div className="review-questions-title">
         <span className="review-question-icon"><MessageSquareText size={17}/></span>
-        <div><h3>Ask this PR</h3><p>Get a focused answer grounded in the changed code.</p></div>
+        <div><h3>Ask this PR</h3><p>Get a focused answer from changed code, with optional repository browsing.</p></div>
       </div>
       <div className="review-question-settings">
         <label><span>Assistant</span><span className="review-question-select"><select aria-label="Assistant" value={harness} onChange={event => onAssistantChange({ harness: event.target.value as 'codex' | 'claude', model: 'default', effort: 'default' })}>
@@ -163,7 +166,16 @@ export function ReviewQuestionPanel({ report, harnesses, assistant, onAssistantC
 
     <form className="review-question-composer" onSubmit={event => { event.preventDefault(); void ask() }}>
       <textarea ref={textarea} aria-label="Question about the pull request" rows={2} maxLength={2000} value={question} onChange={event => setQuestion(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); void ask() } }} placeholder="Ask about behavior, dependencies, or a review concern…" disabled={!installed || busy}/>
-      <div className="review-question-compose-footer"><span>{error ? <span className="review-question-error">{error}</span> : <span>Report excerpts and diffs go to the selected CLI provider.</span>}</span><button type="submit" disabled={!installed || busy || !question.trim()}>{busy ? <LoaderCircle size={15} className="spinning"/> : <ArrowUp size={15}/>}<span>{busy ? 'Thinking' : 'Ask'}</span></button></div>
+      <div className="review-question-compose-footer">
+        <div className="review-question-footer-info">
+          <label className="review-question-context-toggle" title="Allow the selected CLI to browse tracked source files at this PR revision through read-only Prism tools. Retrieved code is sent to that CLI.">
+            <input type="checkbox" checked={includeRepositoryContext} disabled={!installed || busy} onChange={event => setIncludeRepositoryContext(event.target.checked)}/>
+            <span>Allow repository browsing</span>
+          </label>
+          <span className="review-question-compose-note">{error ? <span className="review-question-error">{error}</span> : includeRepositoryContext ? 'Retrieved source excerpts go to the selected CLI.' : 'PR excerpts and diffs go to the selected CLI.'}</span>
+        </div>
+        <button type="submit" disabled={!installed || busy || !question.trim()}>{busy ? <LoaderCircle size={15} className="spinning"/> : <ArrowUp size={15}/>}<span>{busy ? 'Thinking' : 'Ask'}</span></button>
+      </div>
     </form>
     {error && <button className="review-question-retry" type="button" onClick={() => { setError(''); void ask(question) }}>Retry question</button>}
   </section>
