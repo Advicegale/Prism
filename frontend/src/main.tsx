@@ -145,7 +145,8 @@ function App(){
   const changed=topicGroups.flatMap(item=>item.changed_ids.map(id=>item.graph.nodes.find(node=>node.id===id)).filter((node):node is GraphNode=>!!node))
   const visible=changed.filter(node=>!hideViewedFiles||!isViewedPath(node.path))
   const visibleFiles=topic.files.filter(path=>!hideViewedFiles||!isViewedPath(path))
-  return {...topic,changed_count:new Set(visible.map(node=>node.id)).size,files:visibleFiles}
+  const fullyViewed=topic.files.length>0&&topic.files.every(isViewedPath)
+  return {...topic,fullyViewed,changed_count:new Set(visible.map(node=>node.id)).size,files:visibleFiles}
  })
  const selectedTopic=topics.find(topic=>topic.id===topicId)
  const topicGroups=selectedTopic?report?.groups.filter(item=>selectedTopic.group_ids.includes(item.id))||[]:[]

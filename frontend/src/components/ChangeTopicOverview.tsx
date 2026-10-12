@@ -2,7 +2,7 @@ import {ArrowRight,GitBranch,Network} from 'lucide-react'
 import type {ChangeTopic} from '../types'
 
 interface Props {
- topics:ChangeTopic[]
+ topics:(ChangeTopic&{fullyViewed:boolean})[]
  groupTitles:Record<string,string>
  onSelectTopic:(id:string)=>void
  onShowAllGraph:()=>void
@@ -19,7 +19,7 @@ export function ChangeTopicOverview({topics,groupTitles,onSelectTopic,onShowAllG
    const visibleGroups=groupNames.slice(0,2)
    const extraGroups=Math.max(0,groupNames.length-visibleGroups.length)
    const links=topic.connections.slice(0,1).map(connection=>({connection,other:topicById.get(connection.topic_id)})).filter(item=>item.other)
-   return <button className="topic-row" key={topic.id} onClick={()=>onSelectTopic(topic.id)}>
+   return <button className={'topic-row'+(topic.fullyViewed?' completed':'')} key={topic.id} title={topic.fullyViewed?'All files in this topic have been viewed in GitHub':undefined} aria-label={topic.fullyViewed?`${topic.title}, all files viewed in GitHub`:topic.title} onClick={()=>onSelectTopic(topic.id)}>
     <span className="topic-row-main">
      <span className="topic-row-title"><strong>{topic.title}</strong><ArrowRight size={15}/></span>
      {topic.focus&&<span className="topic-row-focus">{topic.focus}</span>}

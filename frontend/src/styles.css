@@ -74,6 +74,7 @@ main{max-width:1680px}
 .review-topic-link:focus-visible{outline:2px solid #65bb91;outline-offset:1px}
 .review-topic-number{padding-top:1px;color:#6f8174;font:10px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
 .review-topic-link.selected .review-topic-number{color:#7ac49b}
+.review-topic-link.completed{opacity:.5}
 .review-topic-link-copy{display:block;min-width:0}
 .review-topic-link-copy strong{display:block;color:inherit;font-size:11.5px;font-weight:570;line-height:1.45;overflow-wrap:anywhere}
 .review-topic-link-copy small{display:block;margin-top:4px;color:#7f8d83;font-size:10px;line-height:1.4}
@@ -422,6 +423,7 @@ main{max-width:1480px;padding:30px clamp(22px,3.25vw,48px) 52px}
 .topic-list{display:flex;flex-direction:column;border-top:1px solid #2c2e2f}
 .topic-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(180px,.7fr);align-items:center;gap:24px;width:100%;min-width:0;padding:14px 9px;border:0;border-bottom:1px solid #282a2b;background:transparent;color:#e2e4e5;text-align:left}
 .topic-row:last-child{border-bottom:0}
+.topic-row.completed{opacity:.5}
 .topic-row:hover{background:#141516}
 .topic-row:focus-visible{outline:2px solid #94a1ab;outline-offset:-2px}
 .topic-row-main,.topic-row-context{display:flex;min-width:0;flex-direction:column;align-items:flex-start}

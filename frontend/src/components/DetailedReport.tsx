@@ -230,8 +230,9 @@ export function DetailedReport({report,activeGroup,groupTitles,showRoute,onNavig
       const topicEntries=sortedChanges(topicGroups)
       const count=topicEntries.length
       const fileCount=new Set(topicEntries.map(item=>canonicalPath(report,item.node.path))).size
+      const fullyViewed=topic.files.length>0&&topic.files.every(path=>viewedStates[canonicalPath(report,path)]==='VIEWED')
       const selected=selectedTopic?.id===topic.id
-      return <button type="button" key={topic.id} className={'review-topic-link'+(selected?' selected':'')} aria-pressed={selected} onClick={()=>setSelectedTopicId(topic.id)}>
+      return <button type="button" key={topic.id} className={'review-topic-link'+(selected?' selected':'')+(fullyViewed?' completed':'')} title={fullyViewed?'All files in this topic have been viewed in GitHub':undefined} aria-label={`${topic.title} — ${countLabel(count,'symbol')}, ${countLabel(fileCount,'file')}${fullyViewed?', all files viewed':''}`} aria-pressed={selected} onClick={()=>setSelectedTopicId(topic.id)}>
        <span className="review-topic-number">{String(index+1).padStart(2,'0')}</span>
        <span className="review-topic-link-copy"><strong>{topic.title}</strong><small>{countLabel(count,'symbol')}, {countLabel(fileCount,'file')}</small></span>
       </button>
