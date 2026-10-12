@@ -155,18 +155,34 @@ def _toml_key(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
-def _codex_user_mcp_servers() -> list[str]:
+def _codex_user_mcp_override() -> str | None:
     codex_home = Path(os.environ.get("CODEX_HOME") or (Path.home() / ".codex"))
     config = codex_home / "config.toml"
     if not config.is_file():
-        return []
+        return None
     try:
         parsed = tomllib.loads(config.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, tomllib.TOMLDecodeError) as exc:
         raise RuntimeError("Cannot safely isolate Codex MCP servers for repository browsing; check the Codex config.toml file.") from exc
     servers = parsed.get("mcp_servers", {})
-    return [str(name) for name, value in servers.items()
-            if isinstance(value, dict) and value.get("enabled", True)] if isinstance(servers, dict) else []
+    if not isinstance(servers, dict):
+        return None
+
+    # Codex's --config accepts TOML dotted paths, but quotes in a path segment
+    # are treated literally. Replace each enabled global server with a complete,
+    # disabled inert entry so odd names and host-provided MCPs cannot break the
+    # isolated repository-browsing invocation. Do not copy commands, URLs, or
+    # environment values from the user's MCP config into process arguments.
+    overrides = []
+    for name, value in servers.items():
+        if not isinstance(value, dict) or not value.get("enabled", True):
+            continue
+        if isinstance(value.get("url"), str):
+            transport = f"url={_toml_key('http://127.0.0.1')}"
+        else:
+            transport = f"command={_toml_key(sys.executable)}"
+        overrides.append(f"{_toml_key(str(name))}={{enabled=false,{transport}}}")
+    return "mcp_servers={" + ",".join(overrides) + "}" if overrides else None
 
 
 def _repository_audit(path: Path) -> list[dict]:
@@ -230,10 +246,11 @@ def run_harness(harness: str, model: str, effort: str, prompt: str, timeout=360,
                     args.extend(["--config", f"features.{feature}=false"])
                 for tool in ("web_search", "view_image"):
                     args.extend(["--config", f"tools.{tool}=false"])
-                for name in _codex_user_mcp_servers():
-                    args.extend(["--config", f"mcp_servers.{_toml_key(name)}.enabled=false"])
+                mcp_override = _codex_user_mcp_override()
+                if mcp_override:
+                    args.extend(["--config", mcp_override])
                 assert repository_args is not None
-                server = f"mcp_servers.{_toml_key(repository_server)}"
+                server = f"mcp_servers.{repository_server}"
                 args.extend(["--config", f"{server}.default_tools_approval_mode=\"auto\""])
                 tool_names = ["list_files", "list_symbols", "related_symbols", "read_source"]
                 args.extend(["--config", f"{server}.enabled_tools={json.dumps(tool_names)}"])
@@ -241,7 +258,7 @@ def run_harness(harness: str, model: str, effort: str, prompt: str, timeout=360,
                 args.extend(["--config", f"{server}.args={json.dumps(repository_args, ensure_ascii=False)}"])
                 args.extend(["--config", f"{server}.enabled=true"])
                 for tool_name in ("list_files", "list_symbols", "related_symbols", "read_source"):
-                    args.extend(["--config", f"{server}.tools.{_toml_key(tool_name)}.approval_mode=\"auto\""])
+                    args.extend(["--config", f"{server}.tools.{tool_name}.approval_mode=\"auto\""])
             if model and model != "default":args.extend(["--model",model])
             if effort and effort != "default":args.extend(["-c",f"model_reasoning_effort={effort}"])
             args.append("-")

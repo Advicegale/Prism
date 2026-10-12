@@ -61,7 +61,7 @@ main{max-width:1680px}
 .review-order-file>code{color:#cad4cc;font:11px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}
 .review-order-reason{margin-top:3px;color:#91a096;font-size:10px}
 .review-order-reason>summary{width:max-content;cursor:pointer}
-.review-order-reason p{max-width:68ch;margin:4px 0 3px;color:#9aa89e;font-size:10px;line-height:1.55}
+.review-order-reason-copy{max-width:68ch;margin:4px 0 3px;color:#9aa89e;font-size:10px;line-height:1.55}
 .review-workbench{display:grid;grid-template-columns:205px minmax(0,1fr);gap:28px;align-items:start}
 .review-workbench.group-review{grid-template-columns:minmax(0,1fr)}
 .review-topic-rail{position:sticky;top:18px;min-width:0}
@@ -103,7 +103,7 @@ main{max-width:1680px}
 .review-secondary{margin:10px 0 0;color:#92a096;font-size:10.5px}
 .review-secondary>summary{width:max-content;cursor:pointer;color:#92a995}
 .review-secondary>summary:hover{color:#c6e4cd}
-.review-secondary p{max-width:72ch;margin:7px 0 0;color:#aab7ad;font-size:11px;line-height:1.65}
+.review-secondary-copy{max-width:72ch;margin:7px 0 0;color:#aab7ad;font-size:11px;line-height:1.65}
 .review-action-note{display:flex;align-items:flex-start;gap:9px;max-width:74ch;margin:11px 0 0;padding-left:9px;border-left:2px solid #c69b53;color:#d8c59f;font-size:11px;line-height:1.55}
 .review-action-note>span{flex:0 0 auto;color:#dbb56e;font-size:10px;font-weight:600}
 .review-action-note ul{margin:0;padding-left:14px}
@@ -162,6 +162,20 @@ main{max-width:1680px}
 .source-code .token.number,.source-code .token.boolean,.source-code .token.constant{color:#c6a6f4}
 .source-code .token.property,.source-code .token.attr-name,.source-code .token.selector{color:#9fcaf0}
 .markdown-inline-code{padding:1px 4px;border:1px solid #344238;border-radius:4px;background:#172019;color:#bce4c7;font:0.92em ui-monospace,SFMono-Regular,Consolas,monospace;white-space:nowrap}
+.markdown-content{min-width:0;overflow-wrap:anywhere}
+.markdown-content>:first-child{margin-top:0}
+.markdown-content>:last-child{margin-bottom:0}
+.markdown-content p{margin:0 0 .65em}
+.markdown-content ul,.markdown-content ol{margin:.5em 0;padding-left:1.45em}
+.markdown-content li+li{margin-top:.22em}
+.markdown-content blockquote{margin:.65em 0;padding:.05em 0 .05em 11px;border-left:2px solid #46596a;color:#aebdca}
+.markdown-content h1,.markdown-content h2,.markdown-content h3,.markdown-content h4,.markdown-content h5,.markdown-content h6{margin:.8em 0 .35em;color:#e5ebf0;font-size:1.04em;line-height:1.45}
+.markdown-content a{color:#9ac9e7;text-decoration:underline;text-decoration-color:#55768c;text-underline-offset:2px}
+.markdown-content pre{max-width:100%;margin:.65em 0;overflow:auto;border:1px solid #303c46;border-radius:6px;background:#0d1116}
+.markdown-content pre code{display:block;padding:10px 12px;border:0;border-radius:0;background:transparent;color:#d2dce5;font:11px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre}
+.markdown-content table{display:block;max-width:100%;margin:.65em 0;overflow-x:auto;border-collapse:collapse}
+.markdown-content th,.markdown-content td{padding:5px 8px;border:1px solid #35424c;text-align:left}
+.markdown-content th{background:#1a222b;color:#e2e9ef;font-weight:650}
 
 
 /* The map toolbar wraps its controls when the graph shares space with the details panel. */
@@ -689,7 +703,6 @@ body,.workspace{background:var(--page)}
 .review-answer-meta a{display:grid;place-items:center;color:#8294a5}
 .review-answer-meta a:hover{color:#c5dfef}
 .review-answer-copy{color:#d0d7e0;font-size:11px;line-height:1.65}
-.inline-markdown{white-space:pre-wrap}
 .review-answer-copy p{margin:0 0 7px}
 .review-answer-copy p:last-child{margin-bottom:0}
 .review-answer-copy ul,.review-answer-copy ol{margin:5px 0;padding-left:19px}

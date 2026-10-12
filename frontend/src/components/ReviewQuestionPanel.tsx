@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowUp, ChevronDown, CircleHelp, ExternalLink, LoaderCircle, MessageSquareText, Sparkles } from 'lucide-react'
 import type { Harnesses, Job, QuestionAnswer, Report, ReviewAssistantSettings } from '../types'
-import { InlineMarkdown } from './InlineMarkdown'
+import { MarkdownContent } from './MarkdownContent'
 
 interface Props {
   report: Report
@@ -154,7 +154,7 @@ export function ReviewQuestionPanel({ report, harnesses, assistant, onAssistantC
         <div className="review-question-user"><span>You</span><p>{turn.question}</p></div>
         {turn.answer ? <div className="review-question-answer" id={`question-answer-${turn.id}`}>
           <div className="review-answer-meta"><span><Sparkles size={13}/>{label(turn.answer.harness)} · {turn.answer.model}</span><a href={report.meta.url} target="_blank" rel="noreferrer" aria-label="Open pull request on GitHub"><ExternalLink size={13}/></a></div>
-          <div className="review-answer-copy"><InlineMarkdown text={turn.answer.answer}/></div>
+          <MarkdownContent className="review-answer-copy" text={turn.answer.answer}/>
           {!!turn.answer.citations.length && <div className="review-answer-citations"><span>Source</span>{turn.answer.citations.map((citation, index) => citation.symbol_id ? <button key={`${citation.symbol_id}-${index}`} type="button" onClick={() => onCitationClick(citation.symbol_id!)} title={citation.reason || `${citation.path}:${citation.line}`}>
             <span>{citation.path.split(/[\\/]/).pop()}:{citation.line}</span><ArrowUp size={12}/>
           </button> : <span className="review-answer-source" key={`${citation.path}-${citation.line}-${index}`} title={citation.reason}>{citation.path.split(/[\\/]/).pop()}:{citation.line}</span>)}</div>}

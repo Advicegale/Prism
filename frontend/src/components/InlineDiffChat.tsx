@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { ArrowUp, ChevronDown, LoaderCircle, MessageSquareText, Sparkles, X } from 'lucide-react'
 import type { DiffLineAnchor, Harnesses, Job, QuestionAnswer, ReviewAssistantSettings } from '../types'
-import { InlineMarkdown } from './InlineMarkdown'
+import { MarkdownContent } from './MarkdownContent'
 
 interface Props {
   reportId: string
@@ -117,7 +117,7 @@ export function InlineDiffChat({ reportId, anchor, assistant, harnesses, onAssis
         <p className="inline-diff-chat-question">{turn.question}</p>
         {turn.answer ? <div className="inline-diff-chat-answer">
           <div className="inline-diff-chat-provider"><Sparkles size={12}/>{providerLabel(turn.answer.harness)} · {turn.answer.model}</div>
-          <div className="inline-diff-chat-copy"><InlineMarkdown text={turn.answer.answer}/></div>
+          <MarkdownContent className="inline-diff-chat-copy" text={turn.answer.answer}/>
           {!!turn.answer.citations.length && <div className="inline-diff-chat-citations">Grounded in {turn.answer.citations.map((citation, index) => <span key={`${citation.path}-${citation.line}-${index}`}><code>{citation.path.split(/[\\/]/).pop()}:{citation.line}</code>{index < turn.answer!.citations.length - 1 ? ', ' : ''}</span>)}</div>}
         </div> : <div className="inline-diff-chat-pending"><LoaderCircle size={13} className="spinning"/>{busy ? progress || 'Reading the selected lines' : 'Waiting for an answer'}</div>}
       </article>)}

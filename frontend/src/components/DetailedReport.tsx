@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Check, ChevronRight, Code2, Eye, EyeOff, FileCode2, LoaderCircle } from 'lucide-react'
 import type { AIChange, ChangeGroup, GraphNode, Harnesses, Report, ReviewAssistantSettings, ReviewStep } from '../types'
 import { CodeDiff, SyntaxCode, type DiffLineReference } from './CodeDiff'
-import { InlineMarkdown } from './InlineMarkdown'
+import { MarkdownContent } from './MarkdownContent'
 
 interface Props {
   report: Report
@@ -135,7 +135,7 @@ function ReviewRoute({steps,paths,viewedStates}:{steps?:ReviewStep[],paths:strin
   <summary><span>Review order</span><small>{ordered.length} {ordered.length===1?'file':'files'}</small><ChevronRight size={15}/></summary>
   <ol>{ordered.map((step,i)=><li key={step.path} className={viewedStates[step.path]==='VIEWED'?'viewed':''}>
    <span className="review-order-number">{String(i+1).padStart(2,'0')}</span>
-   <div className="review-order-file"><code>{step.path}</code>{viewedStates[step.path]==='VIEWED'&&<small className="review-order-viewed">Viewed in GitHub</small>}{step.reason?.trim()&&<details className="review-order-reason"><summary>Why</summary><p><InlineMarkdown text={step.reason}/></p></details>}</div>
+   <div className="review-order-file"><code>{step.path}</code>{viewedStates[step.path]==='VIEWED'&&<small className="review-order-viewed">Viewed in GitHub</small>}{step.reason?.trim()&&<details className="review-order-reason"><summary>Why</summary><MarkdownContent className="review-order-reason-copy" text={step.reason}/></details>}</div>
   </li>)}</ol>
  </details>
 }
@@ -152,9 +152,9 @@ function ChangeCard({node,change,report,onNavigate,groupId,harnesses,assistant,o
     <div className="review-symbol-title"><h5>{node.qualified||node.label}</h5><div><span>{node.kind}</span><code>{node.path}:{node.line}</code></div></div>
     <button className="review-graph-link" type="button" onClick={()=>onNavigate(groupId,node.id)}>Map <ChevronRight size={14}/></button>
    </header>
-   {change?.diff_summary?.trim()&&<p className="review-change-summary"><InlineMarkdown text={change.diff_summary}/></p>}
-   {change?.why?.trim()&&!legacyAI&&<details className="review-secondary"><summary>Why it changed</summary><p><InlineMarkdown text={change.why}/></p></details>}
-   {!!change?.review_notes?.length&&<div className="review-action-note"><span>Check</span><ul>{change.review_notes.map((note,index)=><li key={index}><InlineMarkdown text={note}/></li>)}</ul></div>}
+   {change?.diff_summary?.trim()&&<MarkdownContent className="review-change-summary" text={change.diff_summary}/>}
+   {change?.why?.trim()&&!legacyAI&&<details className="review-secondary"><summary>Why it changed</summary><MarkdownContent className="review-secondary-copy" text={change.why}/></details>}
+   {!!change?.review_notes?.length&&<div className="review-action-note"><span>Check</span><ul>{change.review_notes.map((note,index)=><li key={index}><MarkdownContent text={note}/></li>)}</ul></div>}
    {hasPatch&&<Excerpt node={node} report={report} harnesses={harnesses} assistant={assistant} onAssistantChange={onAssistantChange}/>}
    {!hasPatch&&hasEvidence&&<details className="review-secondary"><summary>Source context</summary><Excerpt node={node} report={report} harnesses={harnesses} assistant={assistant} onAssistantChange={onAssistantChange}/></details>}
  </article>
@@ -242,7 +242,7 @@ export function DetailedReport({report,activeGroup,groupTitles,showRoute,onNavig
      {activeGroup&&<div className="review-reading-title"><h4>{groupTitles[activeGroup.id]||activeGroup.title}</h4><span>{countLabel(activeChanges.length,'symbol')} across {countLabel(new Set(activeChanges.map(item=>canonicalPath(report,item.node.path))).size,'file')}</span></div>}
      {!activeGroup&&selectedTopic&&<>
       <div className="review-reading-title"><h4>{selectedTopic.title}</h4><span>{countLabel(topicChanges.length,'symbol')} across {countLabel(new Set(topicChanges.map(item=>canonicalPath(report,item.node.path))).size,'file')}</span></div>
-      {selectedTopic.focus?.trim()&&<p className="review-topic-focus"><InlineMarkdown text={selectedTopic.focus}/></p>}
+      {selectedTopic.focus?.trim()&&<MarkdownContent className="review-topic-focus" text={selectedTopic.focus}/>}
       {!topicChanges.length&&hideViewedFiles?<div className="review-filter-empty"><EyeOff size={18}/><span>All files in this topic are marked viewed.</span><button type="button" onClick={()=>onHideViewedFilesChange(false)}>Show viewed files</button></div>:<div className="review-symbol-list">{fileSections(topicChanges).map(([path,entries])=><ReviewFileSection key={path} entries={entries} report={report} onNavigate={onNavigate} viewedAvailable={viewedAvailable} viewedStates={viewedStates} viewedBusyPaths={viewedBusyPaths} onToggleViewedFile={onToggleViewedFile} harnesses={harnesses} assistant={assistant} onAssistantChange={onAssistantChange}/>)}</div>}
      </>}
      {activeGroup&&(!activeChanges.length&&hideViewedFiles?<div className="review-filter-empty"><EyeOff size={18}/><span>All files in this group are marked viewed.</span><button type="button" onClick={()=>onHideViewedFilesChange(false)}>Show viewed files</button></div>:<div className="review-symbol-list">{fileSections(activeChanges).map(([path,entries])=><ReviewFileSection key={path} entries={entries} report={report} onNavigate={onNavigate} viewedAvailable={viewedAvailable} viewedStates={viewedStates} viewedBusyPaths={viewedBusyPaths} onToggleViewedFile={onToggleViewedFile} harnesses={harnesses} assistant={assistant} onAssistantChange={onAssistantChange}/>)}</div>)}
