@@ -121,7 +121,7 @@ main{max-width:1680px}
 .diff-tally{display:flex;gap:9px;flex-shrink:0;font:10px ui-monospace,SFMono-Regular,Consolas,monospace}
 .diff-tally .added{color:#69e0a5}.diff-tally .removed{color:#f08e99}
 .source-evidence .diff-code{margin:0;border:0;border-radius:0;max-height:430px}
-.source-evidence .diff-code .diff-line.diff-meta{display:none}
+.source-evidence .diff-code .diff-line.diff-meta:not(.diff-hunk-header){display:none}
 .snippet-line{font:10px ui-monospace,SFMono-Regular,Consolas,monospace;color:#94a995;overflow-wrap:anywhere}
 .source-code{margin:0;padding:16px 17px;overflow:auto;font:11px/1.75 ui-monospace,SFMono-Regular,Consolas,monospace;color:#d4e4d3;tab-size:2;max-height:430px;white-space:pre-wrap;overflow-wrap:anywhere}
 .snippet-footnote{border-top:1px solid #303b31;color:#8da38e;font-size:10px;padding:9px 12px}
@@ -720,6 +720,9 @@ body,.workspace{background:var(--page)}
 .diff-code .diff-lines{display:block}
 .diff-row-wrap{position:relative;display:block}
 .diff-code .diff-line{position:relative;padding:0 34px 0 0}
+.diff-code .diff-line.diff-hunk-header{display:flex;align-items:center;gap:8px;min-height:27px;margin:8px 4px 4px;padding:4px 8px;border:1px solid #35414d;border-left:2px solid #789bb4;border-radius:4px;background:#151c24;color:#a5b4c1;font-size:.84em;line-height:1.4}
+.diff-hunk-label{flex:0 0 auto;color:#92abc0;font:700 8px/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.08em}
+.diff-hunk-code{min-width:0;overflow:hidden;color:#aabac8;font:inherit;text-overflow:ellipsis;white-space:nowrap}
 .diff-line-numbers{display:inline-grid;grid-template-columns:4ch 4ch;gap:5px;margin-right:7px;color:#758392;font-size:.84em;line-height:inherit;user-select:none}
 .diff-line-numbers>span{text-align:right}
 .diff-line-selected{box-shadow:inset 2px 0 #8bbbd7}
@@ -751,23 +754,26 @@ body,.workspace{background:var(--page)}
 .inline-diff-chat-unavailable{margin:9px 0 0;padding:7px 8px;border:1px solid #3d4248;border-radius:4px;background:#1b1e22;color:#b8b3a8;font-size:9px}
 .inline-diff-chat-composer{margin-top:10px;padding:7px 8px 6px;border:1px solid #3d4a57;border-radius:5px;background:#10151b}
 .inline-diff-chat-composer:focus-within{border-color:#789ab2;box-shadow:0 0 0 2px #789ab222}
-.inline-diff-chat-settings{display:grid;grid-template-columns:minmax(0,1fr) 132px;gap:8px;margin:0 0 8px}
-.inline-diff-chat-settings>label{display:flex;min-width:0;flex-direction:column;gap:3px;color:#8797a5;font-size:8px}
-.inline-diff-chat-settings input,.inline-diff-chat-select{width:100%;height:26px;min-width:0;display:flex;align-items:center;gap:4px;padding:0 7px;border:1px solid #35414d;border-radius:4px;background:#171d25;color:#d0d9e2;font:9px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-.inline-diff-chat-settings input{outline:none}
-.inline-diff-chat-settings input::placeholder{color:#7f8c99}
-.inline-diff-chat-select select{width:100%;min-width:0;border:0;outline:0;background:transparent;color:inherit;font:inherit;appearance:none;cursor:pointer}
-.inline-diff-chat-select svg{flex:0 0 auto;color:#8897a6;pointer-events:none}
-.inline-diff-chat-settings input:focus,.inline-diff-chat-select:focus-within{border-color:#82b7d6;outline:2px solid #82b7d655;outline-offset:1px}
+.inline-diff-chat-settings{display:flex;flex:0 0 auto;align-items:center;gap:5px;margin-left:auto}
+.inline-diff-chat-settings>label{display:block;min-width:0}
+.inline-diff-chat-model-control{width:130px}.inline-diff-chat-effort-control{width:78px}
+.inline-diff-chat-visually-hidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.inline-diff-chat-select{width:100%;height:23px;min-width:0;display:flex;align-items:center;gap:3px;padding:0 5px;border:1px solid #35414d;border-radius:4px;background:#171d25;color:#d0d9e2;font:9px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.inline-diff-chat-custom-model{width:100%;height:23px;min-width:0;padding:0 5px;border:1px solid #35414d;border-radius:4px;background:#171d25;color:#d0d9e2;font:9px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.inline-diff-chat-custom-model::placeholder{color:#7f8c99}
+.inline-diff-chat-select select{width:100%;min-width:0;border:0;outline:0;background:transparent;color:inherit;font:inherit;appearance:none;cursor:pointer;text-overflow:ellipsis}
+.inline-diff-chat-select svg{width:10px;height:10px;flex:0 0 auto;color:#8897a6;pointer-events:none}
+.inline-diff-chat-select:focus-within,.inline-diff-chat-custom-model:focus{border-color:#82b7d6;outline:2px solid #82b7d655;outline-offset:1px}
 .inline-diff-chat-settings option{background:#171c23;color:#e5e8ee}
 .inline-diff-chat-composer textarea{display:block;width:100%;min-height:39px;resize:vertical;border:0;outline:0;background:transparent;color:#e2e8ef;font:10px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .inline-diff-chat-composer textarea::placeholder{color:#82909e}.inline-diff-chat-composer textarea:disabled{opacity:.62}
-.inline-diff-chat-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:6px;border-top:1px solid #29333e;color:#8493a1;font-size:8.5px}
-.inline-diff-chat-footer>span{min-width:0;overflow-wrap:anywhere}
+.inline-diff-chat-footer{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px;padding-top:6px;border-top:1px solid #29333e;color:#8493a1;font-size:8.5px}
+.inline-diff-chat-footer>span{flex:1 1 0;min-width:0;overflow-wrap:anywhere}
+.inline-diff-chat-footer>.inline-diff-chat-status-error{order:3;flex-basis:100%;color:#e1b679}
 .inline-diff-chat-footer button{display:inline-flex;align-items:center;gap:4px;min-height:25px;padding:0 8px;border:1px solid #789bb4;border-radius:4px;background:#8bbbd7;color:#111b22;font-size:9px;font-weight:650;cursor:pointer}
 .inline-diff-chat-footer button:hover:not(:disabled){background:#b0d4e7}
 .inline-diff-chat-footer button:disabled{opacity:.46;cursor:not-allowed}
 .inline-diff-chat-hint{margin:7px 0 0;color:#7f8f9c;font-size:8px}
 .review-answer-source{padding:3px 6px;border:1px solid #394856;border-radius:4px;color:#b4d1e2;font:9px ui-monospace,SFMono-Regular,Consolas,monospace}
-@media(max-width:580px){.inline-diff-chat{margin:7px 5px 9px 7px;padding:10px 9px}.diff-ask-line{opacity:1;width:23px;height:22px}.diff-code .diff-line{padding-right:32px}.diff-line-numbers{grid-template-columns:3ch 3ch;gap:3px;margin-right:5px}}
+@media(max-width:580px){.inline-diff-chat{margin:7px 5px 9px 7px;padding:10px 9px}.inline-diff-chat-settings{gap:4px}.inline-diff-chat-model-control{width:108px}.inline-diff-chat-effort-control{width:68px}.diff-ask-line{opacity:1;width:23px;height:22px}.diff-code .diff-line{padding-right:32px}.diff-line-numbers{grid-template-columns:3ch 3ch;gap:3px;margin-right:5px}}
 @media(prefers-reduced-motion:reduce){.diff-ask-line{transition:none}}

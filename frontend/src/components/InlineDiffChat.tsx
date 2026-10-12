@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { ArrowUp, ChevronDown, LoaderCircle, MessageSquareText, Sparkles, X } from 'lucide-react'
 import type { DiffLineAnchor, Harnesses, Job, QuestionAnswer, ReviewAssistantSettings } from '../types'
 import { InlineMarkdown } from './InlineMarkdown'
@@ -46,9 +46,9 @@ export function InlineDiffChat({ reportId, anchor, assistant, harnesses, onAssis
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState('')
   const [error, setError] = useState('')
+  const [editingCustomModel, setEditingCustomModel] = useState(false)
   const reportIdRef = useRef(reportId)
   reportIdRef.current = reportId
-  const modelListId = `inline-models-${useId()}`
   const providerInfo = harnesses?.[assistant.harness]
   const installed = !!providerInfo?.installed
   const modelOptions = assistant.harness === 'codex'
@@ -123,16 +123,22 @@ export function InlineDiffChat({ reportId, anchor, assistant, harnesses, onAssis
 
     {!installed && <p className="inline-diff-chat-unavailable">{harnesses ? `${providerLabel(assistant.harness)} is not installed. Choose an available assistant in Ask this PR.` : 'Checking available assistants…'}</p>}
     <form className="inline-diff-chat-composer" onSubmit={event => { event.preventDefault(); void ask() }}>
-      <div className="inline-diff-chat-settings" aria-label="Inline chat model and reasoning effort">
-        <label><span>Model</span><input aria-label="Inline chat model" list={modelListId} value={assistant.model === 'default' ? '' : assistant.model} placeholder="CLI default" onChange={event => onAssistantChange({ ...assistant, model: event.target.value.trim() || 'default' })}/>
-          <datalist id={modelListId}>{modelOptions.filter(item => item.id !== 'default').map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</datalist>
-        </label>
-        <label><span>Effort</span><span className="inline-diff-chat-select"><select aria-label="Inline chat reasoning effort" value={assistant.effort} onChange={event => onAssistantChange({ ...assistant, effort: event.target.value })}>
-          <option value="default">Default</option>{efforts.map(item => <option key={item} value={item}>{item.charAt(0).toUpperCase() + item.slice(1)}</option>)}
-        </select><ChevronDown size={12}/></span></label>
-      </div>
       <textarea aria-label="Question about selected diff lines" rows={2} maxLength={2000} value={question} disabled={!installed || busy} onChange={event => setQuestion(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); void ask() } }} placeholder="What should I know about this change?"/>
-      <div className="inline-diff-chat-footer"><span>{error || `${providerLabel(assistant.harness)} CLI`}</span><button type="submit" disabled={!installed || busy || !question.trim()}>{busy ? <LoaderCircle size={13} className="spinning"/> : <ArrowUp size={13}/>}<span>{busy ? 'Thinking' : 'Ask'}</span></button></div>
+      <div className="inline-diff-chat-footer">
+        <span className={error ? 'inline-diff-chat-status-error' : undefined} role={error ? 'alert' : undefined}>{error || `${providerLabel(assistant.harness)} CLI`}</span>
+        <div className="inline-diff-chat-settings" aria-label="Inline chat model and reasoning effort">
+          <label className="inline-diff-chat-model-control" title="Model"><span className="inline-diff-chat-visually-hidden">Model</span>{editingCustomModel
+            ? <input className="inline-diff-chat-custom-model" aria-label="Custom inline chat model ID" autoFocus value={assistant.model === 'default' ? '' : assistant.model} placeholder="Enter model ID" onChange={event => onAssistantChange({ ...assistant, model: event.target.value.trim() || 'default' })} onBlur={() => setEditingCustomModel(false)} onKeyDown={event => { if (event.key === 'Enter' || event.key === 'Escape') { event.preventDefault(); setEditingCustomModel(false) } }}/>
+            : <span className="inline-diff-chat-select"><select aria-label="Inline chat model" value={assistant.model} onChange={event => { if (event.target.value === '__custom_model__') setEditingCustomModel(true); else onAssistantChange({ ...assistant, model: event.target.value }) }}>
+              <option value="default">CLI default</option>{!modelOptions.some(item => item.id === assistant.model) && assistant.model !== 'default' && <option value={assistant.model}>{assistant.model}</option>}{modelOptions.filter(item => item.id !== 'default').map(item => <option key={item.id} value={item.id}>{item.label}</option>)}<option value="__custom_model__">Custom model ID…</option>
+            </select><ChevronDown size={12}/></span>}
+          </label>
+          <label className="inline-diff-chat-effort-control" title="Reasoning effort"><span className="inline-diff-chat-visually-hidden">Effort</span><span className="inline-diff-chat-select"><select aria-label="Inline chat reasoning effort" value={assistant.effort} onChange={event => onAssistantChange({ ...assistant, effort: event.target.value })}>
+            <option value="default">Default</option>{efforts.map(item => <option key={item} value={item}>{item.charAt(0).toUpperCase() + item.slice(1)}</option>)}
+          </select><ChevronDown size={12}/></span></label>
+        </div>
+        <button type="submit" disabled={!installed || busy || !question.trim()}>{busy ? <LoaderCircle size={13} className="spinning"/> : <ArrowUp size={13}/>}<span>{busy ? 'Thinking' : 'Ask'}</span></button>
+      </div>
     </form>
     <p className="inline-diff-chat-hint">This question stays focused on the selected diff lines.</p>
   </section>

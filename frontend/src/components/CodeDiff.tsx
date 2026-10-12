@@ -196,11 +196,14 @@ export function CodeDiff({ patch, path, lineReferences, inlineQuestion }: CodeDi
           const selected = chatSlots.some(slot => index >= Math.min(slot.start, slot.end) && index <= Math.max(slot.start, slot.end))
           const threadsHere = chatSlots.filter(slot => Math.max(slot.start, slot.end) === index)
           const side = row.kind === 'added' ? 'added' : row.kind === 'removed' ? 'removed' : 'context'
+          const isHunkHeader = row.kind === 'meta' && row.code.startsWith('@@')
           return <div className="diff-row-wrap" key={index}>
-            <div className={`diff-line diff-${row.kind}${selected ? ' diff-line-selected' : ''}`}>
-              <span className="diff-line-numbers" aria-hidden="true"><span>{row.oldLine ?? ''}</span><span>{row.newLine ?? ''}</span></span>
-              {row.prefix !== undefined && <span className="diff-prefix" aria-hidden="true">{row.prefix}</span>}
-              <span className="diff-source"><HighlightedCode code={row.code} language={readyLanguage} /></span>
+            <div className={`diff-line diff-${row.kind}${isHunkHeader ? ' diff-hunk-header' : ''}${selected ? ' diff-line-selected' : ''}`}>
+              {isHunkHeader ? <><span className="diff-hunk-label" aria-hidden="true">HUNK</span><code className="diff-hunk-code">{row.code}</code></> : <>
+                <span className="diff-line-numbers" aria-hidden="true"><span>{row.oldLine ?? ''}</span><span>{row.newLine ?? ''}</span></span>
+                {row.prefix !== undefined && <span className="diff-prefix" aria-hidden="true">{row.prefix}</span>}
+                <span className="diff-source"><HighlightedCode code={row.code} language={readyLanguage} /></span>
+              </>}
               {inlineQuestion && row.kind !== 'meta' && (row.oldLine !== undefined || row.newLine !== undefined) && <button className="diff-ask-line" type="button" aria-label={`Ask about ${side} line ${row.newLine ?? row.oldLine}`} title="Ask about this diff line · Shift-click another line to include a range" onClick={event => selectLine(index, event)}><MessageSquareText size={13}/></button>}
             </div>
             {inlineQuestion && threadsHere.map(slot => <InlineDiffChat key={slot.id} reportId={inlineQuestion.reportId} anchor={anchorFor(slot)} assistant={inlineQuestion.assistant} harnesses={inlineQuestion.harnesses} onAssistantChange={inlineQuestion.onAssistantChange} onConversationStarted={() => setChatSlots(current => current.map(item => item.id === slot.id ? { ...item, locked: true } : item))} onClose={() => closeSlot(slot.id)}/>)}
