@@ -1,10 +1,11 @@
 import {ArrowRight} from 'lucide-react'
-import {inferComponentRole} from '../graphOrganization'
+import {inferComponentGroups} from '../graphOrganization'
 import type {GraphNode,ReviewStep} from '../types'
 
 interface Props {
  steps:ReviewStep[]
  changedNodes:GraphNode[]
+ organizationNodes:GraphNode[]
  selectedPath:string|null
  onSelect:(path:string)=>void
 }
@@ -14,24 +15,24 @@ function shortPath(path:string){
  return parts.length>2?parts.slice(-2).join('/'):path
 }
 
-function fileArea(path:string,nodes:GraphNode[]){
- if(/(?:^|\/)(?:api|route|routes|schema|schemas|type|types|contract|contracts|dto|request|response)(?:\/|\.|$)/i.test(path))return 'API contract'
+function fileArea(nodes:GraphNode[],groups:Map<string,string>){
  const counts=new Map<string,number>()
  for(const node of nodes){
-  const role=inferComponentRole(node)
+  const role=groups.get(node.id)||'Other'
   if(role!=='Other')counts.set(role,(counts.get(role)||0)+1)
  }
  return [...counts].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0]?.[0]||''
 }
 
-export function ReviewPathRail({steps,changedNodes,selectedPath,onSelect}:Props){
+export function ReviewPathRail({steps,changedNodes,organizationNodes,selectedPath,onSelect}:Props){
  if(!steps.length)return null
+ const groups=inferComponentGroups(organizationNodes)
  return <section className="review-path" aria-label="Suggested file review order">
   <div className="review-path-heading"><strong>Suggested review order</strong><span>{steps.length} files · AI suggestion · scroll to follow</span></div>
   <div className="review-path-track">
    {steps.map((step,index)=>{
     const nodes=changedNodes.filter(node=>node.path===step.path&&node.status!=='context')
-    const area=fileArea(step.path,nodes)
+    const area=fileArea(nodes,groups)
     return <div className="review-path-item" key={step.path}>
      <button className={'review-path-step'+(selectedPath===step.path?' active':'')} aria-pressed={selectedPath===step.path} aria-label={`Review step ${index+1}: ${step.path}. ${step.reason}`} title={`${step.path}\n${step.reason}`} onClick={()=>onSelect(step.path)}>
       <span className="review-path-number">{String(index+1).padStart(2,'0')}</span>

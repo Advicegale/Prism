@@ -2,12 +2,14 @@
 
 ## Unreleased
 
+- Added a map group filter listing every inferred group with per-group visibility toggles and show-all/hide-all controls; hidden groups and their edges are removed in network, tree, and inferred-group layouts. Inferred-layout headings now include only groups and nodes present in the filtered map.
+- Classified nodes from test/spec paths and filenames as Tests before applying component-name suffixes, preventing test suites named after services from appearing in the Service group.
 - Added a topic-first change map: begin with a compact overview, open a topic to inspect its source graph, and retain an all-symbols view. Graph-only reports group by file area; AI synthesis may suggest semantic topic names and membership using validated existing group IDs.
 - Added a numbered suggested file-review path to the map. Selecting a step highlights that file's changed symbols and linked context; the route remains explicitly separate from extracted graph relationships.
 - Filtered unchanged map context to omit structural containment edges, which often surfaced unrelated declarations from the same file.
 - Added a persistent map toggle to hide unchanged context nodes while keeping changed nodes and their connected relationships visible.
 - Disambiguated repeated change-group labels with affected file names, including for previously cached reports.
-- Added change-map organization modes: relationship network, changed-symbol-rooted tree, and component-role groups inferred from symbol and file names.
+- Added change-map organization modes: relationship network, changed-symbol-rooted tree, and graph-specific groups learned from recurring type-name patterns, with source-folder fallback.
 - Added language-aware syntax highlighting to selected-symbol file diffs and detailed-review source excerpts, while preserving the added and removed line styling.
 - Added source-range-matched diff hunks to each changed-symbol prompt and concise, visible diff summaries to detailed change cards.
 - Added symbol-scoped, syntax-highlighted PR diff excerpts with actual added (`+`) and removed (`-`) source lines to detailed change cards; the diff and implementation now share one source panel.

@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import cytoscape, { type Core } from 'cytoscape'
 import { Maximize2, ZoomIn, ZoomOut } from 'lucide-react'
 import type { GraphData, GraphLayout } from '../types'
-import { inferComponentRole } from '../graphOrganization'
+import { inferComponentGroups } from '../graphOrganization'
 
-interface Props { graph:GraphData; selected:string|null; onSelect:(id:string)=>void; layoutMode:GraphLayout; focusPath?:string|null }
+interface Props { graph:GraphData; organizationNodes?:GraphData['nodes']; selected:string|null; onSelect:(id:string)=>void; layoutMode:GraphLayout; focusPath?:string|null }
 
 function treeRoots(graph:GraphData):string[]{
  const byId=new Map(graph.nodes.map(node=>[node.id,node]))
@@ -33,11 +33,9 @@ function treeRoots(graph:GraphData):string[]{
 function componentPositions(graph:GraphData,nodeRoles:Map<string,string>,width:number):Map<string,{x:number;y:number}>{
  const groups=new Map<string,GraphData['nodes']>()
  for(const node of graph.nodes){const role=nodeRoles.get(node.id)||'Other';groups.set(role,[...(groups.get(role)||[]),node])}
- const preferred=['Controller','Service','Repository','Handler','Provider','Factory','Manager','Client','Adapter','Middleware','Validator','Serializer','Mapper','Store','Cache','Gateway','Strategy','Command','Query','Event','Listener','Consumer','Producer','Decorator','Builder','Coordinator','Resolver','Component','ViewModel','Entity','Model','Request','Response','Config','Settings','Data','Inventory','Utility','Helper','Extension','Enum','Flags','Other']
  const roles=[...groups.keys()].sort((a,b)=>{
   const count=(groups.get(b)?.length||0)-(groups.get(a)?.length||0)
-  const ai=preferred.indexOf(a),bi=preferred.indexOf(b)
-  return count||((ai<0?preferred.length:ai)-(bi<0?preferred.length:bi))||a.localeCompare(b)
+  return count||a.localeCompare(b)
  })
  const columns=Math.min(3,Math.max(1,Math.ceil(Math.sqrt(roles.length))))
  const margin=24
@@ -58,7 +56,7 @@ function componentPositions(graph:GraphData,nodeRoles:Map<string,string>,width:n
  return positions
 }
 
-export function GraphCanvas({graph,selected,onSelect,layoutMode,focusPath}:Props){
+export function GraphCanvas({graph,organizationNodes,selected,onSelect,layoutMode,focusPath}:Props){
  const container=useRef<HTMLDivElement|null>(null)
  const graphRef=useRef<Core|null>(null)
  const [zoomPercent,setZoomPercent]=useState(100)
@@ -66,9 +64,9 @@ export function GraphCanvas({graph,selected,onSelect,layoutMode,focusPath}:Props
  selectRef.current=onSelect
  useEffect(()=>{
   if(!container.current)return
-  const nodeRoles=new Map(graph.nodes.map(n=>[n.id,inferComponentRole(n)]))
+  const nodeRoles=inferComponentGroups(organizationNodes||graph.nodes)
   const roleCounts=new Map<string,number>()
-  if(layoutMode==='roles')for(const role of nodeRoles.values())roleCounts.set(role,(roleCounts.get(role)||0)+1)
+  if(layoutMode==='roles')for(const node of graph.nodes){const role=nodeRoles.get(node.id)||'Other';roleCounts.set(role,(roleCounts.get(role)||0)+1)}
   const roleParents=layoutMode==='roles'?[...roleCounts].map(([role,count])=>({data:{id:`component-${role.toLowerCase().replace(/[^a-z0-9]+/g,'-')}`,label:`${role} · ${count}`},classes:'role-group'})):[]
   const rolesPositions=layoutMode==='roles'?componentPositions(graph,nodeRoles,container.current.clientWidth||640):new Map<string,{x:number;y:number}>()
   const nodes=graph.nodes.map(n=>({data:{id:n.id,label:n.label,kind:n.kind,path:n.path,status:n.status,...(layoutMode==='roles'?{parent:`component-${nodeRoles.get(n.id)?.toLowerCase().replace(/[^a-z0-9]+/g,'-')}`}:{})},...(layoutMode==='roles'?{position:rolesPositions.get(n.id)}:{})}))
@@ -110,7 +108,7 @@ export function GraphCanvas({graph,selected,onSelect,layoutMode,focusPath}:Props
   const resize=new ResizeObserver(()=>cy.resize())
   resize.observe(container.current)
   return()=>{resize.disconnect();cy.destroy();graphRef.current=null}
- },[graph,layoutMode])
+ },[graph,organizationNodes,layoutMode])
  useEffect(()=>{
   const cy=graphRef.current
   if(!cy)return
