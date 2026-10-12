@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Rebalanced the dark palette around neutral graphite and slate surfaces with a restrained blue interaction accent; green and red remain reserved for change meaning and status.
+- Refined the report workspace around PR context, compact review facts, a full-width topic index, and the focused change map; the full analyzer now opens on demand while reviewing. The home screen includes a short list of recent reports.
 - Reworked detailed review into a topic rail and focused patch-reading column; moved file order into one expandable list and removed repeated legacy explanation prompts from cached reports.
 - Asked full-PR synthesis for specific reviewer-facing topics ordered along the suggested file route, with an optional short focus on shared behavior or a concrete review question. Validated and cached the focus alongside the exact group-ID partition; the detailed review shows it once per topic.
 - Organized the detailed review under validated AI-suggested topics, combining their structural groups into one review section and keeping symbols in recommended file order; individual symbols still navigate to their source graph group.
