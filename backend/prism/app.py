@@ -6,6 +6,7 @@ import hashlib
 import json
 from pathlib import Path
 import os
+import re
 import threading
 import uuid
 from typing import Literal
@@ -13,9 +14,10 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from . import settings
-from .gitops import RepoError, parse_pr_url, pr_metadata, prepare_worktrees, diff_files
+from .gitops import (RepoError, parse_pr_url, pr_metadata, prepare_worktrees, diff_files,
+                     github_viewed_file_states, set_github_file_viewed)
 from .graph import snapshot, identify_changes, segment
-from .harness import available_harnesses, explain
+from .harness import available_harnesses, explain, answer_question
 from .evidence import collect_evidence
 from .topics import build_topics
 
@@ -34,6 +36,100 @@ class ExplainRequest(BaseModel):
     harness: Literal["claude","codex"]
     model: str = Field(default="default", max_length=120)
     effort: str = Field(default="default", max_length=32)
+
+class ViewedFileRequest(BaseModel):
+    path: str = Field(min_length=1, max_length=1000)
+    viewed: bool
+
+class QuestionTurn(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+    answer: str = Field(min_length=1, max_length=6000)
+
+class DiffLineAnchor(BaseModel):
+    path: str = Field(min_length=1, max_length=1000)
+    old_lines: list[int] = Field(default_factory=list, max_length=30)
+    new_lines: list[int] = Field(default_factory=list, max_length=30)
+
+class QuestionRequest(BaseModel):
+    harness: Literal["claude","codex"]
+    model: str = Field(default="default", max_length=120)
+    effort: str = Field(default="default", max_length=32)
+    question: str = Field(min_length=1, max_length=2000)
+    history: list[QuestionTurn] = Field(default_factory=list, max_length=6)
+    anchor: DiffLineAnchor | None = None
+
+
+_QUESTION_HUNK_HEADER = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
+
+
+def _verified_diff_anchor(report: dict, anchor: DiffLineAnchor) -> dict:
+    """Rebuild a reviewer-selected diff excerpt from the cached PR patch."""
+    old_lines, new_lines = set(anchor.old_lines), set(anchor.new_lines)
+    if not old_lines and not new_lines:
+        raise HTTPException(422, "Select at least one changed-file diff line.")
+    if any(line < 1 for line in old_lines | new_lines):
+        raise HTTPException(422, "Diff line numbers must be positive.")
+    if len(old_lines) != len(anchor.old_lines) or len(new_lines) != len(anchor.new_lines):
+        raise HTTPException(422, "A diff line can only be selected once.")
+    if len(old_lines | new_lines) > 30:
+        raise HTTPException(422, "Select no more than 30 diff lines at a time.")
+
+    file = next((item for item in report.get("files", [])
+                 if anchor.path in {item.get("path"), item.get("old_path")}), None)
+    if not file:
+        raise HTTPException(400, "Choose lines from a file changed by this pull request.")
+
+    rows: list[dict] = []
+    old_line = new_line = None
+    for raw in (file.get("patch") or "").splitlines():
+        header = _QUESTION_HUNK_HEADER.match(raw)
+        if header:
+            old_line = int(header.group(1))
+            new_line = int(header.group(3))
+            continue
+        if old_line is None or new_line is None or raw.startswith("\\"):
+            continue
+        prefix = raw[:1]
+        if prefix == "+":
+            rows.append({"old": None, "new": new_line, "prefix": "+", "code": raw[1:]})
+            new_line += 1
+        elif prefix == "-":
+            rows.append({"old": old_line, "new": None, "prefix": "-", "code": raw[1:]})
+            old_line += 1
+        elif prefix == " ":
+            rows.append({"old": old_line, "new": new_line, "prefix": " ", "code": raw[1:]})
+            old_line += 1
+            new_line += 1
+
+    available_old = {row["old"] for row in rows if row["old"] is not None}
+    available_new = {row["new"] for row in rows if row["new"] is not None}
+    if not old_lines.issubset(available_old) or not new_lines.issubset(available_new):
+        raise HTTPException(422, "Those lines are not present in the stored PR diff. Select visible diff lines.")
+
+    selected = [row for row in rows if row["old"] in old_lines or row["new"] in new_lines]
+    if not selected:
+        raise HTTPException(422, "No PR diff lines matched that selection.")
+    excerpt = []
+    for row in selected:
+        if row["prefix"] == "+":
+            location = f"new line {row['new']}"
+        elif row["prefix"] == "-":
+            location = f"old line {row['old']}"
+        else:
+            location = f"old line {row['old']}, new line {row['new']}"
+        excerpt.append(f"{row['prefix']} [{location}] {row['code']}")
+
+    path = file.get("path") or file.get("old_path") or anchor.path
+    lines = sorted(new_lines or old_lines)
+    return {
+        "path": path,
+        "old_lines": sorted(old_lines),
+        "new_lines": sorted(new_lines),
+        "line": lines[0],
+        "end_line": lines[-1],
+        "label": "Selected diff lines",
+        "diff": "\n".join(excerpt)[:9000],
+    }
 
 
 def _reports_dir() -> Path:
@@ -104,7 +200,7 @@ def save_report(report: dict):
 
 def _job(kind: str, callback):
     job_id=uuid.uuid4().hex
-    with lock: jobs[job_id]={"id":job_id,"kind":kind,"state":"queued","message":"Queued","report_id":None,"error":None}
+    with lock: jobs[job_id]={"id":job_id,"kind":kind,"state":"queued","message":"Queued","report_id":None,"result":None,"error":None}
     def update(message):
         with lock:
             jobs[job_id]["state"]="running"
@@ -112,8 +208,11 @@ def _job(kind: str, callback):
     def work():
         try:
             update("Starting")
-            rid=callback(update)
-            with lock:jobs[job_id].update(state="completed",message="Ready",report_id=rid)
+            result=callback(update)
+            with lock:
+                jobs[job_id].update(state="completed",message="Ready",
+                                    report_id=result if isinstance(result,str) else None,
+                                    result=None if isinstance(result,str) else result)
         except Exception as e:
             with lock:jobs[job_id].update(state="failed",message="Analysis failed",error=str(e)[:1100])
     executor.submit(work)
@@ -203,6 +302,43 @@ def reports():
 
 @app.get("/api/reports/{report_id}")
 def report(report_id:str):return ensure_topics(ensure_evidence(read_report(report_id)))
+
+@app.get("/api/reports/{report_id}/viewed-files")
+def viewed_files(report_id:str):
+    data=read_report(report_id)
+    meta=data.get("meta", {})
+    try:
+        states=github_viewed_file_states(meta["owner"],meta["repo"],int(meta["number"]))
+        changed_paths={file.get("path") or file.get("old_path", "") for file in data.get("files", [])}
+        return {"available":True,"states":{path:state for path,state in states.items() if path in changed_paths}}
+    except (KeyError,TypeError,ValueError,RepoError) as exc:
+        return {"available":False,"states":{},"reason":str(exc)[:500]}
+
+@app.post("/api/reports/{report_id}/viewed-files")
+def update_viewed_file(report_id:str, request:ViewedFileRequest):
+    data=read_report(report_id)
+    meta=data.get("meta", {})
+    valid_paths={path for file in data.get("files", [])
+                 for path in (file.get("path"),file.get("old_path")) if path}
+    if request.path not in valid_paths:
+        raise HTTPException(400,"Choose a file changed by this pull request.")
+    try:
+        set_github_file_viewed(meta["owner"],meta["repo"],int(meta["number"]),request.path,request.viewed)
+    except (KeyError,TypeError,ValueError,RepoError) as exc:
+        raise HTTPException(400,str(exc)) from exc
+    return {"available":True,"path":request.path,"state":"VIEWED" if request.viewed else "UNVIEWED"}
+
+@app.post("/api/reports/{report_id}/questions",status_code=202)
+def ask_question(report_id:str, request:QuestionRequest):
+    question=request.question.strip()
+    if not question:
+        raise HTTPException(422,"Enter a question about this pull request.")
+    history=[turn.model_dump() for turn in request.history]
+    anchor = _verified_diff_anchor(read_report(report_id), request.anchor) if request.anchor else None
+    def work(progress):
+        data=ensure_topics(ensure_evidence(read_report(report_id)))
+        return answer_question(data,request.harness,request.model,request.effort,question,history,progress,anchor)
+    return _job("question",work)
 
 @app.post("/api/reports/{report_id}/explain",status_code=202)
 def explain_report(report_id:str, request:ExplainRequest):

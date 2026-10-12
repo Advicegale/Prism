@@ -150,3 +150,81 @@ def diff_files(repo: Path, base_sha: str, head_sha: str) -> list[dict]:
             if len(current["patch"]) < 16000:
                 current["patch"] += line + "\n"
     return [r for r in results if r["path"] or r["old_path"]]
+
+
+def _github_graphql(query: str, variables: dict) -> dict:
+    """Call GitHub GraphQL through the user's authenticated GitHub CLI."""
+    if not shutil.which("gh"):
+        raise RepoError("GitHub CLI (`gh`) is not installed. Install it to sync viewed-file status.")
+    payload = json.dumps({"query": query, "variables": variables})
+    try:
+        response = command(["gh", "api", "graphql", "--hostname", "github.com", "--input", "-"],
+                           input=payload, timeout=30)
+    except RepoError as exc:
+        detail = str(exc)
+        if "not logged in" in detail.lower() or "authentication" in detail.lower():
+            detail = "Sign in to GitHub CLI with `gh auth login`, then retry."
+        raise RepoError(f"GitHub CLI could not update review status: {detail}") from exc
+    try:
+        result = json.loads(response)
+    except ValueError as exc:
+        raise RepoError("GitHub CLI returned an invalid GraphQL response.") from exc
+    errors = result.get("errors") or []
+    if errors:
+        message = "; ".join(str(error.get("message") or "GraphQL request failed") for error in errors[:3])
+        raise RepoError(f"GitHub GraphQL request failed: {message[:700]}")
+    data = result.get("data")
+    if not isinstance(data, dict):
+        raise RepoError("GitHub GraphQL response did not contain pull request data.")
+    return data
+
+
+def github_viewed_file_states(owner: str, repo: str, number: int) -> dict[str, str]:
+    """Return current-user viewed state for every changed file in a pull request."""
+    query = """query($owner:String!, $repo:String!, $number:Int!, $after:String) {
+      repository(owner:$owner, name:$repo) {
+        pullRequest(number:$number) {
+          files(first:100, after:$after) {
+            nodes { path viewerViewedState }
+            pageInfo { hasNextPage endCursor }
+          }
+        }
+      }
+    }"""
+    states: dict[str, str] = {}
+    after = None
+    while True:
+        data = _github_graphql(query, {"owner": owner, "repo": repo, "number": number, "after": after})
+        pull_request = (data.get("repository") or {}).get("pullRequest")
+        if not pull_request:
+            raise RepoError("GitHub did not return this pull request. Check the URL and your `gh` account access.")
+        connection = pull_request.get("files") or {}
+        for item in connection.get("nodes") or []:
+            path, state = item.get("path"), item.get("viewerViewedState")
+            if isinstance(path, str) and state in {"VIEWED", "UNVIEWED", "DISMISSED"}:
+                states[path] = state
+        page_info = connection.get("pageInfo") or {}
+        if not page_info.get("hasNextPage"):
+            return states
+        after = page_info.get("endCursor")
+        if not after:
+            raise RepoError("GitHub omitted the cursor while listing changed files.")
+
+
+def set_github_file_viewed(owner: str, repo: str, number: int, path: str, viewed: bool) -> None:
+    """Mark or unmark one changed file for the authenticated GitHub viewer."""
+    pr_query = """query($owner:String!, $repo:String!, $number:Int!) {
+      repository(owner:$owner, name:$repo) {
+        pullRequest(number:$number) { id }
+      }
+    }"""
+    data = _github_graphql(pr_query, {"owner": owner, "repo": repo, "number": number})
+    pull_request = (data.get("repository") or {}).get("pullRequest")
+    pull_request_id = pull_request.get("id") if pull_request else None
+    if not pull_request_id:
+        raise RepoError("GitHub did not return this pull request. Check the URL and your `gh` account access.")
+    mutation_name = "markFileAsViewed" if viewed else "unmarkFileAsViewed"
+    mutation = f"""mutation($input:{'MarkFileAsViewedInput' if viewed else 'UnmarkFileAsViewedInput'}!) {{
+      {mutation_name}(input:$input) {{ clientMutationId }}
+    }}"""
+    _github_graphql(mutation, {"input": {"pullRequestId": pull_request_id, "path": path}})

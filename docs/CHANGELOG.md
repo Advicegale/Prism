@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added GitHub viewed-file controls backed by the authenticated GitHub CLI; file state can be refreshed and hidden consistently from the topic overview, graph, suggested route, and code walkthrough.
+- Added in-report PR questions for Codex and Claude Code, with selectable model/reasoning effort, bounded report-grounded context, follow-up questions, and validated source citations that navigate to changed symbols.
+- Added GitHub-style inline chats to changed-code excerpts: ask about a selected diff line, Shift-click within the same hunk to include a range, and continue a focused thread. Each inline composer exposes model and effort pickers synchronized with the PR chat. Anchors are checked against Prism's cached patch before being sent to the CLI.
 - Rebalanced the dark palette around neutral graphite and slate surfaces with a restrained blue interaction accent; green and red remain reserved for change meaning and status.
 - Refined the report workspace around PR context, compact review facts, a full-width topic index, and the focused change map; the full analyzer now opens on demand while reviewing. The home screen includes a short list of recent reports.
 - Reworked detailed review into a topic rail and focused patch-reading column; moved file order into one expandable list and removed repeated legacy explanation prompts from cached reports.

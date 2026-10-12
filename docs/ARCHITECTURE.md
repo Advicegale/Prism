@@ -48,6 +48,12 @@ Topics reduce overview density without changing structural groups. Graph-only re
 
 The detailed walkthrough uses the same validated topic partition and topic order as the change map. Topics follow the earliest file they contain in the validated PR-wide review route, with their previous order retained for ties; member-group symbols follow that file order as well. Each symbol keeps its original group for graph navigation. The optional topic focus appears once in this walkthrough. Reports without a valid AI topic partition use the deterministic path-based topics.
 
+GitHub viewed-file state is fetched on demand through `gh api graphql` for the authenticated viewer. Prism does not persist it in cached reports; refreshing reads the current `viewerViewedState` for changed paths. Mark/unmark actions use GitHub's file-view mutations and are restricted to paths present in that report. The shared UI filter removes viewed files from the map, review route, and detailed walkthrough.
+
+The in-report question endpoint runs as an asynchronous job, independently of graph analysis and report generation. It supplies bounded PR metadata, report summaries, and up to 18 relevance-ranked changed-symbol contexts containing verified source excerpts and symbol-matched diff hunks. The provider returns a separate structured answer with source IDs; Prism discards citations that were not in that exact prompt. General-question citations link to the corresponding changed symbol in the report. Conversation follow-ups reuse a bounded recent history, but earlier model answers are treated as fallible context, not proof.
+
+Inline questions use the same endpoint and answer schema with an optional line anchor. The detailed diff reader preserves old/new line coordinates even when it displays a symbol-filtered patch excerpt. The server resolves the requested path and old/new line numbers against the report's cached unified patch, reconstructs the selected +/- rows, and rejects references outside the stored diff; client-supplied source text is never trusted. The anchored diff is the first source in the prompt and the model is instructed to answer about it directly. Inline chats expose model and effort controls backed by the same assistant settings as the general PR chat, while keeping their own bounded follow-up history.
+
 ## Cache details
 
 `~/.local/share/prism-pr-review/repos/<hash>/origin` is a normal Git clone, with detached worktrees under `worktrees/<sha>`. Graphs are cached as `graphs/graph-v2-<sha>-<graphify-version>.json`, containing the normalized Graphify extraction. Reports are separate, keyed by repository/PR/merge-base/head SHAs. AI runs can re-use persisted reports. Older reports are opportunistically enriched with source evidence from their retained worktrees; no graph rebuild is required.
@@ -59,6 +65,8 @@ Scanning doesn't execute repository scripts, tests, post-checkout hooks or depen
 - **Codex:** `codex exec --sandbox read-only --skip-git-repo-check --output-schema ... --output-last-message ... -` with `--model` and `-c model_reasoning_effort=...` when explicitly set.
 - **Claude Code:** `claude -p --output-format json --json-schema ... --permission-mode plan --tools "" --disallowedTools "mcp__*"` with model/effort flags when explicitly set.
 - **Working directory:** temporary empty directory, never checked-out PR code. Agents receive serialized graph context and bounded patches only. Prompts label PR text untrusted data and tell models not to follow embedded instructions.
+- The question adapter uses its own answer-and-citations schema. It validates each citation against the bounded source catalog and does not accept model-created file paths or symbol IDs.
+- Question context, including PR text, summaries, source excerpts, diffs, and recent conversation, is sent to the selected CLI provider. GitHub file-view requests use the user's `gh` authentication; Prism does not store GitHub tokens or viewer state in reports.
 - This is not a guarantee against prompt injection, leakage through the external harness, or arbitrary user customization of CLI configurations. Running on untrusted PR content must be treated cautiously.
 
 Only the backend accesses Git/processes or local report data. Frontend never executes shell commands. The app listens on loopback; cross-origin POSTs from unrelated web origins are blocked.

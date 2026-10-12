@@ -30,8 +30,12 @@ The home screen starts clean: **no example report loads automatically**. There i
 5. Use the numbered **Suggested review order** rail in the map to follow the recommended file sequence; selecting a step highlights that file's changed symbols and linked context.
 6. For each group, scroll down to **Detailed review**. Each modified class/method/function has its own card with one source panel: actual added/removed diff lines when available, otherwise the exact source excerpt captured from the relevant revision.
 7. With Claude Code or Codex selected, each card contains **why this change was made (or inferred)**, **how the new implementation works**, and a line-level explanation. You can generate this later without reindexing the graph.
+8. Mark each changed file as viewed on GitHub from its file header. The shared **Hide viewed** filter removes those files from the map, review route, and detailed walkthrough; refresh its status when files are viewed elsewhere on GitHub.
+9. Ask Codex or Claude Code follow-up questions from **Ask this PR**. In a detailed diff, click the message icon beside a line to start a focused inline chat; Shift-click another line in the same hunk to ask about a range. Inline chats include model and effort pickers that stay synchronized with **Ask this PR**.
 
 Private repositories are supported when `gh auth login` is configured or GitHub authentication is available. `GH_TOKEN` / `GITHUB_TOKEN` can also authenticate the GitHub API; repository cloning needs matching Git/`gh` access. No GitHub token is saved by Prism.
+
+GitHub viewed-file status and mark/unmark actions use the authenticated GitHub CLI account (`gh auth login` or the CLI's supported token environment). They are scoped to that account's review state. The filter can be refreshed independently of the saved report.
 
 ### AI harness installation
 
@@ -42,7 +46,7 @@ Prism **does not install or sign you in** to third-party coding harnesses. Insta
 
 The Configuration page detects available executables on the backend's `PATH`. Codex model and effort selections are populated from the installed app-server's `model/list` response when available. Claude Code doesn't offer a verified stable account-level CLI model-list interface; Prism uses CLI aliases / custom model IDs with user-selectable effort. When an API isn't available, fields remain editable/defaultable rather than pretending to know your account's models.
 
-**Privacy:** Graph construction and symbol mapping run locally. Selecting Codex/Claude sends a bounded PR diff and graph context to the provider via that CLI; don't enable AI on private code unless you're comfortable with that. Prism doesn't independently contact LLM APIs.
+**Privacy:** Graph construction and symbol mapping run locally. Selecting Codex/Claude sends bounded PR context to the provider via that CLI. PR questions include the PR body, report summaries, and verified excerpts/diffs for changed symbols; inline questions also include the selected line-anchored diff excerpt. Prism doesn't independently contact LLM APIs.
 
 ## Interface
 
@@ -52,8 +56,9 @@ The Configuration page detects available executables on the backend's `PATH`. Co
 - **Before/after graph context:** Graphify runs on the merge-base and PR head. Relationship topology is compared; removed connections remain inspectable.
 - **PR segmentation:** connected change clusters form separate graphs. Very large cohesive clusters are divided using structural connectivity and modularity; small contextual neighborhoods remain visible.
 - **Detailed AI report (v3):** JSON-structured overview plus *per-symbol* actual syntax-highlighted added/removed diff lines in a single implementation panel, diff summary, rationale, step-by-step explanation of the new implementation, grounded code commentary, complete group/global recommended file review sequence, behavioral impact, risks and test suggestions.
+- **GitHub review state and questions:** Mark changed files viewed through the GitHub CLI and hide viewed files across report views. Ask the configured CLI harness questions inside the report or from selected diff lines; inline threads stay focused on one line or a same-hunk range, and the server verifies anchors against the cached PR patch.
 - **Verified code excerpts:** excerpts are captured from base/head worktrees, not invented by the LLM. Changes to removed symbols show their previous implementation. The LLM explains the provided source, but cannot rewrite it.
-- **Black theme:** neutral near-black panels and backgrounds with restrained emerald accents and semantic change colors.
+- **Graphite theme:** neutral dark panels with restrained blue navigation and semantic colors for change states.
 - **Local report history:** reopen cached analysis, upgrade and regenerate detailed AI narrative independently, export report as JSON.
 
 ## Configuration
@@ -85,17 +90,17 @@ cd backend
 .venv/bin/python -m pytest -q
 ```
 
-The backend API includes `GET /api/health`, `GET /api/harnesses`, `POST /api/analyze`, `GET /api/jobs/{id}`, `GET /api/reports`, `GET /api/reports/{id}`, `POST /api/reports/{id}/explain` and `GET /api/demo`; interactive docs are under `/api/docs`.
+The backend API includes `GET /api/health`, `GET /api/harnesses`, `POST /api/analyze`, `GET /api/jobs/{id}`, `GET /api/reports`, `GET /api/reports/{id}`, `POST /api/reports/{id}/explain`, `GET/POST /api/reports/{id}/viewed-files`, `POST /api/reports/{id}/questions` and `GET /api/demo`; interactive docs are under `/api/docs`.
 
 ## Source structure
 
 ```text
 backend/prism/
   app.py       FastAPI endpoints, jobs, cache/report persistence
-  gitops.py    URL parsing, GitHub API, clones and Git diff
+  gitops.py    URL parsing, GitHub API/CLI, clones and Git diff
   graph.py     Graphify extraction, graph differences, segmentation
   symbols.py   Tree-sitter changed-symbol mapping
-  harness.py   Codex/Claude non-interactive detailed JSON report adapters
+  harness.py   Codex/Claude structured report and grounded question adapters
   evidence.py  Exact base/head source excerpts per changed symbol
   demo.json    Clearly labeled illustrative example
 frontend/src/
