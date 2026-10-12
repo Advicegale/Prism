@@ -2,7 +2,7 @@ import type {ReactNode} from 'react'
 
 interface Props {text:string}
 
-/** Render Markdown inline-code spans as safe React text and code elements. */
+/** Render inline-code spans while preserving formatting line breaks in model text. */
 export function InlineMarkdown({text}:Props){
  const parts:ReactNode[]=[]
  const codeSpan=/(^|[^`])`([^`\n]+)`(?!`)/g
@@ -16,7 +16,7 @@ export function InlineMarkdown({text}:Props){
   cursor=codeSpan.lastIndex
  }
 
- if(cursor===0)return <>{text}</>
+ if(cursor===0)return <span className="inline-markdown">{text}</span>
  if(cursor<text.length)parts.push(text.slice(cursor))
- return <>{parts}</>
+ return <span className="inline-markdown">{parts}</span>
 }

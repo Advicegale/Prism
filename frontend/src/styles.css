@@ -689,6 +689,7 @@ body,.workspace{background:var(--page)}
 .review-answer-meta a{display:grid;place-items:center;color:#8294a5}
 .review-answer-meta a:hover{color:#c5dfef}
 .review-answer-copy{color:#d0d7e0;font-size:11px;line-height:1.65}
+.inline-markdown{white-space:pre-wrap}
 .review-answer-copy p{margin:0 0 7px}
 .review-answer-copy p:last-child{margin-bottom:0}
 .review-answer-copy ul,.review-answer-copy ol{margin:5px 0;padding-left:19px}
