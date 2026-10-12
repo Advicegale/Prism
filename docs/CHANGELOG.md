@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added a topic-first change map: begin with a compact overview, open a topic to inspect its source graph, and retain an all-symbols view. Graph-only reports group by file area; AI synthesis may suggest semantic topic names and membership using validated existing group IDs.
+- Added a numbered suggested file-review path to the map. Selecting a step highlights that file's changed symbols and linked context; the route remains explicitly separate from extracted graph relationships.
+- Filtered unchanged map context to omit structural containment edges, which often surfaced unrelated declarations from the same file.
 - Added a persistent map toggle to hide unchanged context nodes while keeping changed nodes and their connected relationships visible.
 - Disambiguated repeated change-group labels with affected file names, including for previously cached reports.
 - Added change-map organization modes: relationship network, changed-symbol-rooted tree, and component-role groups inferred from symbol and file names.

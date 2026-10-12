@@ -26,9 +26,10 @@ The home screen starts clean: **no example report loads automatically**. There i
 1. Paste a GitHub URL such as `https://github.com/owner/repo/pull/123`.
 2. Pick **Graph only** or **Claude Code / Codex**; pick a model and reasoning effort where available.
 3. Click **Analyze PR**. The first run downloads the repository, computes Git's merge-base diff, indexes both revisions, and caches the graphs by commit SHA.
-4. Switch between **All changes** and related **change groups**; click any node to see source location, relationships, and diff.
-5. For each group, scroll down to **Detailed review**. Each modified class/method/function has its own card with one source panel: actual added/removed diff lines when available, otherwise the exact source excerpt captured from the relevant revision.
-6. With Claude Code or Codex selected, each card contains **why this change was made (or inferred)**, **how the new implementation works**, a line-level explanation, and a **recommended order for reviewing every file**. You can generate this later without reindexing the graph.
+4. Start with **review topics**, open one to inspect its source graph, or choose **All symbols** for the complete graph. Click any node to see its source location, relationships, and diff.
+5. Use the numbered **Suggested review order** rail in the map to follow the recommended file sequence; selecting a step highlights that file's changed symbols and linked context.
+6. For each group, scroll down to **Detailed review**. Each modified class/method/function has its own card with one source panel: actual added/removed diff lines when available, otherwise the exact source excerpt captured from the relevant revision.
+7. With Claude Code or Codex selected, each card contains **why this change was made (or inferred)**, **how the new implementation works**, and a line-level explanation. You can generate this later without reindexing the graph.
 
 Private repositories are supported when `gh auth login` is configured or GitHub authentication is available. `GH_TOKEN` / `GITHUB_TOKEN` can also authenticate the GitHub API; repository cloning needs matching Git/`gh` access. No GitHub token is saved by Prism.
 
@@ -45,6 +46,7 @@ The Configuration page detects available executables on the backend's `PATH`. Co
 
 ## Interface
 
+- **Topic-first change map:** begin with a compact set of review topics, then open a topic or structural group to inspect changed symbols. Graph-only reports use file-area groupings; AI reports can suggest semantic topics by grouping validated existing change groups. Topic links summarize relationships already present in the code graph. AI reports also show a numbered file-review path; selecting a step spotlights that file's changed symbols and linked context.
 - **Interactive Cytoscape graph:** switch between a relationship network, a tree rooted at changed symbols, and semantic component groups inferred from symbol/file suffixes. Unmatched symbols stay in an **Other** group. The map also supports modified/added/deleted/context nodes, directed and inferred connections, stronger scroll zoom, a zoom slider, pan, search and fit-to-view. Selected-symbol diffs and detailed-review source panels use syntax colors based on the file extension.
 - **Symbol-first review:** Tree-sitter AST ranges identify innermost modified declarations, including their containing classes. Functions outside classes are supported too. Unparseable files appear as changed-file fallback nodes.
 - **Before/after graph context:** Graphify runs on the merge-base and PR head. Relationship topology is compared; removed connections remain inspectable.

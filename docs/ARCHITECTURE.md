@@ -23,6 +23,8 @@ Merge head graph + removed base-only edges; classify edge additions/removals
      |
 Cluster change symbols + expand graph context; split oversized communities
      |
+Roll up structural groups into reviewer topics (path-based fallback or validated AI suggestion)
+     |
 Persist report JSON
      |
 React/Cytoscape interactive viewer
@@ -38,9 +40,11 @@ Persist AI narrative independently of deterministic graph
 
 ## Stable data shape
 
-`Report` contains `meta`, `stats`, `files` (old/new hunk ranges + capped patch), `overview` (`nodes`/`edges`), `groups` (`id`, `title`, `changed_ids`, `files`, contextual `graph`) and `evidence` (line-numbered source excerpts from the actual base/head revisions), plus optional `ai` (overall summary, per-group review order, per-symbol rationale and how-it-works explanation). Node IDs are from Graphify or prefixed `ast:` if a Tree-sitter declaration can't be associated to an existing graph node.
+`Report` contains `meta`, `stats`, `files` (old/new hunk ranges + capped patch), `overview` (`nodes`/`edges`), `groups` (`id`, `title`, `changed_ids`, `files`, contextual `graph`), `topics` (a parent roll-up over existing groups with topic-scoped subgraphs), and `evidence` (line-numbered source excerpts from the actual base/head revisions), plus optional `ai` (overall summary, per-group review order, per-symbol rationale and how-it-works explanation, and suggested topic memberships). Node IDs are from Graphify or prefixed `ast:` if a Tree-sitter declaration can't be associated to an existing graph node.
 
 A change group is a *cluster of changed symbols*, not necessarily a list of changed files. This makes multi-file feature refactors a single group when relationships support it. Source context can be displayed in several graphs. For oversized connected clusters, greedy modularity identifies candidate splits, followed by bounded connected neighborhoods.
+
+Topics reduce overview density without changing structural groups. Graph-only reports roll groups up by path family. When AI explanations are generated, the report synthesis may suggest more semantic topics, but every group ID must appear exactly once and unknown IDs invalidate the suggestion. Topic graphs and cross-topic links are projections of verified report nodes and edges; the model cannot add graph entities or relationships. Unchanged topic context excludes structural containment edges such as `contains`, which otherwise surface neighboring declarations without indicating a dependency. Cached reports receive the current deterministic topic graph when the topic rules change.
 
 ## Cache details
 
@@ -64,6 +68,8 @@ Only the backend accesses Git/processes or local report data. Frontend never exe
 - The AI returns one explanation per symbol: inferred/author-stated reason, operation of new code, and commentary on an actual snippet. The displayed code always comes from the worktree, not the model's imagination.
 - It also returns an ordered list of the group's files with concrete review rationale. The server verifies every path belongs to the group and inserts any omitted paths, ensuring the route is complete.
 - Reports with multiple groups have a separate overall synthesis, which can suggest a global cross-group file order. All returned paths and symbol IDs are validated against the deterministic report graph.
+- The map renders that validated file order as a numbered review path. Selecting a file highlights its changed symbols and directly linked context; the route is a reading recommendation, not a new graph edge.
+- The same synthesis may suggest a small topic partition over the supplied structural group IDs. Invalid, incomplete, duplicated, or overly fragmented partitions fall back to path-based topics; the renderer builds each topic subgraph from existing groups and graph edges.
 - Source excerpts are bounded to avoid persisting huge class bodies; if truncated or unavailable, the UI clearly labels that. AI motivations are not proven author intent unless grounded in the PR description.
 
 ## Expansion opportunities

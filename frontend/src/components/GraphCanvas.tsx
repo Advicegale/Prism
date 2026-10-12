@@ -4,7 +4,7 @@ import { Maximize2, ZoomIn, ZoomOut } from 'lucide-react'
 import type { GraphData, GraphLayout } from '../types'
 import { inferComponentRole } from '../graphOrganization'
 
-interface Props { graph:GraphData; selected:string|null; onSelect:(id:string)=>void; layoutMode:GraphLayout }
+interface Props { graph:GraphData; selected:string|null; onSelect:(id:string)=>void; layoutMode:GraphLayout; focusPath?:string|null }
 
 function treeRoots(graph:GraphData):string[]{
  const byId=new Map(graph.nodes.map(node=>[node.id,node]))
@@ -58,7 +58,7 @@ function componentPositions(graph:GraphData,nodeRoles:Map<string,string>,width:n
  return positions
 }
 
-export function GraphCanvas({graph,selected,onSelect,layoutMode}:Props){
+export function GraphCanvas({graph,selected,onSelect,layoutMode,focusPath}:Props){
  const container=useRef<HTMLDivElement|null>(null)
  const graphRef=useRef<Core|null>(null)
  const [zoomPercent,setZoomPercent]=useState(100)
@@ -71,7 +71,7 @@ export function GraphCanvas({graph,selected,onSelect,layoutMode}:Props){
   if(layoutMode==='roles')for(const role of nodeRoles.values())roleCounts.set(role,(roleCounts.get(role)||0)+1)
   const roleParents=layoutMode==='roles'?[...roleCounts].map(([role,count])=>({data:{id:`component-${role.toLowerCase().replace(/[^a-z0-9]+/g,'-')}`,label:`${role} · ${count}`},classes:'role-group'})):[]
   const rolesPositions=layoutMode==='roles'?componentPositions(graph,nodeRoles,container.current.clientWidth||640):new Map<string,{x:number;y:number}>()
-  const nodes=graph.nodes.map(n=>({data:{id:n.id,label:n.label,kind:n.kind,status:n.status,...(layoutMode==='roles'?{parent:`component-${nodeRoles.get(n.id)?.toLowerCase().replace(/[^a-z0-9]+/g,'-')}`}:{})},...(layoutMode==='roles'?{position:rolesPositions.get(n.id)}:{})}))
+  const nodes=graph.nodes.map(n=>({data:{id:n.id,label:n.label,kind:n.kind,path:n.path,status:n.status,...(layoutMode==='roles'?{parent:`component-${nodeRoles.get(n.id)?.toLowerCase().replace(/[^a-z0-9]+/g,'-')}`}:{})},...(layoutMode==='roles'?{position:rolesPositions.get(n.id)}:{})}))
   const edges=graph.edges.filter(e=>graph.nodes.some(n=>n.id===e.source)&&graph.nodes.some(n=>n.id===e.target)).map((e,i)=>({data:{id:`edge-${i}`,source:e.source,target:e.target,relation:e.relation,confidence:e.confidence,status:(e as {status?:string}).status||"unchanged"}}))
   const layout=layoutMode==='roles'
    ? {name:'preset',fit:true,padding:32,animate:false} as cytoscape.LayoutOptions
@@ -88,12 +88,17 @@ export function GraphCanvas({graph,selected,onSelect,layoutMode}:Props){
     {selector:'node[status="deleted"]',style:{'border-color':'#ff8c89','background-color':'#382128','color':'#ffd9d8'}},
     {selector:'node[status="context"]',style:{'opacity':0.73}},
     {selector:'node[status="renamed"]',style:{'border-color':'#dca4ef'}},
+    {selector:'node.review-focus',style:{'border-width':3.2,'border-color':'#f1c66f','background-color':'#38301d','color':'#fff0c1','opacity':1,'z-index':80}},
+    {selector:'node.review-related-context',style:{'opacity':0.94}},
+    {selector:'node.review-muted',style:{'opacity':0.2}},
     {selector:'node.is-selected',style:{'border-width':3.5,'border-color':'#f2f7fd','opacity':1,'z-index':90}},
     {selector:'edge',style:{'width':1.6,'line-color':'#535b59','target-arrow-color':'#65716d','target-arrow-shape':'triangle','arrow-scale':0.75,'curve-style':'bezier','opacity':0.65,'label':'data(relation)','color':'#a0aaa6','font-size':8,'text-background-color':'#0d0f0e','text-background-opacity':0.85,'text-background-padding':'3px','text-rotation':'autorotate'}},
     {selector:'edge[status="added"]',style:{'line-color':'#36c5ad','target-arrow-color':'#36c5ad','opacity':.85,'width':2.2}},
     {selector:'edge[status="removed"]',style:{'line-color':'#f58f92','target-arrow-color':'#f58f92','line-style':'dashed','opacity':.78,'width':2}},
     {selector:'edge[confidence="INFERRED"]',style:{'line-style':'dashed','opacity':0.38}},
     {selector:'edge[confidence="AST"]',style:{'line-style':'dashed'}},
+    {selector:'edge.review-muted',style:{'opacity':0.12}},
+    {selector:'edge.review-linked',style:{'opacity':0.95,'width':2.2}},
    ],
    layout,
   })
@@ -106,6 +111,31 @@ export function GraphCanvas({graph,selected,onSelect,layoutMode}:Props){
   resize.observe(container.current)
   return()=>{resize.disconnect();cy.destroy();graphRef.current=null}
  },[graph,layoutMode])
+ useEffect(()=>{
+  const cy=graphRef.current
+  if(!cy)return
+  cy.nodes().removeClass('review-focus review-related-context review-muted')
+  cy.edges().removeClass('review-muted review-linked')
+  if(!focusPath)return
+  const focused=graph.nodes.filter(node=>node.path===focusPath&&node.status!=='context').map(node=>node.id)
+  if(!focused.length)return
+  const focusIds=new Set(focused)
+  const relatedContext=new Set<string>()
+  for(const edge of graph.edges){
+   if(focusIds.has(edge.source)&&graph.nodes.some(node=>node.id===edge.target&&node.status==='context'))relatedContext.add(edge.target)
+   if(focusIds.has(edge.target)&&graph.nodes.some(node=>node.id===edge.source&&node.status==='context'))relatedContext.add(edge.source)
+  }
+  cy.nodes().forEach(node=>{
+   if(node.hasClass('role-group'))return
+   if(focusIds.has(node.id()))node.addClass('review-focus')
+   else if(relatedContext.has(node.id()))node.addClass('review-related-context')
+   else node.addClass('review-muted')
+  })
+  cy.edges().forEach(edge=>{
+   if(focusIds.has(edge.data('source'))||focusIds.has(edge.data('target')))edge.addClass('review-linked')
+   else edge.addClass('review-muted')
+  })
+ },[focusPath,graph])
  useEffect(()=>{
   const cy=graphRef.current
   if(!cy)return

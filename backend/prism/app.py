@@ -17,6 +17,7 @@ from .gitops import RepoError, parse_pr_url, pr_metadata, prepare_worktrees, dif
 from .graph import snapshot, identify_changes, segment
 from .harness import available_harnesses, explain
 from .evidence import collect_evidence
+from .topics import build_topics
 
 app = FastAPI(title="Prism PR Review", version="0.2.0", docs_url="/api/docs", openapi_url="/api/openapi.json")
 executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="prism-job")
@@ -73,6 +74,26 @@ def ensure_evidence(report: dict) -> dict:
     return report
 
 
+def ensure_topics(report: dict) -> dict:
+    """Build or refresh reviewer topics when their graph-selection rules change."""
+    if report.get("topics_version", 0) < 3:
+        ai = report.get("ai") or {}
+        saved_topics = ai.get("topics") or report.get("topics") or []
+        suggestions = [
+            {"title": topic.get("title"), "group_ids": topic.get("group_ids")}
+            for topic in saved_topics
+            if isinstance(topic, dict) and topic.get("source") == "ai"
+        ]
+        topics = build_topics(report.get("groups", []), report.get("overview", {}), suggestions or None)
+        report["topics"] = topics
+        if report.get("ai"):
+            report["ai"]["topics"] = topics
+        report["topics_version"] = 3
+        if not report.get("demo"):
+            save_report(report)
+    return report
+
+
 def save_report(report: dict):
     path=report_path(report["id"])
     tmp=path.with_suffix(".tmp")
@@ -108,7 +129,7 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
     report_id=hashlib.sha256(f"{owner}/{repo}/{number}/{merge_base}/{meta['head']}".encode()).hexdigest()[:24]
     path=report_path(report_id)
     if path.exists():
-        result=ensure_evidence(read_report(report_id))
+        result=ensure_topics(ensure_evidence(read_report(report_id)))
         if req.harness != "none":
             progress("Updating AI explanation")
             result["ai"]=explain(result,req.harness,req.model,req.effort,progress)
@@ -129,7 +150,8 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
                      "groups":len(groups),"indexed_files":new["files_indexed"],
                      "total_graph_nodes":len(nodes),"total_graph_edges":len(edges)},
             "files":files,"groups":groups,"overview":overview,
-            "evidence":collect_evidence(groups,files,before,after),"ai":None,"demo":False}
+            "evidence":collect_evidence(groups,files,before,after),"ai":None,
+            "topics":build_topics(groups,overview),"topics_version":3,"demo":False}
     save_report(report)
     if req.harness != "none":
         report["ai"]=explain(report,req.harness,req.model,req.effort,progress)
@@ -179,13 +201,13 @@ def reports():
     return results
 
 @app.get("/api/reports/{report_id}")
-def report(report_id:str):return ensure_evidence(read_report(report_id))
+def report(report_id:str):return ensure_topics(ensure_evidence(read_report(report_id)))
 
 @app.post("/api/reports/{report_id}/explain",status_code=202)
 def explain_report(report_id:str, request:ExplainRequest):
     read_report(report_id)
     def work(progress):
-        data=ensure_evidence(read_report(report_id))
+        data=ensure_topics(ensure_evidence(read_report(report_id)))
         data["ai"]=explain(data,request.harness,request.model,request.effort,progress)
         save_report(data)
         return report_id
@@ -193,7 +215,7 @@ def explain_report(report_id:str, request:ExplainRequest):
 
 @app.get("/api/demo")
 def demo():
-    return json.loads((Path(__file__).parent / "demo.json").read_text())
+    return ensure_topics(json.loads((Path(__file__).parent / "demo.json").read_text()))
 
 # Serve frontend build when available. During development, Vite proxies /api to FastAPI.
 FRONTEND = Path(__file__).resolve().parents[2] / "frontend" / "dist"
