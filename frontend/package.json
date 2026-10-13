@@ -9,7 +9,8 @@
     "preview": "vite preview --host 127.0.0.1",
     "test:layout": "node scripts/test-architecture-layout.mjs",
     "test:review": "node scripts/test-review-topics.mjs",
-    "test:export": "node scripts/test-html-export.mjs"
+    "test:export": "node scripts/test-html-export.mjs",
+    "test:diff": "node scripts/test-diff.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

@@ -985,3 +985,39 @@ body,.workspace{background:var(--page)}
 .review-file-choice-copy strong {word-break:normal}
 
 @media(max-width:580px){.review-question-composer textarea,.review-question-settings input,.review-question-select{font-size:16px}.review-question-settings input,.review-question-select{height:36px}}
+
+/* Both revisions share a row and one scroll area, including wrapped source. */
+.diff-reader-controls{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:12px 16px;border-bottom:1px solid #344353;background:#17212d;font:12px system-ui,sans-serif;color:#a9bfd2}
+.diff-reader-controls button{border:1px solid #456079;border-radius:4px;background:#1a2a3a;color:#c4d9e9;padding:6px 10px;font:12px system-ui,sans-serif;cursor:pointer}
+.diff-mode-controls{display:flex;gap:0}
+.diff-mode-controls button{border-radius:0}.diff-mode-controls button:first-child{border-radius:4px 0 0 4px}.diff-mode-controls button:last-child{border-radius:0 4px 4px 0;border-left:0}
+.diff-mode-controls button[aria-pressed=true]{background:#304b63;color:#edf6fd;box-shadow:inset 0 -2px #82b4dc}
+.diff-reader-controls label{display:flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer}
+.diff-reader-controls input{margin:0;accent-color:#82b4dc;width:13px;height:13px}
+.diff-reader-controls .diff-next-change{margin-left:auto}.diff-next-change span{color:#97b2c9;margin-left:4px;font-size:11px}
+.diff-reader-controls button:focus-visible,.diff-reader-controls input:focus-visible{outline:2px solid #82b4dc;outline-offset:3px}
+.diff-reader-controls button:disabled{opacity:.4;cursor:default}
+.diff-code .diff-split-heading,.diff-code .diff-split-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-width:600px}
+.diff-code .diff-split-heading{position:sticky;top:-7px;z-index:3;background:#1e2d3c;border-bottom:1px solid #405469;color:#a9bfd2;font:12px system-ui,sans-serif}
+.diff-split-heading>span{padding:9px 12px}.diff-split-heading>span+span{border-left:1px solid #405469}
+.diff-code .diff-split-cell{display:flex;align-items:baseline;padding:2px 30px 2px 0;min-width:0;border-radius:0;line-height:1.7;position:relative}
+.diff-code .diff-split-cell+.diff-split-cell,.diff-code .diff-split-row>:nth-child(2){border-left:1px solid #3d4d5d}
+.diff-code .diff-split-cell .diff-line-numbers{display:block;flex:0 0 4ch;min-width:4ch;margin-right:5px;padding-left:4px}
+.diff-code .diff-split-cell .diff-prefix{flex:0 0 12px;width:12px}
+.diff-code .diff-split-cell .diff-source{display:block;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere;flex:1}
+.diff-split-gap{min-height:1.7em;background:repeating-linear-gradient(135deg,#18212b,#18212b 4px,#1c2631 4px,#1c2631 8px)}
+.diff-code .diff-split-row .diff-ask-line{top:3px;width:22px;height:21px}
+.diff-code .diff-split-row .diff-ask-line{opacity:0}.diff-code .diff-split-cell:hover .diff-ask-line,.diff-code .diff-split-cell:focus-within .diff-ask-line{opacity:1}
+.diff-code .diff-word-change{color:inherit;border-radius:2px;padding:0;background:#286744}
+.diff-code .diff-removed .diff-word-change{background:#783d47}
+.diff-code.diff-no-wrap .diff-line:not(.diff-hunk-header),.diff-code.diff-no-wrap .diff-source{white-space:pre;overflow-wrap:normal;word-break:normal}
+.diff-code .diff-source{tab-size:4}
+.diff-code.diff-no-wrap .diff-lines{font-size:12px}
+.diff-code.diff-no-wrap.diff-code-split .diff-lines,.diff-code.diff-no-wrap .diff-split-heading{min-width:max(600px,calc(var(--diff-pane-width) * 2))}
+.diff-code.diff-no-wrap .diff-split-cell .diff-source{overflow:visible}
+.diff-code-split .diff-block-source>.diff-row-wrap:not(.diff-split-row){min-width:600px}
+.diff-code-split .inline-diff-chat{margin-left:12px;margin-right:12px;max-width:none}
+@media(max-width:650px){.diff-reader-controls{padding:10px 12px;gap:10px;font-size:11px}.diff-reader-controls button{font-size:11px}.diff-code .diff-split-cell{font-size:11px}.diff-code .diff-split-cell .diff-ask-line{opacity:1}.diff-reader-controls .diff-next-change{margin-left:0}}
+@media print{.diff-reader-controls{display:none}.diff-code .diff-split-heading{position:static}}
+.diff-code.diff-no-wrap .diff-split-heading{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.diff-split-heading>span{font-family:system-ui,sans-serif}

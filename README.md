@@ -28,7 +28,7 @@ The home screen starts clean: **no example report loads automatically**. There i
 3. Click **Analyze PR**. The first run downloads the repository, computes Git's merge-base diff, indexes both revisions, and caches the graphs by commit SHA.
 4. Use **Architecture** to understand file relationships. Re-click a selected file or connection to deselect it; choose **Review file** to open its changes.
 5. Switch to **Topics** to review a useful grouping of changes. Choose a topic, then a file from its searchable queue. Saved AI review order is used when available.
-6. Read the selected file's saved change notes and syntax-highlighted diff. Longer diffs expand progressively; files omitted from saved topics appear under **Other changes**.
+6. Read the selected file's saved change notes and syntax-highlighted diff. Switch between **Split** (before/after) and **Unified**, toggle line wrapping or changed-word highlighting, and jump to the next change. Split is the desktop default; narrow screens start unified unless a mode was chosen. Longer diffs expand progressively; files omitted from saved topics appear under **Other changes**.
 7. Mark files viewed on GitHub and use **Hide viewed** to narrow both views. Refresh status when reviewing elsewhere on GitHub.
 8. Ask follow-up questions from **Ask this PR**, or use the message icon beside a diff line for an inline chat. Shift-click another line in the same hunk to ask about a range.
 

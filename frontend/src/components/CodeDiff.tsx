@@ -1,7 +1,9 @@
-import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 import { MessageSquareText } from 'lucide-react'
 import type { Token, TokenStream } from 'prismjs'
-import type { DiffLineAnchor, Harnesses, ReviewAssistantSettings } from '../types'
+import type { Harnesses, ReviewAssistantSettings } from '../types'
+import {alignSplitRows, buildDiffBlocks, diffAnchor, parseDiffRows, type DiffLineReference, type DiffSide, type IndexedDiffRow, type SplitRow, type TextRange} from '../diff'
+export type {DiffLineReference} from '../diff'
 import { InlineDiffChat } from './InlineDiffChat'
 import 'prismjs'
 
@@ -53,22 +55,36 @@ export function languageForPath(path: string): string | undefined {
   return LANGUAGE_BY_EXTENSION[dot < 0 ? '' : filename.slice(dot).toLowerCase()]
 }
 
-function tokenNodes(stream: TokenStream, key = 'token'): ReactNode {
-  if (typeof stream === 'string') return stream
-  if (Array.isArray(stream)) {
-    return stream.map((item, index) => <span key={`${key}-${index}`}>{tokenNodes(item, `${key}-${index}`)}</span>)
+function markedText(text: string, ranges: TextRange[], offset: number): ReactNode {
+  let cursor = 0
+  const parts: ReactNode[] = []
+  for (const range of ranges) {
+    const start = Math.max(0, range.start - offset), end = Math.min(text.length, range.end - offset)
+    if (start >= end) continue
+    if (cursor < start) parts.push(text.slice(cursor, start))
+    parts.push(<mark className="diff-word-change" key={`${offset}-${start}`}>{text.slice(start, end)}</mark>)
+    cursor = end
   }
-
-  const token = stream as Token
-  const aliases = Array.isArray(token.alias) ? token.alias : token.alias ? [token.alias] : []
-  const classes = ['token', token.type, ...aliases].join(' ')
-  return <span className={classes}>{tokenNodes(token.content, key)}</span>
+  if (cursor < text.length) parts.push(text.slice(cursor))
+  return parts
 }
 
-function HighlightedCode({ code, language }: { code: string; language?: string }) {
+function tokenNodes(stream: TokenStream, ranges: TextRange[] = [], position = {offset: 0}, key = 'token'): ReactNode {
+  if (typeof stream === 'string') {
+    const content = ranges.length ? markedText(stream, ranges, position.offset) : stream
+    position.offset += stream.length
+    return content
+  }
+  if (Array.isArray(stream)) return stream.map((item, index) => <span key={`${key}-${index}`}>{tokenNodes(item, ranges, position, `${key}-${index}`)}</span>)
+  const token = stream as Token
+  const aliases = Array.isArray(token.alias) ? token.alias : token.alias ? [token.alias] : []
+  return <span className={['token', token.type, ...aliases].join(' ')}>{tokenNodes(token.content, ranges, position, key)}</span>
+}
+
+function HighlightedCode({code, language, changes = []}: {code: string; language?: string; changes?: TextRange[]}) {
   const grammar = language && prism?.languages[language]
-  if (!grammar || !prism || code.length > 8000) return <>{code || ' '}</>
-  return <>{tokenNodes(prism.tokenize(code, grammar))}</>
+  if (!grammar || !prism || code.length > 8000) return <>{markedText(code || ' ', changes, 0)}</>
+  return <>{tokenNodes(prism.tokenize(code, grammar), changes)}</>
 }
 
 function useReadyLanguage(language?: string) {
@@ -97,122 +113,125 @@ export function SyntaxCode({ code, path }: { code: string; path: string }) {
   return <code className="syntax-code"><HighlightedCode code={code} language={readyLanguage} /></code>
 }
 
-export interface DiffLineReference { oldLine?: number; newLine?: number }
-type DiffRow = { kind: 'added' | 'removed' | 'context' | 'meta'; prefix?: string; code: string; oldLine?: number; newLine?: number; hunk: number }
+type DiffMode = 'unified' | 'split'
+interface InlineQuestionConfig {reportId: string; assistant: ReviewAssistantSettings; harnesses: Harnesses | null; onAssistantChange: (settings: ReviewAssistantSettings) => void}
+interface CodeDiffProps {expanded?: boolean; interactive?: boolean; patch: string; path: string; lineReferences?: (DiffLineReference | null)[]; inlineQuestion?: InlineQuestionConfig}
+interface InlineChatSlot {id: string; start: number; end: number; side: DiffSide; locked: boolean}
 
-function parseDiffRows(patch: string, references?: (DiffLineReference | null)[]): DiffRow[] {
-  let inHunk = false
-  let hunk = -1
-  let oldLine = 0
-  let newLine = 0
-  return patch.split('\n').map((line, index) => {
-    if (line.startsWith('diff --git ')) {
-      inHunk = false
-      return { kind: 'meta', code: line || ' ', hunk }
-    }
-    if (line.startsWith('@@')) {
-      inHunk = true
-      hunk++
-      const match = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/.exec(line)
-      oldLine = match ? Number(match[1]) : 0
-      newLine = match ? Number(match[3]) : 0
-      return { kind: 'meta', code: line, hunk }
-    }
-    if (!inHunk || line.startsWith('\\ No newline at end of file')) {
-      return { kind: 'meta', code: line || ' ', hunk }
-    }
-
-    const prefix = line[0]
-    if (prefix === '+') {
-      const row = { kind: 'added' as const, prefix, code: line.slice(1), newLine: references ? references[index]?.newLine : newLine, hunk }
-      newLine++
-      return row
-    }
-    if (prefix === '-') {
-      const row = { kind: 'removed' as const, prefix, code: line.slice(1), oldLine: references ? references[index]?.oldLine : oldLine, hunk }
-      oldLine++
-      return row
-    }
-    if (prefix === ' ') {
-      const row = { kind: 'context' as const, prefix: ' ', code: line.slice(1), oldLine: references ? references[index]?.oldLine : oldLine, newLine: references ? references[index]?.newLine : newLine, hunk }
-      oldLine++
-      newLine++
-      return row
-    }
-    return { kind: 'meta', code: line || ' ', hunk }
-  })
+function preference(key: string): string | null {
+  try {return typeof localStorage === 'undefined' ? null : localStorage.getItem(`prism:diff-${key}`)} catch {return null}
+}
+function savePreference(key: string, value: string) {
+  try {localStorage.setItem(`prism:diff-${key}`, value)} catch { /* The reader still works when browser storage is unavailable. */ }
 }
 
-interface InlineQuestionConfig { reportId: string; assistant: ReviewAssistantSettings; harnesses: Harnesses | null; onAssistantChange: (settings: ReviewAssistantSettings) => void }
-interface CodeDiffProps { expanded?: boolean; patch: string; path: string; lineReferences?: (DiffLineReference | null)[]; inlineQuestion?: InlineQuestionConfig }
-interface InlineChatSlot { id: string; start: number; end: number; locked: boolean }
-
-export function CodeDiff({ patch, path, lineReferences, inlineQuestion, expanded = false }: CodeDiffProps) {
+export function CodeDiff({patch, path, lineReferences, inlineQuestion, expanded = false, interactive = true}: CodeDiffProps) {
   const language = languageForPath(path)
   const readyLanguage = useReadyLanguage(language)
-  const allRows = parseDiffRows(patch, lineReferences).filter(row => row.hunk >= 0)
+  const allRows = useMemo(() => parseDiffRows(patch, lineReferences).filter(row => row.hunk >= 0), [patch, lineReferences])
+  const allBlocks = useMemo(() => buildDiffBlocks(allRows), [allRows])
   const [limit, setLimit] = useState(120)
-  const rows = expanded ? allRows : allRows.slice(0, limit)
-  useEffect(() => {setLimit(120);setChatSlots([]);setActiveSlotId(null)}, [patch,path])
   const [chatSlots, setChatSlots] = useState<InlineChatSlot[]>([])
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null)
-
-  function anchorFor(slot: InlineChatSlot): DiffLineAnchor {
-    const start = Math.min(slot.start, slot.end)
-    const end = Math.max(slot.start, slot.end)
-    const selectedRows = rows.slice(start, end + 1).filter(row => row.kind !== 'meta' && (row.oldLine !== undefined || row.newLine !== undefined))
-    return {
-      path,
-      old_lines: [...new Set(selectedRows.map(row => row.oldLine).filter((line): line is number => line !== undefined))].sort((a, b) => a - b),
-      new_lines: [...new Set(selectedRows.map(row => row.newLine).filter((line): line is number => line !== undefined))].sort((a, b) => a - b),
+  const [chosenMode, setChosenMode] = useState<DiffMode | null>(() => {
+    const value = interactive ? preference('mode') : null
+    return value === 'split' || value === 'unified' ? value : null
+  })
+  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 650px)').matches)
+  const [wrap, setWrap] = useState(() => !interactive || preference('wrap') !== 'false')
+  const [words, setWords] = useState(() => interactive && preference('words') !== 'false')
+  const [focusHunk, setFocusHunk] = useState(-1)
+  const [jumpRequest, setJumpRequest] = useState(0)
+  const scroller = useRef<HTMLDivElement>(null)
+  const mode = interactive ? chosenMode || (narrow ? 'unified' : 'split') : 'unified'
+  // Finish small replacement blocks rather than separating their two sides at the display limit.
+  const cutBlock = allBlocks.find(block => block.start < limit && block.end >= limit)
+  const visibleCount = expanded ? allRows.length : Math.min(allRows.length, cutBlock && cutBlock.end - limit < 80 ? cutBlock.end + 1 : limit)
+  const blocks = useMemo(() => allBlocks.filter(block => block.start < visibleCount).map(block => ({...block, rows: block.rows.filter(row => row.index < visibleCount), end: Math.min(block.end, visibleCount - 1)})), [allBlocks, visibleCount])
+  const splitBlocks = useMemo(() => mode === 'split' || words ? new Map(blocks.map(block => [block.start, alignSplitRows(block)])) : new Map<number, SplitRow[]>(), [blocks, mode, words])
+  const longestLine = useMemo(() => Math.max(0, ...allRows.filter(row => row.kind !== 'meta').map(row => row.code.replace(/\t/g, '    ').length)), [allRows])
+  const changesByIndex = useMemo(() => {
+    const ranges = new Map<number, TextRange[]>()
+    for (const pairs of splitBlocks.values()) for (const pair of pairs) {
+      if (pair.left && pair.leftChanges) ranges.set(pair.left.index, pair.leftChanges)
+      if (pair.right && pair.rightChanges) ranges.set(pair.right.index, pair.rightChanges)
     }
-  }
+    return ranges
+  }, [splitBlocks])
+  const hunks = useMemo(() => allRows.map((row, index) => ({row, index})).filter(({row}) => row.kind === 'meta' && row.code.startsWith('@@')), [allRows])
 
-  function selectLine(index: number, event: MouseEvent<HTMLButtonElement>) {
-    const row = rows[index]
-    const active = chatSlots.find(slot => slot.id === activeSlotId)
+  useEffect(() => {setLimit(120); setChatSlots([]); setActiveSlotId(null); setFocusHunk(-1); setJumpRequest(0)}, [patch, path])
+  useEffect(() => {
+    if (!interactive) return
+    const media = window.matchMedia('(max-width: 650px)')
+    const update = () => setNarrow(media.matches)
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [interactive])
+  useEffect(() => {
+    if (focusHunk < 0) return
+    const container = scroller.current, header = container?.querySelector<HTMLElement>(`[data-hunk-id="${focusHunk}"]`)
+    if (container && header) container.scrollTop += header.getBoundingClientRect().top - container.getBoundingClientRect().top - (mode === 'split' ? 34 : 8)
+  }, [focusHunk, jumpRequest, visibleCount, mode])
+
+  function chooseMode(value: DiffMode) {setChosenMode(value); savePreference('mode', value)}
+  function nextChange() {
+    const next = (focusHunk + 1) % hunks.length
+    setLimit(current => Math.max(current, hunks[next].index + 120))
+    setFocusHunk(next)
+    setJumpRequest(current => current + 1)
+  }
+  function selectLine(index: number, side: DiffSide, event: MouseEvent<HTMLButtonElement>) {
+    const row = allRows[index], active = chatSlots.find(slot => slot.id === activeSlotId)
+    const extend = event.shiftKey && active?.side === side && allRows[active.start]?.hunk === row.hunk
     if (active && !active.locked) {
-      if (event.shiftKey && rows[active.start]?.hunk === row.hunk) {
-        setChatSlots(current => current.map(slot => slot.id === active.id ? { ...slot, end: index } : slot))
-      } else {
-        setChatSlots(current => current.map(slot => slot.id === active.id ? { ...slot, start: index, end: index } : slot))
-      }
+      setChatSlots(current => current.map(slot => slot.id === active.id ? {...slot, side, start: extend ? slot.start : index, end: index} : slot))
       return
     }
-    if (active && active.locked && index >= Math.min(active.start, active.end) && index <= Math.max(active.start, active.end)) return
+    if (active?.locked && active.side === side && index >= Math.min(active.start, active.end) && index <= Math.max(active.start, active.end)) return
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`
-    const rangeStart = active?.locked && event.shiftKey && rows[active.start]?.hunk === row.hunk ? active.start : index
-    setChatSlots(current => [...current, { id, start: rangeStart, end: index, locked: false }])
+    setChatSlots(current => [...current, {id, start: extend && active ? active.start : index, end: index, side, locked: false}])
     setActiveSlotId(id)
   }
-
   function closeSlot(id: string) {
-    const remaining = chatSlots.filter(slot => slot.id !== id)
-    setChatSlots(remaining)
-    if (activeSlotId === id) setActiveSlotId(remaining[remaining.length - 1]?.id || null)
+    setChatSlots(current => current.filter(slot => slot.id !== id))
+    if (activeSlotId === id) setActiveSlotId(chatSlots.filter(slot => slot.id !== id).at(-1)?.id || null)
   }
-
-  return (
-    <div className="diff-review-patch"><div className="diff-code" role="region" aria-label={`Code diff for ${path}`} tabIndex={0}>
-      <div className="diff-lines">
-        {rows.map((row, index) => {
-          const selected = chatSlots.some(slot => index >= Math.min(slot.start, slot.end) && index <= Math.max(slot.start, slot.end))
-          const threadsHere = chatSlots.filter(slot => Math.max(slot.start, slot.end) === index)
-          const side = row.kind === 'added' ? 'added' : row.kind === 'removed' ? 'removed' : 'context'
-          const isHunkHeader = row.kind === 'meta' && row.code.startsWith('@@')
-          return <div className="diff-row-wrap" key={index}>
-            <div className={`diff-line diff-${row.kind}${isHunkHeader ? ' diff-hunk-header' : ''}${selected ? ' diff-line-selected' : ''}`}>
-              {isHunkHeader ? <><span className="diff-hunk-label" aria-hidden="true">HUNK</span><code className="diff-hunk-code">{row.code}</code></> : <>
-                <span className="diff-line-numbers" aria-hidden="true"><span>{row.oldLine ?? ''}</span><span>{row.newLine ?? ''}</span></span>
-                {row.prefix !== undefined && <span className="diff-prefix" aria-hidden="true">{row.prefix}</span>}
-                <span className="diff-source"><HighlightedCode code={row.code} language={readyLanguage} /></span>
-              </>}
-              {inlineQuestion && row.kind !== 'meta' && (row.oldLine !== undefined || row.newLine !== undefined) && <button className="diff-ask-line" type="button" aria-label={`Ask about ${side} line ${row.newLine ?? row.oldLine}`} title="Ask about this diff line · Shift-click another line to include a range" onClick={event => selectLine(index, event)}><MessageSquareText size={13}/></button>}
-            </div>
-            {inlineQuestion && threadsHere.map(slot => <InlineDiffChat key={slot.id} reportId={inlineQuestion.reportId} anchor={anchorFor(slot)} assistant={inlineQuestion.assistant} harnesses={inlineQuestion.harnesses} onAssistantChange={inlineQuestion.onAssistantChange} onConversationStarted={() => setChatSlots(current => current.map(item => item.id === slot.id ? { ...item, locked: true } : item))} onClose={() => closeSlot(slot.id)}/>)}
-          </div>
-        })}
-      </div>
-    </div>{!expanded&&limit<allRows.length&&<div className="diff-more-lines"><span>{limit} of {allRows.length} diff lines shown</span><button type="button" onClick={()=>setLimit(n=>Math.min(allRows.length,n+160))}>Show {Math.min(160,allRows.length-limit)} more lines</button></div>}</div>
-  )
+  function selected(index: number, side: DiffSide) {
+    return chatSlots.some(slot => index >= Math.min(slot.start, slot.end) && index <= Math.max(slot.start, slot.end) && (slot.side === 'both' || (side === 'both' ? allRows[index][slot.side === 'old' ? 'oldLine' : 'newLine'] !== undefined : slot.side === side)))
+  }
+  function sourceLine(row: IndexedDiffRow, side: DiffSide, ranges?: TextRange[]) {
+    const split = side !== 'both'
+    const line = side === 'old' ? row.oldLine : row.newLine ?? row.oldLine
+    const hasAnchor = split ? line !== undefined : row.oldLine !== undefined || row.newLine !== undefined
+    const label = split ? `${side === 'old' ? 'before' : 'after'} line ${line}` : `${row.kind === 'added' ? 'added' : row.kind === 'removed' ? 'removed' : 'context'} line ${line}`
+    const header = row.kind === 'meta' && row.code.startsWith('@@')
+    return <div className={`diff-line diff-${row.kind}${split ? ' diff-split-cell' : ''}${header ? ' diff-hunk-header' : ''}${selected(row.index, side) ? ' diff-line-selected' : ''}`} data-hunk-id={header ? row.hunk : undefined} data-side={split ? side : undefined} data-line={split ? line : undefined}>
+      {header ? <><span className="diff-hunk-label" aria-hidden="true">HUNK</span><code className="diff-hunk-code">{row.code}</code></> : <>
+        <span className="diff-line-numbers" aria-hidden="true">{split ? <span>{line ?? ''}</span> : <><span>{row.oldLine ?? ''}</span><span>{row.newLine ?? ''}</span></>}</span>
+        {row.prefix !== undefined && <span className="diff-prefix" aria-hidden="true">{row.prefix}</span>}
+        <span className="diff-source"><HighlightedCode code={row.code} language={readyLanguage} changes={words ? ranges : undefined}/></span>
+      </>}
+      {inlineQuestion && row.kind !== 'meta' && hasAnchor && <button className="diff-ask-line" type="button" aria-label={`Ask about ${label}`} title="Ask about this diff line · Shift-click another line on this side to include a range" onClick={event => selectLine(row.index, side, event)}><MessageSquareText size={13}/></button>}
+    </div>
+  }
+  return <div className="diff-review-patch">
+    {interactive && <div className="diff-reader-controls">
+      <div className="diff-mode-controls" role="group" aria-label="Diff layout"><button type="button" aria-pressed={mode === 'unified'} onClick={() => chooseMode('unified')}>Unified</button><button type="button" aria-pressed={mode === 'split'} onClick={() => chooseMode('split')}>Split</button></div>
+      <label><input type="checkbox" checked={wrap} onChange={event => {setWrap(event.target.checked); savePreference('wrap', String(event.target.checked))}}/> Wrap lines</label>
+      <label><input type="checkbox" checked={words} onChange={event => {setWords(event.target.checked); savePreference('words', String(event.target.checked))}}/> Highlight words</label>
+      <button type="button" className="diff-next-change" disabled={!hunks.length} onClick={nextChange}>Next change{focusHunk >= 0 && <span> {focusHunk + 1}/{hunks.length}</span>}</button>
+    </div>}
+    <div className={`diff-code${mode === 'split' ? ' diff-code-split' : ''}${wrap ? '' : ' diff-no-wrap'}`} ref={scroller} style={{'--diff-pane-width': `calc(${longestLine}ch + 80px)`} as CSSProperties} role="region" aria-label={`Code diff for ${path}`} tabIndex={0}>
+      {mode === 'split' && <div className="diff-split-heading"><span>Before · base</span><span>After · head</span></div>}
+      <div className="diff-lines">{blocks.map(block => <div className="diff-block" key={block.start}>
+        <div className="diff-block-source">{mode === 'unified' ? block.rows.map(row => <div className="diff-row-wrap" key={row.index}>{sourceLine(row, 'both', changesByIndex.get(row.index))}</div>) : splitBlocks.get(block.start)!.map((pair, index) => pair.note ? <div className="diff-row-wrap" key={`note-${pair.note.index}`}>{sourceLine(pair.note, 'both')}</div> : <div className="diff-split-row diff-row-wrap" key={index}>
+          {pair.left ? sourceLine(pair.left, 'old', pair.leftChanges) : <div className="diff-split-gap" aria-hidden="true"/>}
+          {pair.right ? sourceLine(pair.right, 'new', pair.rightChanges) : <div className="diff-split-gap" aria-hidden="true"/>}
+        </div>)}</div>
+        {inlineQuestion && chatSlots.filter(slot => Math.max(slot.start, slot.end) >= block.start && Math.max(slot.start, slot.end) <= block.end).map(slot => <InlineDiffChat key={slot.id} reportId={inlineQuestion.reportId} anchor={diffAnchor(path, allRows, slot.start, slot.end, slot.side)} assistant={inlineQuestion.assistant} harnesses={inlineQuestion.harnesses} onAssistantChange={inlineQuestion.onAssistantChange} onConversationStarted={() => setChatSlots(current => current.map(item => item.id === slot.id ? {...item, locked: true} : item))} onClose={() => closeSlot(slot.id)}/>)}
+      </div>)}</div>
+    </div>
+    {!expanded && visibleCount < allRows.length && <div className="diff-more-lines"><span>{visibleCount} of {allRows.length} diff lines shown</span><button type="button" onClick={() => setLimit(Math.min(allRows.length, visibleCount + 160))}>Show {Math.min(160, allRows.length - visibleCount)} more lines</button></div>}
+  </div>
 }

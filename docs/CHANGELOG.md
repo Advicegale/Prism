@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added a split/unified diff reader with aligned before/after source, separate line gutters, changed-word highlighting, wrapping controls and next-change navigation. Reader preferences persist across files; inline questions stay tied to exact revision-side coordinates and conversations survive mode changes. Narrow screens default to unified; offline HTML retains its static unified view.
+
 - Added self-contained offline HTML export named `<repo>-<pull_nr>.html`, with shared architecture layout, local connection selection/evidence, topic/file navigation, complete captured diffs, saved notes and print styling. Export omits live assistants and GitHub mutations and includes files hidden by the current viewed filter.
 
 - Removed the Symbols diagram and Cytoscape renderer. Redesigned Topics around a persistent topic list, ordered/searchable file queue, saved file notes and progressively expandable complete cached diffs. Retained GitHub viewed state, inline questions, Architecture state and re-click-only deselection; architecture actions and PR citations now open file review. Added complete-file-coverage checks, including renamed/deleted paths and unassigned files.

@@ -22,3 +22,15 @@ Manual smoke checklist on Linux and macOS:
 CI or package-integrity tests can run without GitHub credentials using the fixture dataset.
 
 **Build environment limitation:** this delivery was generated in an environment without outbound npm/PyPI access. Backend Python tests were executed successfully, but the live Graphify installation, full GitHub retrieval against a real PR, actual Claude/Codex calls and production frontend bundle were **not** executed end-to-end here. The `setup.sh` workflow is intended to run and build those pieces on a networked Linux/macOS machine.
+
+Frontend diff reader regressions:
+
+```bash
+cd frontend
+npm run test:diff
+npm run test:review
+npm run test:export
+npm run build
+```
+
+Diff checks cover aligned replacements and pure insertion/deletion gaps, exact base/head coordinates and range anchors, source ordering, no-newline markers, Unicode word changes, bounded large blocks, escaped source markup and static export. Manually check Split/Unified switching with an open inline conversation, same-side Shift-click ranges, progressive expansion, repeated next-change navigation, saved preferences across files, and 390px viewport scrolling.
