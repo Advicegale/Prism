@@ -58,7 +58,7 @@ The Configuration page detects available executables on the backend's `PATH`. Co
 - **GitHub review state and questions:** Mark changed files viewed through the GitHub CLI and hide viewed files across report views. Ask the configured CLI harness questions inside the report or from selected diff lines; inline threads stay focused on one line or a same-hunk range, and the server verifies anchors against the cached PR patch.
 - **Verified code excerpts:** excerpts are captured from base/head worktrees, not invented by the LLM. Changes to removed symbols show their previous implementation. The LLM explains the provided source, but cannot rewrite it.
 - **Graphite theme:** neutral dark panels with restrained blue navigation and semantic colors for change states.
-- **Local report history:** reopen cached analysis, upgrade and regenerate detailed AI narrative independently, export report as JSON.
+- **Local report history:** reopen cached analysis, upgrade and regenerate detailed AI narrative independently, export reports as JSON or a self-contained offline HTML file (`<repo>-<pull_nr>.html`). HTML includes the complete captured report, grouped architecture, evidence, topics, saved notes and syntax-highlighted diffs. Local navigation and print expansion work without a server; live assistants and GitHub write controls are omitted.
 
 ## Configuration
 

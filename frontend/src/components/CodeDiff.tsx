@@ -29,7 +29,7 @@ const GRAMMAR_LOADERS: Record<string, GrammarLoader> = {
   php: () => import('prismjs/components/prism-php'),
 }
 
-async function loadLanguage(language: string) {
+export async function loadLanguage(language: string) {
   if (!prism || prism.languages[language] || !GRAMMAR_LOADERS[language]) return
   if (language === 'cpp') await loadLanguage('c')
   if (language === 'tsx') {
@@ -47,7 +47,7 @@ const LANGUAGE_BY_EXTENSION: Record<string, string> = {
   '.rs': 'rust', '.swift': 'swift', '.ts': 'typescript', '.tsx': 'tsx', '.json': 'json',
 }
 
-function languageForPath(path: string): string | undefined {
+export function languageForPath(path: string): string | undefined {
   const filename = path.split('/').pop() || path
   const dot = filename.lastIndexOf('.')
   return LANGUAGE_BY_EXTENSION[dot < 0 ? '' : filename.slice(dot).toLowerCase()]
@@ -144,15 +144,15 @@ function parseDiffRows(patch: string, references?: (DiffLineReference | null)[])
 }
 
 interface InlineQuestionConfig { reportId: string; assistant: ReviewAssistantSettings; harnesses: Harnesses | null; onAssistantChange: (settings: ReviewAssistantSettings) => void }
-interface CodeDiffProps { patch: string; path: string; lineReferences?: (DiffLineReference | null)[]; inlineQuestion?: InlineQuestionConfig }
+interface CodeDiffProps { expanded?: boolean; patch: string; path: string; lineReferences?: (DiffLineReference | null)[]; inlineQuestion?: InlineQuestionConfig }
 interface InlineChatSlot { id: string; start: number; end: number; locked: boolean }
 
-export function CodeDiff({ patch, path, lineReferences, inlineQuestion }: CodeDiffProps) {
+export function CodeDiff({ patch, path, lineReferences, inlineQuestion, expanded = false }: CodeDiffProps) {
   const language = languageForPath(path)
   const readyLanguage = useReadyLanguage(language)
   const allRows = parseDiffRows(patch, lineReferences).filter(row => row.hunk >= 0)
   const [limit, setLimit] = useState(120)
-  const rows = allRows.slice(0, limit)
+  const rows = expanded ? allRows : allRows.slice(0, limit)
   useEffect(() => {setLimit(120);setChatSlots([]);setActiveSlotId(null)}, [patch,path])
   const [chatSlots, setChatSlots] = useState<InlineChatSlot[]>([])
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null)
@@ -213,6 +213,6 @@ export function CodeDiff({ patch, path, lineReferences, inlineQuestion }: CodeDi
           </div>
         })}
       </div>
-    </div>{limit<allRows.length&&<div className="diff-more-lines"><span>{limit} of {allRows.length} diff lines shown</span><button type="button" onClick={()=>setLimit(n=>Math.min(allRows.length,n+160))}>Show {Math.min(160,allRows.length-limit)} more lines</button></div>}</div>
+    </div>{!expanded&&limit<allRows.length&&<div className="diff-more-lines"><span>{limit} of {allRows.length} diff lines shown</span><button type="button" onClick={()=>setLimit(n=>Math.min(allRows.length,n+160))}>Show {Math.min(160,allRows.length-limit)} more lines</button></div>}</div>
   )
 }

@@ -1,13 +1,13 @@
 import {useEffect,useMemo,useRef,useState,useId} from 'react'
 import {ArrowRight,FileCode2,Maximize2,ZoomIn,ZoomOut,Sparkles,LoaderCircle} from 'lucide-react'
-import type {ArchitectureData,ArchitectureEdge,ArchitectureNode,ReviewAssistantSettings,Harnesses} from '../types'
-import {routeDrawing,type LayoutInput,type LayoutResult} from '../layout/architectureLayout'
+import type {ArchitectureData,ArchitectureNode,ReviewAssistantSettings,Harnesses} from '../types'
+import {routeDrawing,type LayoutResult} from '../layout/architectureLayout'
+import {architectureColor,buildArchitectureDiagram} from '../layout/architectureDiagram'
 import ArchitectureLayoutWorker from '../layout/architectureLayout.worker?worker&inline'
 
 type Props={data:ArchitectureData;hiddenPaths:Set<string>;onOpenFile:(path:string)=>void;assistant:ReviewAssistantSettings;harnesses:Harnesses|null;onAssistantChange:(value:ReviewAssistantSettings)=>void;onDiscover:()=>void;busy:boolean;progress:string;error:string}
-const color=(status:string)=>status==='added'?'#89c8a5':status==='context'?'#89b6d4':status==='deleted'?'#ec9398':'#dfb66d'
+const color=architectureColor
 const edgeColor=(kind:string)=>kind==='model'?'#d5b16d':kind==='match'?'#b1a3cf':kind==='mixed'?'#b4aecb':'#8ba9c4'
-function cardHeight(label:string){const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');if(!ctx)return 120;ctx.font='650 13px system-ui';const lines=Math.max(1,Math.ceil(ctx.measureText(label).width/168));return Math.ceil(Math.max(96,(lines+1)*17+48)/6)*6}
 
 export function ArchitectureMap({data,hiddenPaths,onOpenFile,assistant,harnesses,onAssistantChange,onDiscover,busy,progress,error}:Props){
  const host=useRef<HTMLDivElement>(null),markerId=useId().replace(/:/g,'')
@@ -20,12 +20,7 @@ export function ArchitectureMap({data,hiddenPaths,onOpenFile,assistant,harnesses
  const supporting=data.layers.filter(layer=>layer.supporting),supportIds=new Set(supporting.map(layer=>layer.id))
  const runtime=nodes.filter(n=>!supportIds.has(n.layer)),runtimeIds=new Set(runtime.map(n=>n.id)),edges=data.edges.filter(e=>runtimeIds.has(e.source)&&runtimeIds.has(e.target))
  const diagram=useMemo(()=>{
-  const cards:{id:string;layer:string;label:string;folder:string;status:string;color:string;path:string;fileIds:string[];rank:number;height:number}[]=[]
-  const memberships=new Map<string,string>()
-  for(const n of runtime){const layer=data.layers.find(l=>l.id===n.layer)!,id=layer.presentation==='bundle'?'bundle:'+n.layer:n.id;memberships.set(n.id,id);const prior=cards.find(b=>b.id===id);if(prior){prior.fileIds.push(n.id);prior.folder=`${prior.fileIds.length} files`;if(prior.status!==(n.status==='context'?'Unchanged context':n.status))prior.status='Mixed changes'}else{const label=layer.presentation==='bundle'?layer.title:n.label;cards.push({id,layer:n.layer,label,folder:layer.presentation==='bundle'?'1 file':n.path.includes('/')?n.path.slice(0,n.path.lastIndexOf('/')):'repository root',status:n.status==='context'?'Unchanged context':n.status,color:color(n.status),path:n.path,fileIds:[n.id],rank:n.rank??0,height:cardHeight(label)})}}
-  const pairs=new Map<string,{id:string;source:string;target:string;refs:ArchitectureEdge[]}>();for(const edge of edges){const source=memberships.get(edge.source)!,target=memberships.get(edge.target)!;if(source===target)continue;const id=JSON.stringify([source,target]);if(!pairs.has(id))pairs.set(id,{id,source,target,refs:[]});pairs.get(id)!.refs.push(edge)}
-  const input:LayoutInput={cards:cards.map(c=>({id:c.id,layer:c.layer,rank:c.rank,height:c.height})),groups:data.layers.filter(l=>cards.some(c=>c.layer===l.id)).map(l=>({id:l.id,title:l.title})),pairs:[...pairs.values()].map(p=>({id:p.id,source:p.source,target:p.target}))}
-  return {cards,pairs:[...pairs.values()],input}
+  return buildArchitectureDiagram(data,nodes)
  },[data,nodes]) // eslint-disable-line react-hooks/exhaustive-deps
  const pairMap=useMemo(()=>new Map(diagram.pairs.map(p=>[p.id,p])),[diagram])
  const selectedEdge=selectedPair?pairMap.get(selectedPair)?.refs:null
