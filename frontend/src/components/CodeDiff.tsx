@@ -105,7 +105,7 @@ function parseDiffRows(patch: string, references?: (DiffLineReference | null)[])
   let hunk = -1
   let oldLine = 0
   let newLine = 0
-  return patch.split('\n').slice(0, 120).map((line, index) => {
+  return patch.split('\n').map((line, index) => {
     if (line.startsWith('diff --git ')) {
       inHunk = false
       return { kind: 'meta', code: line || ' ', hunk }
@@ -150,7 +150,10 @@ interface InlineChatSlot { id: string; start: number; end: number; locked: boole
 export function CodeDiff({ patch, path, lineReferences, inlineQuestion }: CodeDiffProps) {
   const language = languageForPath(path)
   const readyLanguage = useReadyLanguage(language)
-  const rows = parseDiffRows(patch, lineReferences)
+  const allRows = parseDiffRows(patch, lineReferences).filter(row => row.hunk >= 0)
+  const [limit, setLimit] = useState(120)
+  const rows = allRows.slice(0, limit)
+  useEffect(() => {setLimit(120);setChatSlots([]);setActiveSlotId(null)}, [patch,path])
   const [chatSlots, setChatSlots] = useState<InlineChatSlot[]>([])
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null)
 
@@ -190,7 +193,7 @@ export function CodeDiff({ patch, path, lineReferences, inlineQuestion }: CodeDi
   }
 
   return (
-    <div className="diff-code" role="region" aria-label={`Code diff for ${path}`} tabIndex={0}>
+    <div className="diff-review-patch"><div className="diff-code" role="region" aria-label={`Code diff for ${path}`} tabIndex={0}>
       <div className="diff-lines">
         {rows.map((row, index) => {
           const selected = chatSlots.some(slot => index >= Math.min(slot.start, slot.end) && index <= Math.max(slot.start, slot.end))
@@ -210,6 +213,6 @@ export function CodeDiff({ patch, path, lineReferences, inlineQuestion }: CodeDi
           </div>
         })}
       </div>
-    </div>
+    </div>{limit<allRows.length&&<div className="diff-more-lines"><span>{limit} of {allRows.length} diff lines shown</span><button type="button" onClick={()=>setLimit(n=>Math.min(allRows.length,n+160))}>Show {Math.min(160,allRows.length-limit)} more lines</button></div>}</div>
   )
 }

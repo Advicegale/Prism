@@ -1,0 +1,116 @@
+{
+  "cards": [
+    {
+      "id": "file-00",
+      "layer": "group-0",
+      "rank": 0,
+      "height": 96
+    },
+    {
+      "id": "file-01",
+      "layer": "group-0",
+      "rank": 0,
+      "height": 96
+    },
+    {
+      "id": "file-02",
+      "layer": "group-0",
+      "rank": 0,
+      "height": 96
+    },
+    {
+      "id": "file-03",
+      "layer": "group-0",
+      "rank": 0,
+      "height": 96
+    },
+    {
+      "id": "file-04",
+      "layer": "group-0",
+      "rank": 0,
+      "height": 96
+    },
+    {
+      "id": "file-05",
+      "layer": "group-0",
+      "rank": 0,
+      "height": 96
+    },
+    {
+      "id": "file-06",
+      "layer": "group-0",
+      "rank": 0,
+      "height": 96
+    },
+    {
+      "id": "file-07",
+      "layer": "group-0",
+      "rank": 0,
+      "height": 96
+    },
+    {
+      "id": "file-08",
+      "layer": "group-0",
+      "rank": 0,
+      "height": 96
+    }
+  ],
+  "groups": [
+    {
+      "id": "group-0",
+      "title": "Source group"
+    }
+  ],
+  "pairs": [
+    {
+      "id": "pair-00",
+      "source": "file-01",
+      "target": "file-03"
+    },
+    {
+      "id": "pair-01",
+      "source": "file-01",
+      "target": "file-05"
+    },
+    {
+      "id": "pair-02",
+      "source": "file-01",
+      "target": "file-08"
+    },
+    {
+      "id": "pair-03",
+      "source": "file-02",
+      "target": "file-05"
+    },
+    {
+      "id": "pair-04",
+      "source": "file-04",
+      "target": "file-02"
+    },
+    {
+      "id": "pair-05",
+      "source": "file-05",
+      "target": "file-03"
+    },
+    {
+      "id": "pair-06",
+      "source": "file-05",
+      "target": "file-07"
+    },
+    {
+      "id": "pair-07",
+      "source": "file-07",
+      "target": "file-08"
+    },
+    {
+      "id": "pair-08",
+      "source": "file-08",
+      "target": "file-02"
+    },
+    {
+      "id": "pair-09",
+      "source": "file-08",
+      "target": "file-05"
+    }
+  ]
+}

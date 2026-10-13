@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- Removed the Symbols diagram and Cytoscape renderer. Redesigned Topics around a persistent topic list, ordered/searchable file queue, saved file notes and progressively expandable complete cached diffs. Retained GitHub viewed state, inline questions, Architecture state and re-click-only deselection; architecture actions and PR citations now open file review. Added complete-file-coverage checks, including renamed/deleted paths and unassigned files.
+
+- Preserved architecture/symbol view state across tab switches and symbol drill-down. Embedded the layout worker in the app bundle to prevent stale worker URLs from breaking open pages after rebuilding the frontend.
+
+- Implemented the 4.1 architecture layout: connection-aware within-group ordering, readable four-row grids, distinct ports and obstacle-aware separated lanes, crossing bridges, mixed-evidence styling, and background-worker layout. Re-clicking the selected file or connection toggles selection; removed inspector Close and background deselection.
+
+- Bound architecture discovery navigation seeds by UTF-8 bytes, retaining every changed-file entry and full extracted evidence. Larger relationship sets no longer require reducing the PR to fit repeated evidence into the initial prompt.
+
+- Replaced fixed architecture categories with source-browsing AI discovery: repository-specific groups, ordering, supporting sections and bundles. Added complete changed-file coverage checks and two-endpoint source citation validation for model-interpreted relationships; extracted facts retain their relation type.
+- Added Discover/Rebuild architecture independently of prose reports. Expanded read-only repository tools to bounded tracked UTF-8 text in arbitrary languages and optional exact-base reads; projects without symbol parser support continue with file-level review.
+
+- Added a default file architecture map with fixed application-layer columns, bundled migrations, expandable shared-domain/test/doc/configuration groups, source evidence inspection and symbol/diff drill-down.
+- Added deterministic repository import/alias resolution and source-backed HTML/CSS/DOM, fixture, HTTP route and SQL table relationships. Existing cached reports upgrade from their exact retained head/base Git commits without another AI invocation.
+
 - Fixed Codex repository browsing by disabling global MCP servers with safe TOML overrides while preserving the user's Codex config and selected model.
 - Rendered model responses and report explanations as Markdown, including emphasis, lists, tables, quotes, and code blocks; preserved single line breaks and kept raw HTML disabled.
 - Added opt-in repository browsing to PR-wide and inline questions. The selected CLI can inspect tracked files at the exact PR head through bounded read-only file, Tree-sitter symbol, Graphify relationship and source-range tools; source citations are checked against tool-read audit records.

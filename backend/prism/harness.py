@@ -201,7 +201,7 @@ def _repository_audit(path: Path) -> list[dict]:
             end_line = item.get("end_line")
             if (re.fullmatch(r"R[1-9][0-9]*", source_id) and relative and
                     isinstance(line, int) and isinstance(end_line, int) and 1 <= line <= end_line):
-                sources.append({"source_id": source_id, "path": relative, "line": line, "end_line": end_line})
+                sources.append({"source_id": source_id, "path": relative, "line": line, "end_line": end_line, "side": item.get("side", "head")})
     except (OSError, UnicodeError):
         pass
     return sources
@@ -209,7 +209,8 @@ def _repository_audit(path: Path) -> list[dict]:
 
 def run_harness(harness: str, model: str, effort: str, prompt: str, timeout=360,
                 schema: dict = SCHEMA, required_field: str = "groups",
-                repository_root: Path | None = None, repository_head: str | None = None) -> dict:
+                repository_root: Path | None = None, repository_head: str | None = None,
+                repository_base: str | None = None) -> dict:
     if harness not in ("codex","claude"):
         raise ValueError("Choose Codex or Claude Code")
     if len(model) > 120 or len(effort) > 32 or not all(c.isalnum() or c in "-_." for c in model+effort):
@@ -232,6 +233,8 @@ def run_harness(harness: str, model: str, effort: str, prompt: str, timeout=360,
             repository_script = Path(__file__).with_name("repository_tools.py").resolve()
             repository_args = [str(repository_script), "--root", str(repository_root.resolve()),
                                "--head", repository_head, "--audit", str(repository_audit)]
+            if repository_base:
+                repository_args.extend(["--base", repository_base])
             (temp / "repository-mcp.json").write_text(json.dumps({"mcpServers": {
                 repository_server: {"type": "stdio", "command": sys.executable,
                                      "args": repository_args}}}), encoding="utf-8")

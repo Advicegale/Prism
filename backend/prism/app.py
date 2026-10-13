@@ -8,6 +8,7 @@ from pathlib import Path
 import os
 import re
 import threading
+import subprocess
 import uuid
 from typing import Literal
 from fastapi import FastAPI, HTTPException, Request
@@ -20,7 +21,9 @@ from .graph import snapshot, identify_changes, segment
 from .harness import available_harnesses, explain, answer_question
 from .evidence import collect_evidence
 from .topics import build_topics
-from .repository_tools import head_worktree
+from .repository_tools import head_worktree, RepositoryToolError
+from .architecture_review import discover_architecture
+from .architecture import VERSION as ARCHITECTURE_VERSION, report_architecture, build_architecture
 
 app = FastAPI(title="Prism PR Review", version="0.2.0", docs_url="/api/docs", openapi_url="/api/openapi.json")
 executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="prism-job")
@@ -193,6 +196,36 @@ def ensure_topics(report: dict) -> dict:
     return report
 
 
+def ensure_architecture(report: dict, root: Path | None = None) -> dict:
+    if report.get("architecture", {}).get("version") == ARCHITECTURE_VERSION:
+        architecture=report["architecture"]
+        for edge in architecture.get("edges", []):
+            if edge.get("confidence") != "LLM_INFERRED": edge.pop("label", None)
+        if architecture.get("method")=="semantic" and architecture.get("facts_version")!=ARCHITECTURE_VERSION:
+            try:
+                observed=report_architecture(report,root or head_worktree(report),include_all_edges=True)
+                ids={n["id"] for n in architecture["nodes"]}
+                keys={(e["source"],e["target"],e["relation"]) for e in architecture["edges"]}
+                for edge in observed.get("all_edges",[]):
+                    key=(edge["source"],edge["target"],edge["relation"])
+                    if edge["source"] in ids and edge["target"] in ids and key not in keys:
+                        keys.add(key);architecture["edges"].append(edge)
+                architecture["facts_version"]=ARCHITECTURE_VERSION
+                save_report(report)
+            except (RepositoryToolError,OSError,ValueError,RuntimeError,subprocess.SubprocessError):
+                pass  # Keep the accepted map when retained source is unavailable.
+        return report
+    try:
+        report["architecture"] = report_architecture(report, root or head_worktree(report))
+    except (RepositoryToolError, OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+        # Keep all changed files visible when old cache source is unavailable.
+        report["architecture"] = build_architecture(report.get("files", []), {})
+        report["architecture"]["version"] = 0
+        report["architecture"]["notes"] = ["Source relationships unavailable. Reanalyze this PR to restore its cached checkout."]
+    save_report(report)
+    return report
+
+
 def save_report(report: dict):
     path=report_path(report["id"])
     tmp=path.with_suffix(".tmp")
@@ -231,8 +264,10 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
     report_id=hashlib.sha256(f"{owner}/{repo}/{number}/{merge_base}/{meta['head']}".encode()).hexdigest()[:24]
     path=report_path(report_id)
     if path.exists():
-        result=ensure_topics(ensure_evidence(read_report(report_id)))
+        result=ensure_architecture(ensure_topics(ensure_evidence(read_report(report_id))), after)
         if req.harness != "none":
+            result["architecture"]=discover_architecture(result,after,req.harness,req.model,req.effort,progress)
+            save_report(result)
             progress("Updating AI explanation")
             result["ai"]=explain(result,req.harness,req.model,req.effort,progress)
             save_report(result)
@@ -254,8 +289,10 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
             "files":files,"groups":groups,"overview":overview,
             "evidence":collect_evidence(groups,files,before,after),"ai":None,
             "topics":build_topics(groups,overview),"topics_version":5,"demo":False}
-    save_report(report)
+    ensure_architecture(report, after)
     if req.harness != "none":
+        report["architecture"]=discover_architecture(report,after,req.harness,req.model,req.effort,progress)
+        save_report(report)
         report["ai"]=explain(report,req.harness,req.model,req.effort,progress)
         save_report(report)
     return report_id
@@ -303,7 +340,7 @@ def reports():
     return results
 
 @app.get("/api/reports/{report_id}")
-def report(report_id:str):return ensure_topics(ensure_evidence(read_report(report_id)))
+def report(report_id:str):return ensure_architecture(ensure_topics(ensure_evidence(read_report(report_id))))
 
 @app.get("/api/reports/{report_id}/viewed-files")
 def viewed_files(report_id:str):
@@ -342,6 +379,20 @@ def ask_question(report_id:str, request:QuestionRequest):
         repository_root = head_worktree(data) if request.include_repository_context else None
         return answer_question(data,request.harness,request.model,request.effort,question,history,progress,anchor,repository_root)
     return _job("question",work)
+
+@app.post("/api/reports/{report_id}/architecture",status_code=202)
+def organize_architecture(report_id: str, request: ExplainRequest):
+    report = ensure_architecture(ensure_topics(ensure_evidence(read_report(report_id))))
+    root = head_worktree(report)
+    def work(progress):
+        architecture = discover_architecture(report, root, request.harness, request.model, request.effort, progress)
+        # Preserve other report updates that may have happened while the model ran.
+        current = read_report(report_id)
+        current["architecture"] = architecture
+        save_report(current)
+        return report_id
+    return _job("architecture", work)
+
 
 @app.post("/api/reports/{report_id}/explain",status_code=202)
 def explain_report(report_id:str, request:ExplainRequest):

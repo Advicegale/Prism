@@ -47,7 +47,8 @@ def snapshot(root: Path, cache_root: Path, sha: str, progress=lambda x: None) ->
             raise RuntimeError(f"Repository exceeds analysis limit ({settings.MAX_FILES} code files / {settings.MAX_TOTAL_BYTES // 1_000_000} MB). Increase PRISM_MAX_FILES / PRISM_MAX_TOTAL_BYTES to analyze it.")
         files.append(path)
     if not files:
-        raise RuntimeError("No supported code files found in this repository.")
+        progress("No symbol parser for these files; continuing with file-level review")
+        return {"nodes":[], "edges":[], "files_indexed":0, "engine":"file-only", "version":package_version}
     progress(f"Graphify: extracting relationships from {len(files)} source files")
     extraction = extract(files, root=root)
     if not isinstance(extraction, dict) or "nodes" not in extraction or "edges" not in extraction:

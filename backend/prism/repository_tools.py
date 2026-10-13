@@ -14,9 +14,11 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from prism import settings
     from prism.symbols import LANGUAGES, scan_source
+    from prism.sourcefiles import eligible_path
 else:
     from . import settings
     from .symbols import LANGUAGES, scan_source
+    from .sourcefiles import eligible_path
 
 _SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "vendor", "dist", "build", "target", "coverage"}
 
@@ -55,10 +57,12 @@ def head_worktree(report: dict) -> Path:
 class RepositoryTools:
     """A small MCP server whose only capabilities are bounded reads of tracked source."""
 
-    def __init__(self, root: Path, expected_head: str, audit_path: Path):
+    def __init__(self, root: Path, expected_head: str, audit_path: Path, expected_base: str | None = None):
         self.root = root.resolve()
         self.expected_head = expected_head
         self.audit_path = audit_path
+        self.expected_base = expected_base
+        self.base_files = None
         self.next_source_id = 1
         self.inventory_limited = False
         self.files = self._tracked_sources()
@@ -67,7 +71,7 @@ class RepositoryTools:
         self.graph_loaded = False
         self.graph: dict | None = None
 
-    def _tracked_sources(self) -> dict[str, tuple[Path, int]]:
+    def _tracked_sources(self, revision: str | None = None) -> dict[str, tuple[Path, int]]:
         try:
             head = subprocess.run(
                 ["git", "-C", str(self.root), "rev-parse", "--verify", "HEAD^{commit}"],
@@ -76,7 +80,7 @@ class RepositoryTools:
             if head.returncode or head.stdout.strip().lower() != self.expected_head:
                 raise RepositoryToolError("The repository tools are not pointed at the report's PR-head revision.")
             result = subprocess.run(
-                ["git", "-C", str(self.root), "ls-tree", "-rz", "--full-tree", "HEAD"],
+                ["git", "-C", str(self.root), "ls-tree", "-rz", "--full-tree", revision or self.expected_head],
                 capture_output=True, timeout=15, check=False,
                 env={**os.environ, "GIT_NO_REPLACE_OBJECTS": "1"},
             )
@@ -98,7 +102,7 @@ class RepositoryTools:
             pure = PurePosixPath(relative)
             if (mode not in ("100644", "100755") or kind != "blob" or pure.is_absolute()
                     or ".." in pure.parts or _SKIP_DIRS.intersection(pure.parts)
-                    or Path(relative).suffix.lower() not in LANGUAGES):
+                    or not eligible_path(relative)):
                 continue
             candidates.append((relative, oid))
 
@@ -141,8 +145,15 @@ class RepositoryTools:
             total += size
         return files
 
-    def _blob(self, relative: str) -> bytes:
-        item = self.files.get(relative)
+    def _inventory(self, side: str = "head") -> dict:
+        if side == "head": return self.files
+        if side != "base" or not self.expected_base or not re.fullmatch(r"[a-f0-9]{40}", self.expected_base):
+            raise RepositoryToolError("This run has no base revision available.")
+        if self.base_files is None: self.base_files = self._tracked_sources(self.expected_base)
+        return self.base_files
+
+    def _blob(self, relative: str, side: str = "head") -> bytes:
+        item = self._inventory(side).get(relative)
         if item is None:
             raise RepositoryToolError("Choose a tracked, supported source file from this PR checkout.")
         oid, expected_size = item
@@ -158,37 +169,41 @@ class RepositoryTools:
             raise RepositoryToolError("Could not read that source file from the PR commit.")
         return result.stdout
 
-    def _lines(self, relative: str) -> list[str]:
-        cached = self.cache.get(relative)
+    def _lines(self, relative: str, side: str = "head") -> list[str]:
+        cache_key = side + ":" + relative
+        cached = self.cache.get(cache_key)
         if cached is not None:
             return cached
         try:
-            lines = self._blob(relative).decode("utf-8").splitlines()
+            raw = self._blob(relative, side)
+            if b"\0" in raw: raise RepositoryToolError("This file contains binary data.")
+            lines = raw.decode("utf-8").splitlines()
         except UnicodeError as exc:
             raise RepositoryToolError("Could not read that source file as UTF-8.") from exc
-        self.cache[relative] = lines
+        self.cache[cache_key] = lines
         return lines
 
     @staticmethod
     def _clip_line(line: str) -> str:
         return line if len(line) <= 300 else line[:300] + " … [line clipped]"
 
-    def _source(self, relative: str, start: int, end: int, code: str) -> dict:
+    def _source(self, relative: str, start: int, end: int, code: str, side: str = "head") -> dict:
         source_id = f"R{self.next_source_id}"
         self.next_source_id += 1
-        record = {"source_id": source_id, "path": relative, "line": start, "end_line": end}
+        record = {"source_id": source_id, "path": relative, "line": start, "end_line": end, "side": side}
         with self.audit_path.open("a", encoding="utf-8") as audit:
             audit.write(json.dumps(record, ensure_ascii=False) + "\n")
         return {**record, "code": code}
 
     def list_files(self, args: dict) -> dict:
+        files = self._inventory(str(args.get("revision") or "head"))
         prefix = str(args.get("path_prefix") or "").replace("\\", "/").lstrip("/")
         if ".." in PurePosixPath(prefix).parts:
             raise RepositoryToolError("Path prefixes cannot leave the repository.")
-        offset = max(0, min(int(args.get("offset", 0)), len(self.files)))
+        offset = max(0, min(int(args.get("offset", 0)), len(files)))
         limit = max(1, min(int(args.get("limit", 150)), 250))
         directory_prefix = prefix.rstrip("/") + "/" if prefix else ""
-        paths = [path for path in self.files
+        paths = [path for path in files
                  if not prefix or path == prefix.rstrip("/") or path.startswith(directory_prefix)]
         page = paths[offset:offset + limit]
         next_offset = offset + len(page)
@@ -293,9 +308,10 @@ class RepositoryTools:
     def read_source(self, args: dict) -> dict:
         relative = str(args.get("path") or "").replace("\\", "/")
         pure = PurePosixPath(relative)
-        if pure.is_absolute() or ".." in pure.parts or relative not in self.files:
+        side = str(args.get("revision") or "head")
+        if pure.is_absolute() or ".." in pure.parts or relative not in self._inventory(side):
             raise RepositoryToolError("Choose a tracked, supported source file from list_files or list_symbols.")
-        lines = self._lines(relative)
+        lines = self._lines(relative, side)
         start = int(args.get("start_line", 1))
         end = int(args.get("end_line", start + 39))
         if start < 1 or end < start or end - start >= 80:
@@ -305,15 +321,15 @@ class RepositoryTools:
         end = min(end, len(lines))
         code = "\n".join(f"{number:>5}: {self._clip_line(lines[number - 1])}"
                           for number in range(start, end + 1))
-        return self._source(relative, start, end, code)
+        return self._source(relative, start, end, code, side)
 
     def _tool_specs(self) -> list[dict]:
         annotations = {"readOnlyHint": True, "destructiveHint": False,
                        "idempotentHint": True, "openWorldHint": False}
         return [
-            {"name": "list_files", "description": "List tracked, supported source files in the exact PR-head checkout. Use path_prefix to browse a directory and offset to continue. If inventory_limited is true, Prism's repository size limits omitted some files.",
+            {"name": "list_files", "description": "List bounded tracked text/source paths at the exact head or optional base revision, independent of language. Use path_prefix to browse a directory and offset to continue. If inventory_limited is true, Prism's repository size limits omitted some files.",
              "inputSchema": {"type": "object", "properties": {
-                 "path_prefix": {"type": "string"}, "offset": {"type": "integer", "minimum": 0},
+                 "revision": {"type": "string", "enum": ["head", "base"]}, "path_prefix": {"type": "string"}, "offset": {"type": "integer", "minimum": 0},
              "limit": {"type": "integer", "minimum": 1, "maximum": 250}}, "additionalProperties": False},
              "annotations": annotations},
             {"name": "list_symbols", "description": "List exact Tree-sitter declarations (classes, methods and functions) in one tracked source file. Use this after browsing paths with list_files; returns source ranges for follow-up reads.",
@@ -325,9 +341,9 @@ class RepositoryTools:
              "inputSchema": {"type": "object", "properties": {
                  "path": {"type": "string"}, "line": {"type": "integer", "minimum": 1}},
                  "required": ["path"], "additionalProperties": False}, "annotations": annotations},
-            {"name": "read_source", "description": "Read an exact range of up to 80 lines from a tracked, supported source file at the PR head. Returns line-numbered code and a source ID for citations. Read large implementations in adjacent ranges.",
+            {"name": "read_source", "description": "Read an exact range of up to 80 lines from tracked text in any language. revision defaults to head; base is available when supplied by the caller. Returns line-numbered code and a source ID for citations. Read large implementations in adjacent ranges.",
              "inputSchema": {"type": "object", "properties": {
-                 "path": {"type": "string"}, "start_line": {"type": "integer", "minimum": 1},
+                 "revision": {"type": "string", "enum": ["head", "base"]}, "path": {"type": "string"}, "start_line": {"type": "integer", "minimum": 1},
                  "end_line": {"type": "integer", "minimum": 1}},
                  "required": ["path", "start_line", "end_line"], "additionalProperties": False},
              "annotations": annotations},
@@ -349,8 +365,8 @@ def _send(message: dict) -> None:
     sys.stdout.flush()
 
 
-def serve(root: Path, head: str, audit_path: Path) -> None:
-    tools = RepositoryTools(root, head, audit_path)
+def serve(root: Path, head: str, audit_path: Path, base: str | None = None) -> None:
+    tools = RepositoryTools(root, head, audit_path, base)
     specs = tools._tool_specs()
     for raw in sys.stdin:
         try:
@@ -390,10 +406,11 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--head", required=True)
+    parser.add_argument("--base", default=None)
     parser.add_argument("--audit", type=Path, required=True)
     args = parser.parse_args()
     try:
-        serve(args.root, args.head, args.audit)
+        serve(args.root, args.head, args.audit, args.base)
     except RepositoryToolError as exc:
         print(str(exc), file=sys.stderr)
         raise SystemExit(1) from exc

@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
     "build": "tsc -b && vite build",
-    "preview": "vite preview --host 127.0.0.1"
+    "preview": "vite preview --host 127.0.0.1",
+    "test:layout": "node scripts/test-architecture-layout.mjs",
+    "test:review": "node scripts/test-review-topics.mjs"
   },
   "dependencies": {
-    "cytoscape": "^3.31.0",
     "lucide-react": "^0.468.0",
     "prismjs": "^1.30.0",
     "react": "^19.1.0",
@@ -19,7 +20,6 @@
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
-    "@types/cytoscape": "^3.21.0",
     "@types/prismjs": "^1.26.6",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
