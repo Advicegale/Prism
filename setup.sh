@@ -18,7 +18,13 @@ else
   backend/.venv/bin/python -m pip install -e './backend[test]'
 fi
 echo 'Installing language parsers declared by Graphify'
-mapfile -t graphify_parser_requirements < <(backend/.venv/bin/python scripts/graphify-language-requirements.py)
+graphify_parser_output="$(backend/.venv/bin/python scripts/graphify-language-requirements.py)"
+graphify_parser_requirements=()
+while IFS= read -r graphify_parser_requirement; do
+  if [[ -n "$graphify_parser_requirement" ]]; then
+    graphify_parser_requirements+=("$graphify_parser_requirement")
+  fi
+done <<< "$graphify_parser_output"
 if command -v uv >/dev/null; then
   uv pip install --python backend/.venv/bin/python "${graphify_parser_requirements[@]}"
 else

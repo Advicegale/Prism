@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed setup on older Bash versions, including macOS's system Bash, by replacing `mapfile` with a compatible read loop. Parser dependency discovery failures now stop setup before installation.
+
 - Corrected the parser failures found across the retained preview PRs: JSX literal ampersands, PostgreSQL migration syntax and C# pointer assignments. Setup reproducibly builds small licensed grammar patches from pinned upstream source; both Graphify and exploration use them without changing reviewed code or source anchors. Parser-version changes invalidate old exploration caches. Pointer writes retain explicit analysis limits, and malformed syntax still produces coverage warnings. Added an all-report/both-revision parser audit and passive-source regressions.
 
 - Added a split/unified diff reader with aligned before/after source, separate line gutters, changed-word highlighting, wrapping controls and next-change navigation. Reader preferences persist across files; inline questions stay tied to exact revision-side coordinates and conversations survive mode changes. Narrow screens default to unified; offline HTML retains its static unified view.
