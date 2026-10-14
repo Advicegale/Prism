@@ -195,6 +195,27 @@ class Query:
         self.frontier=list(dict.fromkeys(item for item in self.frontier if item[0] not in self.visited))
         return self.projection()
 
+    def settle(self,limit=200):
+        """Fold in layers that only add occurrences to files already on the map.
+
+        A user-visible step should reveal a new file or connection. If the next
+        layer would only add more occurrences/stops inside displayed files, apply
+        it now so the button never offers a click that looks like nothing happened.
+        A layer that does grow the file map is rolled back and left for the click.
+        """
+        for _ in range(limit):
+            if not self.frontier or self.incomplete: break
+            saved=(self.nodes,self.connections,self.boundaries,self.visited,self.history,self.frontier,self.incomplete)
+            self.nodes={path:{**node,'symbols':list(node['symbols'])} for path,node in self.nodes.items()}
+            self.connections=dict(self.connections); self.boundaries=dict(self.boundaries)
+            self.visited=set(self.visited); self.history=dict(self.history); self.frontier=list(self.frontier)
+            files,links=set(self.nodes),set(self.connections)
+            self.expand()
+            if set(self.nodes)!=files or set(self.connections)!=links or self.incomplete:
+                (self.nodes,self.connections,self.boundaries,self.visited,self.history,self.frontier,self.incomplete)=saved
+                break
+        return self.projection()
+
     def connect(self,source,target,evidence):
         if source==target: return
         refs=self.index.relationships

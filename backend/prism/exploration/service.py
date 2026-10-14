@@ -167,7 +167,7 @@ def resolve_symbol(report,path,side,line,column):
 def create_query(report,index,root,direction,changed_only,side,focus_ref=None,focus_anchor=None):
     changed={f.get('old_path') if side=='old' else f.get('path') for f in report.get('files',[])}
     query=Query(index,root,direction,changed_only,changed,side,focus_ref,focus_anchor)
-    query.expand(initial=True);query.reveal_focus();result=query.projection(); token=uuid.uuid4().hex
+    query.expand(initial=True);query.reveal_focus();result=query.settle(); token=uuid.uuid4().hex
     query.id=token; result['query_id']=token
     with lock:
         queries[token]=(report['id'],query,threading.Lock())
@@ -185,7 +185,9 @@ def expand(report,side,root_id,direction,changed_only,query_id=None,context_quer
         if (report_id!=report['id'] or query.side!=side or query.root['id']!=root_id or query.direction!=direction
                 or query.changed_only!=changed_only or query.index.facts.revision!=job['revision']):
             raise ValueError('Exploration cursor does not match this root, revision or filter.')
-        with query_lock: return query.expand()
+        with query_lock:
+            query.expand()
+            return query.settle()
     # Root IDs are opaque, server-derived; accept only roots of this report.
     with lock:
         entry=queries.get(context_query_id) if context_query_id else next((entry for entry in reversed(queries.values())

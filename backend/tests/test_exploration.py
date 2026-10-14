@@ -423,3 +423,30 @@ def test_class_field_assignment_keeps_owner_and_wrapped_constructor_is_construct
     assert any('instance' in s['name'] for n in complete(i,select(i,'device.py','Device')['root'])['nodes'] for s in n['symbols'])
     ambiguous=Index(analyze({'mixed.ts':'class First { move(){} } class Second { move(){} } let value=new First(); value=new Second(); value.move();'},SHA))
     assert select(ambiguous,'mixed.ts','move',2)['status']=='unresolved'
+
+
+def test_settle_folds_occurrence_only_layers_and_keeps_file_growth_for_the_click():
+    sources={'a.ts':'export const config = { retries: 3 };\n',
+             'b.ts':'import { config } from "./a";\nexport const first = config;\nexport const second = first;\n',
+             'c.ts':'import { second } from "./b";\nexport const third = second;\n'}
+    # The next layer reaches c.ts, so it stays for the user's click instead of being applied silently.
+    index=Index(analyze(sources,SHA)); root=select(index,'a.ts','config')['root']
+    query=Query(index,root,'consumers',False,set(sources),'new'); query.expand(initial=True)
+    settled=query.settle(); paths={n['path'] for n in settled['nodes']}
+    assert paths=={'a.ts','b.ts'} and settled['has_more']
+    assert 'c.ts' in {n['path'] for n in query.expand()['nodes']}
+    # A leaf file's remaining occurrences are folded in immediately and nothing is left to click.
+    leaf={'a.ts':sources['a.ts'],'b.ts':sources['b.ts']}
+    index=Index(analyze(leaf,SHA)); root=select(index,'a.ts','config')['root']
+    query=Query(index,root,'consumers',False,set(leaf),'new'); query.expand(initial=True)
+    assert query.projection()['has_more']
+    before=sum(len(n['symbols']) for n in query.projection()['nodes'])
+    settled=query.settle()
+    assert not settled['has_more'] and sum(len(n['symbols']) for n in settled['nodes'])>before
+    assert {n['path'] for n in settled['nodes']}=={'a.ts','b.ts'}
+    # Rolling back a rejected layer must leave the cursor able to continue identically.
+    index=Index(analyze(sources,SHA)); root=select(index,'a.ts','config')['root']
+    a=Query(index,root,'consumers',False,set(sources),'new'); a.expand(initial=True); a.settle(); grown=a.expand()
+    b=Query(index,root,'consumers',False,set(sources),'new'); b.expand(initial=True); direct=b.expand()
+    assert {n['path']:sorted(x['name'] for x in n['symbols']) for n in grown['nodes']}=={n['path']:sorted(x['name'] for x in n['symbols']) for n in direct['nodes']}
+    assert len(grown['connections'])==len(direct['connections'])
