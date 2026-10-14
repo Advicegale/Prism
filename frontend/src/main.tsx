@@ -1,10 +1,11 @@
 import {StrictMode,useEffect,useMemo,useRef,useState} from 'react'
 import {createRoot} from 'react-dom/client'
-import {ArrowRight,Check,CheckCircle2,ChevronDown,ChevronRight,Clock3,Copy,Download,EyeOff,ExternalLink,FileCode2,GitBranch,GitPullRequest,Layers3,LoaderCircle,Menu,Network,Play,Plus,RefreshCcw,Settings2,ShieldCheck,Sparkles,Terminal,X,AlertCircle} from 'lucide-react'
+import {ArrowRight,Check,CheckCircle2,ChevronDown,ChevronRight,Clock3,Copy,Download,EyeOff,ExternalLink,FileCode2,GitBranch,GitPullRequest,Layers3,LoaderCircle,Menu,Network,Play,Plus,RefreshCcw,Settings2,ShieldCheck,Terminal,X,AlertCircle} from 'lucide-react'
 import {ArchitectureMap} from './components/ArchitectureMap'
 import {TopicReview} from './components/TopicReview'
 import {ReviewQuestionPanel} from './components/ReviewQuestionPanel'
-import {MarkdownContent} from './components/MarkdownContent'
+import {ReportBrief} from './components/ReportBrief'
+import {AskShell} from './components/AskShell'
 import type { Harnesses,Job,Report,ReviewAssistantSettings,ViewedFiles } from './types'
 import './styles.css'
 
@@ -52,6 +53,7 @@ function App(){
  const [showHistory,setShowHistory]=useState(false)
  const [showAnalyzeForm,setShowAnalyzeForm]=useState(false)
  const [copied,setCopied]=useState(false)
+ const [focusMode,setFocusMode]=useState(false)
  const poll=useRef<ReturnType<typeof setInterval>|null>(null)
  const reportIdRef=useRef<string|null>(null)
  reportIdRef.current=report?.id||null
@@ -61,6 +63,19 @@ function App(){
   return()=>{if(poll.current)clearInterval(poll.current)}
  },[])
  useEffect(()=>{const syncSidebar=()=>setSidebar(window.innerWidth>900);window.addEventListener('resize',syncSidebar);return()=>window.removeEventListener('resize',syncSidebar)},[])
+ useEffect(()=>setFocusMode(false),[report?.id,mapView,showSettings,showHistory])
+ useEffect(()=>{
+  if(!focusMode)return
+  const onKey=(event:KeyboardEvent)=>{
+   if(event.key!=='Escape'||event.defaultPrevented)return
+   const active=document.activeElement
+   if(active instanceof HTMLElement&&(active.matches('input,textarea,select')||active.isContentEditable))return
+   if(document.querySelector('.symbol-exploration,.reading-help'))return
+   setFocusMode(false)
+  }
+  document.addEventListener('keydown',onKey)
+  return()=>document.removeEventListener('keydown',onKey)
+ },[focusMode])
  useEffect(()=>{localStorage.setItem('prism:harness',harness);localStorage.setItem('prism:model',model);localStorage.setItem('prism:effort',effort)},[harness,model,effort])
  useEffect(()=>{localStorage.setItem('prism:hide-viewed',String(hideViewedFiles))},[hideViewedFiles])
  useEffect(()=>{
@@ -138,8 +153,8 @@ function App(){
  const selectedModel=available?.models.find(m=>m.id===model)
  const effortOptions=selectedModel?.efforts?.length?selectedModel.efforts:(available?.efforts||['low','medium','high'])
  const busy=job?.state==='running'||job?.state==='queued'
- return <div className="app">
-  <aside className={'sidebar '+(!sidebar?'sidebar-hidden':'')}>
+ return <div className={'app'+(focusMode?' focus-mode':'')}>
+  <aside className={'sidebar '+(!sidebar||focusMode?'sidebar-hidden':'')}>
    <div className="brand"><div className="brand-icon"><Network size={22}/></div><div><strong>prism<span className="brand-period">.</span></strong><small>Structural PR review</small></div></div>
    <div className="sidebar-main">
     <div className="side-label">Workspace</div>
@@ -155,7 +170,7 @@ function App(){
    </div>
   </aside>
   <div className="workspace">
-   <header className="topbar"><div className="topbar-left"><button className="icon-btn" onClick={()=>setSidebar(v=>!v)} aria-label="Toggle sidebar"><Menu size={19}/></button><span className="crumb">Workspace</span><ChevronRight size={14} className="muted"/><span className="crumb-current">{showSettings?'Configuration':showHistory?'Reports':report?.demo?'Example report':report?`PR #${report.meta.number}`:'Explorer'}</span></div><div className="topbar-right">{loading&&<LoaderCircle size={16} className="spinning"/>}{report&&!showSettings&&!showHistory&&<button className="topbar-action" onClick={()=>showAnalyzeForm?setShowAnalyzeForm(false):openAnalyzer()}>{showAnalyzeForm?<X size={14}/>:<Plus size={14}/>}<span>{showAnalyzeForm?'Close':'New analysis'}</span></button>}<span className="host-pill"><span className="status-pulse"/> Local instance</span><span className="avatar">PR</span></div></header>
+   <header className="topbar"><div className="topbar-left"><button className="icon-btn" onClick={()=>setSidebar(v=>!v)} aria-label="Toggle sidebar"><Menu size={19}/></button><span className="crumb">Workspace</span><ChevronRight size={14} className="muted"/><span className="crumb-current">{focusMode&&report&&!showSettings&&!showHistory?`Focus mode · ${report.demo?'Example report':`PR #${report.meta.number}`}`:showSettings?'Configuration':showHistory?'Reports':report?.demo?'Example report':report?`PR #${report.meta.number}`:'Explorer'}</span></div><div className="topbar-right">{loading&&<LoaderCircle size={16} className="spinning"/>}{report&&!showSettings&&!showHistory&&<button className="topbar-action" onClick={()=>showAnalyzeForm?setShowAnalyzeForm(false):openAnalyzer()}>{showAnalyzeForm?<X size={14}/>:<Plus size={14}/>}<span>{showAnalyzeForm?'Close':'New analysis'}</span></button>}<span className="host-pill"><span className="status-pulse"/> Local instance</span><span className="avatar">PR</span></div></header>
    <main>
     {showSettings?<div className="settings-view"><div className="page-eyebrow"><Settings2 size={15}/> Configuration</div><h1>Configuration</h1><p>Harnesses run locally using your existing CLI login and credentials. Graphify and Tree-sitter are installed by the setup script.</p><div className="settings-card"><h3>AI harnesses</h3>{(['codex','claude'] as const).map(key=><div className="setting-row" key={key}><div className="setting-title"><Terminal size={18}/><div><strong>{display(key)}</strong><small>{models?.[key]?.discovery||'Checking...'}</small></div></div><span className={'status-tag '+(models?.[key]?.installed?'ok':'')}>{models?.[key]?.installed?'Detected':'Not detected'}</span></div>)}<button className="secondary-btn" onClick={()=>call<Harnesses>('/harnesses').then(setModels).catch(e=>setError(String(e)))}><RefreshCcw size={14}/> Re-detect CLIs</button></div><div className="settings-card"><h3>Runtime</h3><p>Bind address: <code>127.0.0.1</code> · Port: <code>{APP_PORT}</code></p><p>For another port, edit <code>PORT</code> in <code>.env</code> and restart the app.</p><p>AI prompts are sent to your selected CLI provider. Graphify structural indexing is local.</p></div></div>:
     showHistory?<div className="history-view"><div className="page-eyebrow"><Clock3 size={15}/> Recent reports</div><div className="history-head"><div><h1>Saved reports</h1><p>Reports are cached locally and ready to reopen.</p></div><button className="secondary-btn" onClick={refreshHistory}><RefreshCcw size={15}/> Refresh</button></div>{recent.length?recent.map(item=><button className="history-item" key={item.id} onClick={()=>loadReport(item.id)}><div className="history-icon"><GitPullRequest size={20}/></div><div className="history-meta"><strong>{item.meta.title}</strong><small>{item.meta.owner}/{item.meta.repo} · #{item.meta.number} · {prettyDate(item.created_at)}</small></div><span className="history-stats">{item.stats.changed_files} changed files</span><ChevronRight size={18}/></button>):<div className="empty-panel">No saved reports yet. Analyze a pull request to keep its review here.</div>}</div>:
@@ -175,13 +190,12 @@ function App(){
       <div className="report-header"><div><div className="section-topline"><span className="eyebrow">{report.demo?'Example report':`${report.meta.owner}/${report.meta.repo} · PR #${report.meta.number}`}</span>{report.demo?<span className="demo-tag">Sample data</span>:<span className="real-tag"><CheckCircle2 size={12}/> Ready to review</span>}</div><h2>{report.meta.title}</h2><div className="report-meta"><span><Clock3 size={14}/> Analyzed {prettyDate(report.created_at)}</span></div></div><div className="report-buttons">{!report.demo&&<button className="small-btn" onClick={copyLink}>{copied?<Check size={15}/>:<Copy size={15}/>}<span>{copied?'Copied':'Copy link'}</span></button>}<button className="small-btn" onClick={downloadHtml} disabled={htmlExportBusy}>{htmlExportBusy?<LoaderCircle className="spinning" size={15}/>:<Download size={15}/>} {htmlExportBusy?'Exporting…':'Export HTML'}</button><button className="small-btn" onClick={download}><Download size={15}/> Export JSON</button>{!report.demo&&<a className="small-btn" href={report.meta.url} target="_blank" rel="noreferrer"><ExternalLink size={15}/> GitHub</a>}</div></div>
       {htmlExportError&&<p className="error-banner" role="alert">{htmlExportError}</p>}
       <div className="report-facts" aria-label="Pull request change totals"><span><strong>{report.stats.changed_files}</strong> changed files</span><span><strong>{topics.length}</strong> review {topics.length===1?'topic':'topics'}</span>{!report.demo&&<div className="report-review-controls"><span className={'github-viewed-summary'+(viewedFiles?.available?'':' unavailable')} title={viewedFiles?.reason||''}>{viewedFilesLoading?'Checking GitHub…':viewedFiles?.available?`${viewedCount} of ${reportPaths.length} viewed in GitHub`:'GitHub viewed status unavailable'}</span><button className="github-viewed-refresh" type="button" aria-label="Refresh viewed file status from GitHub" title="Refresh status from GitHub" disabled={viewedFilesLoading} onClick={refreshViewedStatus}><RefreshCcw size={13}/></button><label className={'review-viewed-toggle'+(hideViewedFiles?' active':'')} title={viewedFiles?.available?'Hide files already marked viewed in GitHub':viewedFiles?.reason||'Install GitHub CLI and sign in with gh auth login'}><input type="checkbox" aria-label="Hide files viewed in GitHub" checked={hideViewedFiles} onChange={event=>setHideViewedFiles(event.target.checked)} disabled={!viewedFiles?.available}/><EyeOff size={14}/><span>Hide viewed</span><b>{viewedCount}</b></label></div>}</div>
-      {!report.demo&&<ReviewQuestionPanel report={report} harnesses={models} assistant={reviewAssistant} onAssistantChange={setReviewAssistant} onCitationClick={navigateToCitation}/>}
+      <ReportBrief key={'brief-'+report.id} report={report} busy={!!busy} harness={harness} onGenerate={explain}/>
+      {!report.demo&&<AskShell key={'ask-'+report.id}><ReviewQuestionPanel report={report} harnesses={models} assistant={reviewAssistant} onAssistantChange={setReviewAssistant} onCitationClick={navigateToCitation}/></AskShell>}
       <div className="section-heading"><div><h3>Review workspace</h3><p>Orient in the architecture. Review changes by topic.</p></div><div className="graph-meta"><span className="status-pulse"/> Source-backed relationships</div></div>
       {report.architecture&&<div className="architecture-view-switch" aria-label="Change map view"><button className={mapView==='architecture'?'active':''} onClick={()=>setMapView('architecture')}><Layers3 size={15}/> Architecture</button><button className={mapView==='topics'?'active':''} onClick={()=>setMapView('topics')}><FileCode2 size={15}/> Topics</button><span>Understand the connections, then review the files</span></div>}
       {report.architecture&&<div className="architecture-view-panel" hidden={mapView!=='architecture'}><ArchitectureMap data={report.architecture} hiddenPaths={architectureHiddenPaths} onOpenFile={inspectArchitectureFile} assistant={reviewAssistant} harnesses={models} onAssistantChange={setReviewAssistant} onDiscover={discoverArchitecture} busy={!!busy} progress={job?.message||''} error={error}/></div>}
-      <div className="topics-view-panel" hidden={!!report.architecture&&mapView!=='topics'}><TopicReview report={report} assistant={reviewAssistant} harnesses={models} onAssistantChange={setReviewAssistant} viewedAvailable={!!viewedFiles?.available} viewedStates={viewedFiles?.states||{}} viewedBusy={viewedFileBusy} viewedError={viewedFilesError} onToggleViewed={toggleViewedFile} hideViewed={hideViewedFiles} onShowViewed={()=>setHideViewedFiles(false)} focusPath={reviewFocus?.path||null} focusRequest={reviewFocus?.request||0}/></div>
-      {report.ai&&<details className="pr-review-brief"><summary>Pull request brief <ChevronDown size={14}/></summary>{report.ai.overview&&<MarkdownContent text={report.ai.overview}/>} {!!report.ai.key_changes?.length&&<ul>{report.ai.key_changes.map((change,i)=><li key={i}><MarkdownContent text={change}/></li>)}</ul>}</details>}
-      {!report.ai&&!report.demo&&<div className="review-summary-empty"><p>File diffs are ready. Generate review notes to add change summaries and a suggested reading order.</p><button type="button" className="secondary-btn" disabled={busy||harness==='none'} onClick={explain}><Sparkles size={14}/> Generate review notes</button></div>}
+      <div className="topics-view-panel" hidden={!!report.architecture&&mapView!=='topics'}><TopicReview report={report} assistant={reviewAssistant} harnesses={models} onAssistantChange={setReviewAssistant} viewedAvailable={!!viewedFiles?.available} viewedStates={viewedFiles?.states||{}} viewedBusy={viewedFileBusy} viewedError={viewedFilesError} onToggleViewed={toggleViewedFile} hideViewed={hideViewedFiles} onShowViewed={()=>setHideViewedFiles(false)} focusPath={reviewFocus?.path||null} focusRequest={reviewFocus?.request||0} active={mapView==='topics'||!report.architecture} focusMode={focusMode} onToggleFocus={()=>setFocusMode(value=>!value)}/></div>
 
      </section>}
     </>}

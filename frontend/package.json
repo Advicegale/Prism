@@ -11,7 +11,8 @@
     "test:review": "node scripts/test-review-topics.mjs",
     "test:export": "node scripts/test-html-export.mjs",
     "test:diff": "node scripts/test-diff.mjs",
-    "test:exploration": "node scripts/test-exploration.mjs"
+    "test:exploration": "node scripts/test-exploration.mjs",
+    "test:reading": "node scripts/test-reading.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

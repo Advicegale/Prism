@@ -963,13 +963,8 @@ body,.workspace{background:var(--page)}
 .review-file-navigation button{display:flex;align-items:center;gap:5px;background:transparent;border:0;color:#bad2e8;font:12px system-ui,sans-serif;cursor:pointer;padding:4px}
 .review-file-navigation button:disabled{opacity:.35;cursor:default}
 .review-viewed-error{padding:0 20px 15px;color:#e4aeb3;font-size:12px}
-.topic-review button:focus-visible,.topic-review summary:focus-visible,.pr-review-brief summary:focus-visible{outline:2px solid #82b4dc;outline-offset:3px}
+.topic-review button:focus-visible{outline:2px solid #82b4dc;outline-offset:3px}
 .topic-review button:disabled{opacity:.45;cursor:default}
-.pr-review-brief{border-top:1px solid #344353;margin:28px 0;padding-top:17px}
-.pr-review-brief>summary{display:flex;align-items:center;gap:8px;font-size:13px;color:#b0c6da;cursor:pointer}
-.pr-review-brief>.markdown-content{font-size:14px;line-height:1.7;max-width:80ch;color:#cfdeeb;margin:17px 0}
-.pr-review-brief>ul{padding-left:19px;max-width:80ch;color:#bdcfdf}
-.pr-review-brief li .markdown-content{font-size:13px;line-height:1.7}
 .review-summary-empty{display:flex;justify-content:space-between;gap:20px;align-items:center;padding:20px 0;font-size:13px;color:#aabccc}
 .topic-review-empty{padding:35px 20px;color:#a4b9cc}
 @media(max-width:1200px){.topic-review{grid-template-columns:200px minmax(0,1fr);gap:18px}.review-file-workspace{grid-template-columns:180px minmax(0,1fr);gap:15px}.review-topic-heading{display:block}.review-topic-progress{margin-top:14px;max-width:180px}.review-file-heading,.review-file-notes{padding:18px}.review-file-heading-actions{margin-left:0}.review-file-diff-heading{padding:12px 18px}}
@@ -1142,3 +1137,66 @@ body,.workspace{background:var(--page)}
 .exploration-map-footer{padding:7px 16px}
 .wide .exploration-map-footer{padding:10px 16px}
 @media(max-width:650px){.exploration-heading{padding:12px}.exploration-heading h3{font-size:18px}.exploration-heading p>span:last-child{max-width:calc(100vw - 70px)}.exploration-toolbar{padding:6px 10px;gap:6px}.exploration-toolbar label{font-size:13px}.symbol-exploration .exploration-toolbar button{font-size:12px;padding:5px 7px}.exploration-map-footer>span:nth-child(2){display:none}.exploration-source{font-size:14px}.exploration-reopen{right:12px;bottom:12px}.exploration-reopen span{max-width:140px}}
+
+/* Reading layout: compact brief, Ask bar, focus mode, collapsible topic spine and shortcut help. */
+.report-brief{margin:0 0 22px;padding:13px 0 0;border-top:1px solid #344353}
+.report-brief-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:7px}
+.report-brief-head h3{margin:0;font-size:13px;font-weight:620;color:#b0c6da}
+.report-brief-head button{display:inline-flex;align-items:center;gap:5px;min-height:26px;padding:0 9px;border:1px solid #3a4d60;border-radius:5px;background:#151d26;color:#b9cde0;font-size:12px}
+.report-brief-head button svg{transition:transform .15s}
+.report-brief-head button[aria-expanded=true] svg{transform:rotate(180deg)}
+.report-brief-body{position:relative;max-width:80ch;max-height:4.65em;overflow:hidden;font-size:13px;line-height:1.55;color:#cfdeeb}
+.report-brief-body p{margin:0}
+.report-brief-body p+p{margin-top:.5em}
+.report-brief-body.expanded{max-height:none;overflow:visible}
+.report-brief-body:not(.expanded)::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1.3em;background:linear-gradient(rgb(0 0 0 / 0),var(--page))}
+.report-brief-body ul{margin:10px 0 0;padding-left:19px;color:#bdcfdf}
+.report-brief-body li .markdown-content{font-size:13px;line-height:1.7}
+.ask-shell{margin:0 0 28px}
+.ask-shell .review-questions{margin:8px 0 0}
+.ask-shell [hidden]{display:none!important}
+.ask-shell-bar{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:7px 14px;border:1px solid #303844;border-radius:9px;background:#13171d;color:#e2e8ef;font:inherit;text-align:left}
+.ask-shell-bar:hover{border-color:#4d6478}
+.ask-shell-bar>strong{font-size:13px;font-weight:620;white-space:nowrap}
+.ask-shell-hint{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8fa3b8;font-size:12px}
+.ask-shell-chevron{flex:0 0 auto;color:#8897a6;transition:transform .15s}
+.ask-shell.open .ask-shell-chevron{transform:rotate(180deg)}
+@media(max-width:650px){.ask-shell-hint{display:none}}
+.focus-mode main{max-width:none;padding:16px 20px 32px}
+.focus-mode .report-section>:not(.topics-view-panel){display:none}
+.review-topic-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.review-topic-action{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 10px;border:1px solid #3a4d60;border-radius:6px;background:#151e28;color:#b9cde0;font:12px system-ui,sans-serif}
+.review-topic-action:hover{border-color:#55758e;color:#e1eff8}
+.review-topic-action.active{border-color:#82b4dc;background:#1a2b3b;color:#e4f0f9}
+.review-topic-shortcuts{padding:0 8px}
+.review-topic-spine-toggle{display:grid;place-items:center;width:30px;height:30px;flex:0 0 auto;padding:0;border:1px solid #3a4d60;border-radius:6px;background:#151e28;color:#aabccc}
+@media(min-width:1001px){.topic-review.spine-collapsed{grid-template-columns:minmax(0,1fr)}}
+.reading-help{position:fixed;right:20px;bottom:20px;z-index:40;width:min(320px,calc(100vw - 40px));padding:14px 15px 13px;border:1px solid #303844;border-radius:9px;background:#13171d;color:#d6e2ec;box-shadow:0 14px 40px #0008;font:12px system-ui,-apple-system,"Segoe UI",sans-serif}
+.reading-help-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;font-size:13px;font-weight:620}
+.reading-help-head button{display:inline-flex;align-items:center;gap:5px;min-height:26px;padding:0 8px;border:1px solid #3a4d60;border-radius:5px;background:#151d26;color:#b9cde0;font-size:12px}
+.reading-help dl{display:grid;gap:7px;margin:0}
+.reading-help dl>div{display:grid;grid-template-columns:78px minmax(0,1fr);gap:10px;align-items:baseline}
+.reading-help dt{margin:0}
+.reading-help dd{margin:0;color:#aabccc}
+.reading-help kbd{padding:2px 6px;border:1px solid #3a4d60;border-radius:4px;background:#0d1117;color:#dfe9f2;font:600 11px ui-monospace,SFMono-Regular,Consolas,monospace}
+/* Tighter report page rhythm so the reader starts closer to the top of the first screen. */
+.report-section{padding-top:24px}
+.report-header{margin-bottom:8px}
+.report-facts{margin-bottom:12px}
+.report-brief{margin-bottom:12px}
+.ask-shell{margin-bottom:14px}
+.section-heading{margin-bottom:8px}
+.section-heading p{display:none}
+.architecture-view-switch{margin-bottom:8px}
+.topic-review{margin-top:10px}
+
+/* Collapsed topic list: a compact switcher with previous/next built into one picker. */
+.review-topic-switcher{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.review-topic-picker{display:flex;align-items:stretch;flex:1;min-width:0;max-width:640px;border:1px solid #3a4d60;border-radius:7px;background:#151e28;overflow:hidden}
+.review-topic-picker button{display:grid;place-items:center;width:34px;flex:0 0 auto;padding:0;border:0;background:transparent;color:#b9cde0}
+.review-topic-picker button:first-child{border-right:1px solid #2c3b4a}
+.review-topic-picker button:last-child{border-left:1px solid #2c3b4a}
+.review-topic-picker button:hover:not(:disabled){background:#1d2c3b;color:#e4f0f9}
+.review-topic-picker button:disabled{opacity:.35;cursor:default}
+.review-topic-picker select{flex:1;min-width:0;height:34px;padding:0 10px;border:0;background:transparent;color:#e1eaf2;font:13px system-ui,sans-serif;text-overflow:ellipsis;cursor:pointer}
+.review-topic-picker select:focus-visible,.review-topic-picker button:focus-visible{outline:2px solid #82b4dc;outline-offset:-2px}

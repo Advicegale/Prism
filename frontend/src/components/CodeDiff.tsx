@@ -6,6 +6,7 @@ import {alignSplitRows, buildDiffBlocks, diffAnchor, parseDiffRows, type DiffLin
 export type {DiffLineReference} from '../diff'
 import { InlineDiffChat } from './InlineDiffChat'
 import {diffSourcePosition, sourceClick, type SymbolSelection} from '../exploration'
+import {nextDefaultMode, type DiffMode} from '../reading'
 import 'prismjs'
 
 type PrismRuntime = typeof import('prismjs')
@@ -114,7 +115,6 @@ export function SyntaxCode({ code, path, changes = [] }: { code: string; path: s
   return <code className="syntax-code"><HighlightedCode code={code} language={readyLanguage} changes={changes} /></code>
 }
 
-type DiffMode = 'unified' | 'split'
 interface InlineQuestionConfig {reportId: string; assistant: ReviewAssistantSettings; harnesses: Harnesses | null; onAssistantChange: (settings: ReviewAssistantSettings) => void}
 interface CodeDiffProps {expanded?: boolean; interactive?: boolean; patch: string; path: string; oldPath?: string; lineReferences?: (DiffLineReference | null)[]; inlineQuestion?: InlineQuestionConfig; onSymbolSelect?: (selection: SymbolSelection) => void}
 interface InlineChatSlot {id: string; start: number; end: number; side: DiffSide; locked: boolean}
@@ -138,13 +138,14 @@ export function CodeDiff({patch, path, oldPath, lineReferences, inlineQuestion, 
     const value = interactive ? preference('mode') : null
     return value === 'split' || value === 'unified' ? value : null
   })
-  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 650px)').matches)
+  // Until the pane is measured, guess from the viewport; a missing window (static render) keeps the split default.
+  const [autoMode, setAutoMode] = useState<DiffMode>(() => typeof window === 'undefined' || window.innerWidth >= 1500 ? 'split' : 'unified')
   const [wrap, setWrap] = useState(() => !interactive || preference('wrap') !== 'false')
   const [words, setWords] = useState(() => interactive && preference('words') !== 'false')
   const [focusHunk, setFocusHunk] = useState(-1)
   const [jumpRequest, setJumpRequest] = useState(0)
   const scroller = useRef<HTMLDivElement>(null)
-  const mode = interactive ? chosenMode || (narrow ? 'unified' : 'split') : 'unified'
+  const mode = interactive ? chosenMode || autoMode : 'unified'
   // Finish small replacement blocks rather than separating their two sides at the display limit.
   const cutBlock = allBlocks.find(block => block.start < limit && block.end >= limit)
   const visibleCount = expanded ? allRows.length : Math.min(allRows.length, cutBlock && cutBlock.end - limit < 80 ? cutBlock.end + 1 : limit)
@@ -163,17 +164,29 @@ export function CodeDiff({patch, path, oldPath, lineReferences, inlineQuestion, 
 
   useEffect(() => {setLimit(120); setChatSlots([]); setActiveSlotId(null); setFocusHunk(-1); setJumpRequest(0)}, [patch, path])
   useEffect(() => {
-    if (!interactive) return
-    const media = window.matchMedia('(max-width: 650px)')
-    const update = () => setNarrow(media.matches)
-    media.addEventListener('change', update)
-    return () => media.removeEventListener('change', update)
+    const element = scroller.current
+    if (!interactive || !element || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(([entry]) => setAutoMode(current => nextDefaultMode(entry.contentRect.width, current)))
+    observer.observe(element)
+    return () => observer.disconnect()
   }, [interactive])
   useEffect(() => {
     if (focusHunk < 0) return
     const container = scroller.current, header = container?.querySelector<HTMLElement>(`[data-hunk-id="${focusHunk}"]`)
     if (container && header) container.scrollTop += header.getBoundingClientRect().top - container.getBoundingClientRect().top - (mode === 'split' ? 34 : 8)
   }, [focusHunk, jumpRequest, visibleCount, mode])
+  // Keyboard shortcuts from TopicReview reuse the same handlers as the visible controls.
+  const command = useRef<(name: string) => void>(() => {})
+  command.current = name => {
+    if (name === 'next-change' && hunks.length) nextChange()
+    if (name === 'toggle-mode') chooseMode(mode === 'split' ? 'unified' : 'split')
+  }
+  useEffect(() => {
+    if (!interactive) return
+    const listener = (event: Event) => command.current((event as CustomEvent<string>).detail)
+    document.addEventListener('prism:diff-command', listener)
+    return () => document.removeEventListener('prism:diff-command', listener)
+  }, [interactive])
 
   function chooseMode(value: DiffMode) {setChosenMode(value); savePreference('mode', value)}
   function nextChange() {
