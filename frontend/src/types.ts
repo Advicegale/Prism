@@ -19,7 +19,7 @@ export interface ExplorationConnection {id:string;source:string;target:string;in
 export interface ExplorationBoundary {id:string;kind:string;reason:string;anchor:SourceAnchor;from:string;hidden:boolean}
 export interface ExplorationCoverage {complete:boolean;languages:Record<string,number>;omitted:{path:string|null;reason:string}[];adapter:string}
 export interface ExplorationProjection {query_id:string;root:ExplorationRoot;revision:string;side:'old'|'new';direction:'consumers'|'origins';changed_only:boolean;nodes:ExplorationNode[];connections:ExplorationConnection[];boundaries:ExplorationBoundary[];has_more:boolean;status:string;coverage:ExplorationCoverage}
-export interface ExplorationResult {status:string;root?:ExplorationRoot;projection?:ExplorationProjection;revision?:string;side?:'old'|'new';occurrence?:SourceAnchor;name?:string;reason?:string;message?:string;error?:string}
+export interface ExplorationResult {status:string;root?:ExplorationRoot;projection?:ExplorationProjection;projections?:Partial<Record<'consumers'|'origins',ExplorationProjection>>;revision?:string;side?:'old'|'new';occurrence?:SourceAnchor;name?:string;reason?:string;message?:string;error?:string}
 export interface ExplorationSource {status:string;revision:string;side:'old'|'new';path:string;start_line:number;end_line:number;code:string;anchors:SourceAnchor[];bounded:boolean}
 export interface ReviewAssistantSettings {harness:'codex'|'claude';model:string;effort:string}
 export interface DiffLineAnchor {path:string;old_lines:number[];new_lines:number[]}

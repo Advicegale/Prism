@@ -304,6 +304,44 @@ def test_pending_resolution_cannot_race_into_ready_without_root(report_repo,monk
     assert service.resolve_symbol(report,'after.ts','new',1,raw.index(b'"'))['status']=='ignored'
 
 
+def test_clicked_alias_focus_has_two_scoped_cursors_and_hidden_path_evidence(monkeypatch):
+    sources={
+        'prefs.ts':'export const options={net:{tries:2}};\n',
+        'bridge.ts':'import {options} from "./prefs";\nexport const channel=assemble(options.net);\nexport const secondary=assemble(options.net);\n',
+        'hidden.ts':'export {channel as middle} from "./bridge";\n',
+        'clicked.ts':'import {middle as wire} from "./hidden";\nexport const service={wire};\n',
+        'screen.ts':'import {service} from "./clicked";\nexport const screen={service};\n',
+        'sibling.ts':'import {secondary} from "./bridge";\nexport const unrelated={secondary};\n',
+    }
+    index=Index(analyze(sources,SHA))
+    monkeypatch.setattr(service,'revision_context',lambda *_:(Path('/unused'),SHA))
+    monkeypatch.setattr(service,'index_job',lambda *_:{'status':'ready','revision':SHA,'index':index})
+    report={'id':'clicked-focus','files':[{'path':p} for p in ('clicked.ts','screen.ts','sibling.ts')]}
+    data=service.resolve_symbol(report,'clicked.ts','new',1,sources['clicked.ts'].index('wire'))
+    assert data['root']['name']=='channel' and data['root']['definition']['path']=='bridge.ts'
+    assert data['occurrence']['path']=='clicked.ts'
+    assert set(data['projections'])=={'origins','consumers'}
+    assert data['projection']==data['projections']['consumers']
+    for direction,projection in data['projections'].items():
+        paths={n['path'] for n in projection['nodes']}
+        assert {'bridge.ts','clicked.ts'}<=paths and 'hidden.ts' not in paths
+        assert any(e['indirect'] and 'hidden.ts' in e['hidden_paths'] for e in projection['connections'])
+        assert projection['direction']==direction and projection['root']['id']==data['root']['id']
+    upstream=data['projections']['origins'];saved=json.dumps(upstream,sort_keys=True)
+    downstream=service.expand(report,'new',data['root']['id'],'consumers',True,data['projections']['consumers']['query_id'])
+    assert 'screen.ts' in {n['path'] for n in downstream['nodes']}
+    assert json.dumps(upstream,sort_keys=True)==saved,'Expanding downstream does not mutate upstream state'
+    for direction in ('origins','consumers'):
+        all_files=service.expand(report,'new',data['root']['id'],direction,False,context_query_id=downstream['query_id'])
+        assert {'clicked.ts','hidden.ts'}<={n['path'] for n in all_files['nodes']}
+        while all_files['has_more']:
+            all_files=service.expand(report,'new',data['root']['id'],direction,False,all_files['query_id'])
+        assert 'sibling.ts' not in {n['path'] for n in all_files['nodes']}
+        assert not any('secondary' in s['name'] for n in all_files['nodes'] for s in n['symbols'])
+    with pytest.raises(ValueError,match='context does not match'):
+        service.expand({**report,'id':'other-report'},'new',data['root']['id'],'origins',False,context_query_id=downstream['query_id'])
+
+
 @pytest.mark.parametrize('ext',['ts','py','java'])
 def test_external_factories_accept_explicit_inputs_without_implementation(ext):
     if ext=='ts':src={'a.ts':'import { assemble } from "external-library"; export const options={net:{tries:2}}; export const channel=assemble(options.net);',

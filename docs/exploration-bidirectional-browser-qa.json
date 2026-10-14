@@ -1,0 +1,840 @@
+{
+  "date": "2026-10-14",
+  "normalPreview": {"url":"http://localhost:4780/","report":"Advicegale/AHOY #25","bounds":{"bottom":1215,"height":1100,"left":24,"right":1767,"top":115,"width":1743,"x":24,"y":115},"buttons":["Upstream complete","Downstream complete"],"errors":[],"source":"server/migrations/0019_delayed_notification_inbox.sql","title":"notification_events"},
+  "browser": "T3 native collaborative desktop preview",
+  "source": "Passive isolated Git fixture; no reviewed source execution or AI provider analysis",
+  "fixture": {
+    "old": "655085775ff34476e10f57469f5e362db59bbcfa",
+    "new": "6cf9810b4fdc0ab7534fba6a80d37c2d1df16ff0",
+    "recipe": "scripts/exploration-fixture.py --clicked-alias generates equivalent source (commit IDs depend on creation time). QA used a third fixture commit with the same source."
+  },
+  "stages": {
+    "before": {
+      "file": "screen.ts",
+      "pageX": 0,
+      "pageY": 594.5,
+      "diffX": 0,
+      "diffY": 0
+    },
+    "initial": {
+      "title": "primary",
+      "description": "variable After6cf9810bscreen.ts:1",
+      "bounds": {
+        "x": 24,
+        "y": 24,
+        "width": 1392,
+        "height": 852
+      },
+      "sourcePath": "screen.ts",
+      "sourceText": "1\nimport { primary as transportClient } from \"./client\";\n2\nimport { retryPolicy } from \"./policy\";\n3\nexport const service = { client: transportClient, retryPolicy };\n4\nexport const version = 2;",
+      "sourceFont": "15px",
+      "focusFont": "15px",
+      "center": {
+        "x": 0,
+        "y": -0.1875
+      },
+      "files": [
+        {
+          "title": "client.ts",
+          "text": "client.ts\nRepository root\nSource file\nprimary",
+          "x": 206,
+          "y": 261
+        },
+        {
+          "title": "config.ts",
+          "text": "config.ts\nRepository root\nChanged file\nconfig.transport",
+          "x": -174,
+          "y": 261
+        },
+        {
+          "title": "screen.ts",
+          "text": "screen.ts\nRepository root\nClicked source\ntransportClient",
+          "x": 586,
+          "y": 261
+        }
+      ],
+      "buttons": [
+        {
+          "text": "Expand upstream",
+          "disabled": false
+        },
+        {
+          "text": "Expand downstream",
+          "disabled": false
+        }
+      ],
+      "main": {
+        "file": "screen.ts",
+        "pageX": 0,
+        "pageY": 594.5,
+        "diffX": 0,
+        "diffY": 0
+      }
+    },
+    "upstream": {
+      "title": "primary",
+      "description": "variable After6cf9810bscreen.ts:1",
+      "bounds": {
+        "x": 24,
+        "y": 24,
+        "width": 1392,
+        "height": 852
+      },
+      "sourcePath": "screen.ts",
+      "sourceText": "1\nimport { primary as transportClient } from \"./client\";\n2\nimport { retryPolicy } from \"./policy\";\n3\nexport const service = { client: transportClient, retryPolicy };\n4\nexport const version = 2;",
+      "sourceFont": "15px",
+      "focusFont": "15px",
+      "center": {
+        "x": 0,
+        "y": -0.1875
+      },
+      "files": [
+        {
+          "title": "client.ts",
+          "text": "client.ts\nRepository root\nSource file\nprimary",
+          "x": 206,
+          "y": 261
+        },
+        {
+          "title": "config.ts",
+          "text": "config.ts\nRepository root\nChanged file\nconfig.transport",
+          "x": -174,
+          "y": 261
+        },
+        {
+          "title": "screen.ts",
+          "text": "screen.ts\nRepository root\nClicked source\ntransportClient",
+          "x": 586,
+          "y": 261
+        },
+        {
+          "title": "tuning.ts",
+          "text": "tuning.ts\nRepository root\nChanged file\ntuning.tries",
+          "x": -554,
+          "y": 261
+        }
+      ],
+      "buttons": [
+        {
+          "text": "Expand upstream",
+          "disabled": false
+        },
+        {
+          "text": "Expand downstream",
+          "disabled": false
+        }
+      ],
+      "main": {
+        "file": "screen.ts",
+        "pageX": 0,
+        "pageY": 594.5,
+        "diffX": 0,
+        "diffY": 0
+      }
+    },
+    "downstream": {
+      "title": "primary",
+      "description": "variable After6cf9810bscreen.ts:1",
+      "bounds": {
+        "x": 24,
+        "y": 24,
+        "width": 1392,
+        "height": 852
+      },
+      "sourcePath": "screen.ts",
+      "sourceText": "1\nimport { primary as transportClient } from \"./client\";\n2\nimport { retryPolicy } from \"./policy\";\n3\nexport const service = { client: transportClient, retryPolicy };\n4\nexport const version = 2;",
+      "sourceFont": "15px",
+      "focusFont": "15px",
+      "center": {
+        "x": 0,
+        "y": -0.1875
+      },
+      "files": [
+        {
+          "title": "client.ts",
+          "text": "client.ts\nRepository root\nSource file\nprimary",
+          "x": 206,
+          "y": 261
+        },
+        {
+          "title": "config.ts",
+          "text": "config.ts\nRepository root\nChanged file\nconfig.transport",
+          "x": -174,
+          "y": 261
+        },
+        {
+          "title": "screen.ts",
+          "text": "screen.ts\nRepository root\nClicked source\ntransportClient\nservice.client",
+          "x": 586,
+          "y": 261
+        },
+        {
+          "title": "tuning.ts",
+          "text": "tuning.ts\nRepository root\nChanged file\ntuning.tries",
+          "x": -554,
+          "y": 261
+        },
+        {
+          "title": "consumer.ts",
+          "text": "consumer.ts\nRepository root\nChanged file\nservice.client",
+          "x": 966,
+          "y": 261
+        }
+      ],
+      "buttons": [
+        {
+          "text": "Expand upstream",
+          "disabled": false
+        },
+        {
+          "text": "Expand downstream",
+          "disabled": false
+        }
+      ],
+      "main": {
+        "file": "screen.ts",
+        "pageX": 0,
+        "pageY": 594.5,
+        "diffX": 0,
+        "diffY": 0
+      }
+    },
+    "furtherDownstream": {
+      "title": "primary",
+      "description": "variable After6cf9810bscreen.ts:1",
+      "bounds": {
+        "x": 24,
+        "y": 24,
+        "width": 1392,
+        "height": 852
+      },
+      "sourcePath": "screen.ts",
+      "sourceText": "1\nimport { primary as transportClient } from \"./client\";\n2\nimport { retryPolicy } from \"./policy\";\n3\nexport const service = { client: transportClient, retryPolicy };\n4\nexport const version = 2;",
+      "sourceFont": "15px",
+      "focusFont": "15px",
+      "center": {
+        "x": 0,
+        "y": -0.1875
+      },
+      "files": [
+        {
+          "title": "client.ts",
+          "text": "client.ts\nRepository root\nSource file\nprimary",
+          "x": 206,
+          "y": 261
+        },
+        {
+          "title": "config.ts",
+          "text": "config.ts\nRepository root\nChanged file\nconfig.transport",
+          "x": -174,
+          "y": 261
+        },
+        {
+          "title": "screen.ts",
+          "text": "screen.ts\nRepository root\nClicked source\ntransportClient\nservice.client",
+          "x": 586,
+          "y": 261
+        },
+        {
+          "title": "tuning.ts",
+          "text": "tuning.ts\nRepository root\nChanged file\ntuning.tries",
+          "x": -554,
+          "y": 261
+        },
+        {
+          "title": "consumer.ts",
+          "text": "consumer.ts\nRepository root\nChanged file\nservice.client\nmiddle.service.client",
+          "x": 966,
+          "y": 261
+        },
+        {
+          "title": "end.ts",
+          "text": "end.ts\nRepository root\nChanged file\nmiddle.service.client",
+          "x": 1346,
+          "y": 261
+        }
+      ],
+      "buttons": [
+        {
+          "text": "Expand upstream",
+          "disabled": false
+        },
+        {
+          "text": "Expand downstream",
+          "disabled": false
+        }
+      ],
+      "main": {
+        "file": "screen.ts",
+        "pageX": 0,
+        "pageY": 594.5,
+        "diffX": 0,
+        "diffY": 0
+      }
+    },
+    "definition": {
+      "title": "primary",
+      "description": "variable After6cf9810bscreen.ts:1",
+      "bounds": {
+        "x": 24,
+        "y": 24,
+        "width": 1392,
+        "height": 852
+      },
+      "sourcePath": "client.ts",
+      "sourceText": "1\nimport { config as preferences } from \"./config\";\n2\nexport const primary = make(preferences.transport);\n3\nexport const secondary = make(preferences.transport);\n4\nexport const logger = make(preferences.logging);",
+      "sourceFont": "15px",
+      "focusFont": "15px",
+      "center": {
+        "x": 0,
+        "y": -0.1875
+      },
+      "files": [
+        {
+          "title": "client.ts",
+          "text": "client.ts\nRepository root\nSource file\nprimary",
+          "x": 206,
+          "y": 261
+        },
+        {
+          "title": "config.ts",
+          "text": "config.ts\nRepository root\nChanged file\nconfig.transport",
+          "x": -174,
+          "y": 261
+        },
+        {
+          "title": "screen.ts",
+          "text": "screen.ts\nRepository root\nClicked source\ntransportClient\nservice.client",
+          "x": 586,
+          "y": 261
+        },
+        {
+          "title": "tuning.ts",
+          "text": "tuning.ts\nRepository root\nChanged file\ntuning.tries",
+          "x": -554,
+          "y": 261
+        },
+        {
+          "title": "consumer.ts",
+          "text": "consumer.ts\nRepository root\nChanged file\nservice.client\nmiddle.service.client",
+          "x": 966,
+          "y": 261
+        },
+        {
+          "title": "end.ts",
+          "text": "end.ts\nRepository root\nChanged file\nmiddle.service.client",
+          "x": 1346,
+          "y": 261
+        }
+      ],
+      "buttons": [
+        {
+          "text": "Expand upstream",
+          "disabled": false
+        },
+        {
+          "text": "Expand downstream",
+          "disabled": false
+        }
+      ],
+      "main": {
+        "file": "screen.ts",
+        "pageX": 0,
+        "pageY": 594.5,
+        "diffX": 0,
+        "diffY": 0
+      }
+    },
+    "clickedSource": {
+      "title": "primary",
+      "description": "variable After6cf9810bscreen.ts:1",
+      "bounds": {
+        "x": 24,
+        "y": 24,
+        "width": 1392,
+        "height": 852
+      },
+      "sourcePath": "screen.ts",
+      "sourceText": "1\nimport { primary as transportClient } from \"./client\";\n2\nimport { retryPolicy } from \"./policy\";\n3\nexport const service = { client: transportClient, retryPolicy };\n4\nexport const version = 2;",
+      "sourceFont": "15px",
+      "focusFont": "15px",
+      "center": {
+        "x": 0,
+        "y": -0.1875
+      },
+      "files": [
+        {
+          "title": "client.ts",
+          "text": "client.ts\nRepository root\nSource file\nprimary",
+          "x": 206,
+          "y": 261
+        },
+        {
+          "title": "config.ts",
+          "text": "config.ts\nRepository root\nChanged file\nconfig.transport",
+          "x": -174,
+          "y": 261
+        },
+        {
+          "title": "screen.ts",
+          "text": "screen.ts\nRepository root\nClicked source\ntransportClient\nservice.client",
+          "x": 586,
+          "y": 261
+        },
+        {
+          "title": "tuning.ts",
+          "text": "tuning.ts\nRepository root\nChanged file\ntuning.tries",
+          "x": -554,
+          "y": 261
+        },
+        {
+          "title": "consumer.ts",
+          "text": "consumer.ts\nRepository root\nChanged file\nservice.client\nmiddle.service.client",
+          "x": 966,
+          "y": 261
+        },
+        {
+          "title": "end.ts",
+          "text": "end.ts\nRepository root\nChanged file\nmiddle.service.client",
+          "x": 1346,
+          "y": 261
+        }
+      ],
+      "buttons": [
+        {
+          "text": "Expand upstream",
+          "disabled": false
+        },
+        {
+          "text": "Expand downstream",
+          "disabled": false
+        }
+      ],
+      "main": {
+        "file": "screen.ts",
+        "pageX": 0,
+        "pageY": 594.5,
+        "diffX": 0,
+        "diffY": 0
+      }
+    },
+    "upstreamComplete": {
+      "title": "primary",
+      "description": "variable After6cf9810bscreen.ts:1",
+      "bounds": {
+        "x": 24,
+        "y": 24,
+        "width": 1392,
+        "height": 852
+      },
+      "sourcePath": "screen.ts",
+      "sourceText": "1\nimport { primary as transportClient } from \"./client\";\n2\nimport { retryPolicy } from \"./policy\";\n3\nexport const service = { client: transportClient, retryPolicy };\n4\nexport const version = 2;",
+      "sourceFont": "15px",
+      "focusFont": "15px",
+      "center": {
+        "x": 0,
+        "y": -0.1875
+      },
+      "files": [
+        {
+          "title": "client.ts",
+          "text": "client.ts\nRepository root\nSource file\nprimary",
+          "x": 206,
+          "y": 261
+        },
+        {
+          "title": "config.ts",
+          "text": "config.ts\nRepository root\nChanged file\nconfig.transport",
+          "x": -174,
+          "y": 261
+        },
+        {
+          "title": "screen.ts",
+          "text": "screen.ts\nRepository root\nClicked source\ntransportClient\nservice.client",
+          "x": 586,
+          "y": 261
+        },
+        {
+          "title": "tuning.ts",
+          "text": "tuning.ts\nRepository root\nChanged file\ntuning.tries",
+          "x": -554,
+          "y": 261
+        },
+        {
+          "title": "consumer.ts",
+          "text": "consumer.ts\nRepository root\nChanged file\nservice.client\nmiddle.service.client",
+          "x": 966,
+          "y": 261
+        },
+        {
+          "title": "end.ts",
+          "text": "end.ts\nRepository root\nChanged file\nmiddle.service.client",
+          "x": 1346,
+          "y": 261
+        }
+      ],
+      "buttons": [
+        {
+          "text": "Upstream complete",
+          "disabled": true
+        },
+        {
+          "text": "Expand downstream",
+          "disabled": false
+        }
+      ],
+      "main": {
+        "file": "screen.ts",
+        "pageX": 0,
+        "pageY": 594.5,
+        "diffX": 0,
+        "diffY": 0
+      }
+    },
+    "allFiles": {
+      "title": "primary",
+      "description": "variable After6cf9810bscreen.ts:1",
+      "bounds": {
+        "x": 24,
+        "y": 24,
+        "width": 1392,
+        "height": 852
+      },
+      "sourcePath": "screen.ts",
+      "sourceText": "1\nimport { primary as transportClient } from \"./client\";\n2\nimport { retryPolicy } from \"./policy\";\n3\nexport const service = { client: transportClient, retryPolicy };\n4\nexport const version = 2;",
+      "sourceFont": "15px",
+      "focusFont": "15px",
+      "center": {
+        "x": 0,
+        "y": -0.1875
+      },
+      "files": [
+        {
+          "title": "client.ts",
+          "text": "client.ts\nRepository root\nSource file\nprimary",
+          "x": 206,
+          "y": 261
+        },
+        {
+          "title": "config.ts",
+          "text": "config.ts\nRepository root\nChanged file\nconfig.transport",
+          "x": -174,
+          "y": 261
+        },
+        {
+          "title": "screen.ts",
+          "text": "screen.ts\nRepository root\nClicked source\ntransportClient",
+          "x": 586,
+          "y": 261
+        },
+        {
+          "title": "operations.ts",
+          "text": "operations.ts\nRepository root\nSource file\nprimary",
+          "x": 586,
+          "y": 461
+        }
+      ],
+      "buttons": [
+        {
+          "text": "Expand upstream",
+          "disabled": false
+        },
+        {
+          "text": "Expand downstream",
+          "disabled": false
+        }
+      ],
+      "main": {
+        "file": "screen.ts",
+        "pageX": 0,
+        "pageY": 594.5,
+        "diffX": 0,
+        "diffY": 0
+      }
+    },
+    "changedRestored": {
+      "title": "primary",
+      "description": "variable After6cf9810bscreen.ts:1",
+      "bounds": {
+        "x": 24,
+        "y": 24,
+        "width": 1392,
+        "height": 852
+      },
+      "sourcePath": "screen.ts",
+      "sourceText": "1\nimport { primary as transportClient } from \"./client\";\n2\nimport { retryPolicy } from \"./policy\";\n3\nexport const service = { client: transportClient, retryPolicy };\n4\nexport const version = 2;",
+      "sourceFont": "15px",
+      "focusFont": "15px",
+      "center": {
+        "x": 0,
+        "y": -0.1875
+      },
+      "files": [
+        {
+          "title": "client.ts",
+          "text": "client.ts\nRepository root\nSource file\nprimary",
+          "x": 206,
+          "y": 261
+        },
+        {
+          "title": "config.ts",
+          "text": "config.ts\nRepository root\nChanged file\nconfig.transport",
+          "x": -174,
+          "y": 261
+        },
+        {
+          "title": "screen.ts",
+          "text": "screen.ts\nRepository root\nClicked source\ntransportClient\nservice.client",
+          "x": 586,
+          "y": 261
+        },
+        {
+          "title": "tuning.ts",
+          "text": "tuning.ts\nRepository root\nChanged file\ntuning.tries",
+          "x": -554,
+          "y": 261
+        },
+        {
+          "title": "consumer.ts",
+          "text": "consumer.ts\nRepository root\nChanged file\nservice.client\nmiddle.service.client",
+          "x": 966,
+          "y": 261
+        },
+        {
+          "title": "end.ts",
+          "text": "end.ts\nRepository root\nChanged file\nmiddle.service.client",
+          "x": 1346,
+          "y": 261
+        }
+      ],
+      "buttons": [
+        {
+          "text": "Upstream complete",
+          "disabled": true
+        },
+        {
+          "text": "Expand downstream",
+          "disabled": false
+        }
+      ],
+      "main": {
+        "file": "screen.ts",
+        "pageX": 0,
+        "pageY": 594.5,
+        "diffX": 0,
+        "diffY": 0
+      }
+    },
+    "reopenedPanned": {
+      "title": "primary",
+      "description": "variable After6cf9810bscreen.ts:1",
+      "bounds": {
+        "x": 24,
+        "y": 24,
+        "width": 1392,
+        "height": 852
+      },
+      "sourcePath": "screen.ts",
+      "sourceText": "1\nimport { primary as transportClient } from \"./client\";\n2\nimport { retryPolicy } from \"./policy\";\n3\nexport const service = { client: transportClient, retryPolicy };\n4\nexport const version = 2;",
+      "sourceFont": "15px",
+      "focusFont": "15px",
+      "center": {
+        "x": -180,
+        "y": -0.1875
+      },
+      "files": [
+        {
+          "title": "client.ts",
+          "text": "client.ts\nRepository root\nSource file\nprimary",
+          "x": 26,
+          "y": 261
+        },
+        {
+          "title": "config.ts",
+          "text": "config.ts\nRepository root\nChanged file\nconfig.transport",
+          "x": -354,
+          "y": 261
+        },
+        {
+          "title": "screen.ts",
+          "text": "screen.ts\nRepository root\nClicked source\ntransportClient\nservice.client",
+          "x": 406,
+          "y": 261
+        },
+        {
+          "title": "tuning.ts",
+          "text": "tuning.ts\nRepository root\nChanged file\ntuning.tries",
+          "x": -734,
+          "y": 261
+        },
+        {
+          "title": "consumer.ts",
+          "text": "consumer.ts\nRepository root\nChanged file\nservice.client\nmiddle.service.client",
+          "x": 786,
+          "y": 261
+        },
+        {
+          "title": "end.ts",
+          "text": "end.ts\nRepository root\nChanged file\nmiddle.service.client",
+          "x": 1166,
+          "y": 261
+        }
+      ],
+      "buttons": [
+        {
+          "text": "Upstream complete",
+          "disabled": true
+        },
+        {
+          "text": "Expand downstream",
+          "disabled": false
+        }
+      ],
+      "main": {
+        "file": "screen.ts",
+        "pageX": 0,
+        "pageY": 594.5,
+        "diffX": 0,
+        "diffY": 0
+      }
+    },
+    "wide": {
+      "title": "primary",
+      "description": "variable After6cf9810bscreen.ts:1",
+      "bounds": {
+        "x": 80,
+        "y": 24,
+        "width": 1760,
+        "height": 1032
+      },
+      "sourcePath": "screen.ts",
+      "sourceText": "1\nimport { primary as transportClient } from \"./client\";\n2\nimport { retryPolicy } from \"./policy\";\n3\nexport const service = { client: transportClient, retryPolicy };\n4\nexport const version = 2;",
+      "sourceFont": "15px",
+      "focusFont": "15px",
+      "center": {
+        "x": 0.1015625,
+        "y": 0.25
+      },
+      "files": [
+        {
+          "title": "client.ts",
+          "text": "client.ts\nRepository root\nSource file\nprimary",
+          "x": 94.5,
+          "y": 543
+        },
+        {
+          "title": "config.ts",
+          "text": "config.ts\nRepository root\nChanged file\nconfig.transport",
+          "x": -285.5,
+          "y": 543
+        },
+        {
+          "title": "screen.ts",
+          "text": "screen.ts\nRepository root\nClicked source\ntransportClient\nservice.client",
+          "x": 474.5,
+          "y": 543
+        },
+        {
+          "title": "tuning.ts",
+          "text": "tuning.ts\nRepository root\nChanged file\ntuning.tries",
+          "x": -665.5,
+          "y": 543
+        },
+        {
+          "title": "consumer.ts",
+          "text": "consumer.ts\nRepository root\nChanged file\nservice.client\nmiddle.service.client",
+          "x": 854.5,
+          "y": 543
+        },
+        {
+          "title": "end.ts",
+          "text": "end.ts\nRepository root\nChanged file\nmiddle.service.client",
+          "x": 1234.5,
+          "y": 543
+        }
+      ],
+      "buttons": [
+        {
+          "text": "Upstream complete",
+          "disabled": true
+        },
+        {
+          "text": "Expand downstream",
+          "disabled": false
+        }
+      ],
+      "main": {
+        "file": "screen.ts",
+        "pageX": 0,
+        "pageY": 456.5,
+        "diffX": 0,
+        "diffY": 0
+      }
+    }
+  },
+  "freshBundle1280": {
+    "bundle": "http://localhost:5173/assets/index-ID4n10VI.js",
+    "title": "primary",
+    "bounds": {
+      "x": 24,
+      "y": 24,
+      "width": 1232,
+      "height": 752,
+      "top": 24,
+      "right": 1256,
+      "bottom": 776,
+      "left": 24
+    },
+    "source": "screen.ts",
+    "sourceFont": "15px",
+    "mapKeyboardFocusable": true,
+    "center": {
+      "x": 0,
+      "y": -0.1875
+    },
+    "buttons": [
+      "Expand upstream",
+      "Expand downstream"
+    ]
+  },
+  "checks": {
+    "definitionSeparate": true,
+    "bothDirectionsRetained": true,
+    "changedFilterRestoresBranches": true,
+    "panRetainedOnReopen": true,
+    "escapeReturnsDiffFocus": true,
+    "excluded": [
+      "secondary",
+      "logger-derived outputs",
+      "retryPolicy-derived outputs",
+      "responses.ts"
+    ],
+    "desktopViewports": [
+      [
+        1280,
+        800
+      ],
+      [
+        1440,
+        900
+      ],
+      [
+        1920,
+        1080
+      ]
+    ],
+    "mainInvariant": "File/page/diff scroll unchanged through expansion/filter/inspection/reopen at fixed viewport; viewport resize naturally reflows main page.",
+    "actualMacBrowserTested": false
+  },
+  "validation": {
+    "backendTests": 166,
+    "frontendChecks": [
+      "diff",
+      "review",
+      "layout",
+      "export",
+      "exploration"
+    ],
+    "build": "passed; existing >500kB bundle warning"
+  }
+}

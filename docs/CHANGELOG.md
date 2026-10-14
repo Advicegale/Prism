@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Enlarged symbol exploration to nearly fill the viewport, with readable file cards and source text. Laptop screens show a full-width tree above source; wide screens show both panes alongside each other. Initial focus and snippet follow the clicked occurrence, with a separate Definition action. Replaced direction switching with one causal tree and independent upstream/downstream expansion, preserving selected-field scope, hidden-path evidence and each filter’s expanded branches. Failed lookups clear stale results.
+
 - Fixed setup on older Bash versions, including macOS's system Bash, by replacing `mapfile` with a compatible read loop. Parser dependency discovery failures now stop setup before installation.
 
 - Corrected the parser failures found across the retained preview PRs: JSX literal ampersands, PostgreSQL migration syntax and C# pointer assignments. Setup reproducibly builds small licensed grammar patches from pinned upstream source; both Graphify and exploration use them without changing reviewed code or source anchors. Parser-version changes invalidate old exploration caches. Pointer writes retain explicit analysis limits, and malformed syntax still produces coverage warnings. Added an all-report/both-revision parser audit and passive-source regressions.

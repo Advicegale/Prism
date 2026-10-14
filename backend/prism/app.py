@@ -58,6 +58,7 @@ class ExplorationExpandRequest(BaseModel):
     direction: Literal['consumers','origins'] = 'consumers'
     changed_only: bool = True
     query_id: str | None = Field(default=None,max_length=64)
+    context_query_id: str | None = Field(default=None,max_length=64)
 
 class QuestionTurn(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
@@ -372,7 +373,7 @@ def resolve_exploration(report_id: str, request: ExplorationResolveRequest):
 @app.post('/api/reports/{report_id}/exploration/expand')
 def expand_exploration(report_id: str, request: ExplorationExpandRequest):
     data=read_report(report_id)
-    return _exploration_call(lambda: exploration.expand(data,request.side,request.root_id,request.direction,request.changed_only,request.query_id))
+    return _exploration_call(lambda: exploration.expand(data,request.side,request.root_id,request.direction,request.changed_only,request.query_id,request.context_query_id))
 
 
 @app.get('/api/reports/{report_id}/exploration/source')

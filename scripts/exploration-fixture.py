@@ -17,7 +17,10 @@ from prism.gitops import diff_files
 from prism.architecture import build_architecture
 from prism.topics import build_topics
 
-parser=argparse.ArgumentParser();parser.add_argument('--language',choices=['ts','go'],default='ts');args=parser.parse_args()
+parser=argparse.ArgumentParser();parser.add_argument('--language',choices=['ts','go'],default='ts')
+parser.add_argument('--clicked-alias',action='store_true',help='TS alias with further upstream and downstream levels')
+args=parser.parse_args()
+if args.clicked_alias and args.language!='ts':parser.error('--clicked-alias requires --language ts')
 
 data=Path(tempfile.mkdtemp(prefix='prism-exploration-qa-'))
 key=hashlib.sha256(b'local/exploration').hexdigest()[:20]
@@ -56,6 +59,12 @@ if args.language=='go':
 else:
     head={**sources,'config.ts':sources['config.ts'].replace('retries: 3','attempts: 4')}
     for name in ['screen.ts','responses.ts','logger.ts']:head[name]=head[name].replace('version = 1','version = 2')
+    if args.clicked_alias:
+        head['screen.ts']=head['screen.ts'].replace('primary as client','primary as transportClient').replace('{ client, retryPolicy }','{ client: transportClient, retryPolicy }')
+        head['tuning.ts']='export const tuning = { tries: 4 };\n'
+        head['config.ts']='import { tuning } from "./tuning";\nexport const config = { transport: { attempts: tuning.tries }, logging: { level: "info" } };\n'
+        head['consumer.ts']='import { service } from "./screen";\nexport const middle = { service };\n'
+        head['end.ts']='import { middle } from "./consumer";\nexport const display = { middle };\n'
 write_sources(head)
 git('add','.');git('commit','-m','After');new=git('rev-parse','HEAD')
 worktree=repo.parent/'worktrees'/new;worktree.parent.mkdir();git('worktree','add',str(worktree),new)

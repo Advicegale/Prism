@@ -14,7 +14,7 @@ from .. import settings
 from ..architecture import committed_sources
 from ..repository_tools import head_worktree, RepositoryToolError
 from .analyzer import analyze
-from .model import Facts, SCHEMA, ADAPTER_VERSION
+from .model import Facts, Ref, SCHEMA, ADAPTER_VERSION
 from .query import Index, Query
 
 pool=ThreadPoolExecutor(max_workers=2,thread_name_prefix='prism-exploration')
@@ -145,14 +145,19 @@ def resolve_symbol(report,path,side,line,column):
     selected.update(revision=sha,side=side)
     if selected['status']=='resolved':
         selected.update(revision=sha,side=side,coverage=job['index'].facts.coverage)
-        selected['projection']=create_query(report,job['index'],selected['root'],'consumers',True,side)
+        focus=selected.pop('focus_ref')
+        focus_ref=Ref(focus['entity'],tuple(focus['fields']))
+        selected['projections']={direction:create_query(report,job['index'],selected['root'],direction,True,side,
+                                                      focus_ref,selected['occurrence'])
+                                 for direction in ('consumers','origins')}
+        selected['projection']=selected['projections']['consumers']
     return selected
 
 
-def create_query(report,index,root,direction,changed_only,side):
+def create_query(report,index,root,direction,changed_only,side,focus_ref=None,focus_anchor=None):
     changed={f.get('old_path') if side=='old' else f.get('path') for f in report.get('files',[])}
-    query=Query(index,root,direction,changed_only,changed,side)
-    result=query.expand(initial=True); token=uuid.uuid4().hex
+    query=Query(index,root,direction,changed_only,changed,side,focus_ref,focus_anchor)
+    query.expand(initial=True);query.reveal_focus();result=query.projection(); token=uuid.uuid4().hex
     query.id=token; result['query_id']=token
     with lock:
         queries[token]=(report['id'],query,threading.Lock())
@@ -160,7 +165,7 @@ def create_query(report,index,root,direction,changed_only,side):
     return result
 
 
-def expand(report,side,root_id,direction,changed_only,query_id=None):
+def expand(report,side,root_id,direction,changed_only,query_id=None,context_query_id=None):
     job=index_job(report,side)
     if job['status']!='ready': return job_response(job)
     if query_id:
@@ -173,9 +178,13 @@ def expand(report,side,root_id,direction,changed_only,query_id=None):
         with query_lock: return query.expand()
     # Root IDs are opaque, server-derived; accept only roots of this report.
     with lock:
-        root=next((q.root for rid,q,_ in queries.values() if rid==report['id'] and q.root['id']==root_id and q.side==side),None)
-    if root is None: raise ValueError('Unknown exploration root; select a source symbol first.')
-    return create_query(report,job['index'],root,direction,changed_only,side)
+        entry=queries.get(context_query_id) if context_query_id else next((entry for entry in reversed(queries.values())
+                if entry[0]==report['id'] and entry[1].root['id']==root_id and entry[1].side==side),None)
+    if entry is None: raise ValueError('Unknown exploration root; select a source symbol first.')
+    rid,context,_=entry
+    if rid!=report['id'] or context.root['id']!=root_id or context.side!=side or context.index.facts.revision!=job['revision']:
+        raise ValueError('Exploration context does not match this root, report or revision.')
+    return create_query(report,job['index'],context.root,direction,changed_only,side,context.focus_ref,context.focus_anchor)
 
 
 def source(report,path,side,line,end_line=None):

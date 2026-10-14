@@ -70,7 +70,8 @@ class Index:
         entity=self.facts.entities[root['ref']['entity']]
         if entity.imported and root['ref']['entity']==ref.entity:
             return {'status':'unresolved','reason':'Imported name has no unambiguous retained definition.','occurrence':occurrence['anchor'],'name':occurrence['name']}
-        return {'status':'resolved','root':root,'occurrence':occurrence['anchor']}
+        return {'status':'resolved','root':root,'occurrence':occurrence['anchor'],
+                'focus_ref':{'entity':ref.entity,'fields':list(ref.fields)}}
 
     def transitions(self, ref, direction):
         relations=self.forward[ref.entity] if direction=='consumers' else [*self.reverse[ref.entity],*(r for r in self.forward[ref.entity] if r.target is None)]
@@ -92,7 +93,7 @@ class Index:
 
 
 class Query:
-    def __init__(self,index,root,direction,changed_only,changed,side):
+    def __init__(self,index,root,direction,changed_only,changed,side,focus_ref=None,focus_anchor=None):
         self.index=index; self.root=root; self.direction=direction; self.changed_only=changed_only
         self.changed=changed; self.side=side; self.id=identity(root,direction,changed_only,side)
         self.nodes={}; self.connections={}; self.boundaries={}; self.visited=set(); self.incomplete=False
@@ -100,6 +101,45 @@ class Query:
         path=root['definition']['path']; self.add_node(self.ref,root['definition'])
         self.frontier=[(self.ref,path,())]
         self.history={self.ref:frozenset()}
+        self.focus_ref=focus_ref; self.focus_anchor=focus_anchor
+
+    def reveal_focus(self,budget=12000):
+        """Reveal the proven carrier path to the clicked occurrence.
+
+        The investigation still traces the canonical selected entity in each
+        direction. Revealing its clicked alias must not fan out from its inputs
+        into sibling constructions. Hidden intermediaries keep edge evidence.
+        """
+        if not self.focus_ref or not self.focus_anchor:return
+        focus=self.focus_ref; anchor=self.focus_anchor
+        self.add_node(focus,anchor)
+        parents={self.ref:None}; queue=deque([self.ref])
+        while queue and focus not in parents and len(parents)<=budget:
+            state=queue.popleft()
+            for rel,target in self.index.transitions(state,'consumers'):
+                if target is None or target in parents:continue
+                parents[target]=(state,rel.id);queue.append(target)
+                if target==focus:break
+        if focus not in parents:
+            # A visible occurrence is source-backed even if no complete carrier
+            # path can be proven; never draw an invented connection to it.
+            return
+        chain=[];state=focus
+        while parents[state] is not None:
+            previous,relationship=parents[state];chain.append((state,relationship));state=previous
+        chain.reverse();path=self.root['definition']['path'];trail=[]
+        for state,relationship in chain:
+            trail.append(relationship)
+            entity=self.index.facts.entities[state.entity];destination=entity.anchor['path']
+            visible=not self.changed_only or destination in self.changed or destination in {anchor['path'],self.root['definition']['path']}
+            if visible and destination!=path:
+                self.add_node(state,entity.anchor)
+                if self.direction=='consumers':self.connect(path,destination,tuple(trail))
+                else:self.connect(destination,path,tuple(reversed(trail)))
+                path=destination;trail=[]
+        if self.direction=='consumers' and focus not in self.visited:
+            self.frontier.append((focus,anchor['path'],()))
+            self.frontier=list(dict.fromkeys(self.frontier))
 
     def add_node(self,ref,anchor):
         entity=self.index.facts.entities[ref.entity]; path=anchor['path']
@@ -128,7 +168,7 @@ class Query:
                 entity=self.index.facts.entities[target.entity] if target else None
                 to_file=entity.anchor['path'] if self.direction=='origins' and entity else anchor['path']
                 if target and self.direction=='consumers': to_file=entity.anchor['path']
-                visible=not self.changed_only or to_file in self.changed or to_file==self.root['definition']['path']
+                visible=not self.changed_only or to_file in self.changed or to_file==self.root['definition']['path'] or bool(self.focus_anchor and to_file==self.focus_anchor['path'])
                 if target is None:
                     key=identity(state,rel.id,from_file)
                     self.boundaries[key]={'id':key,'kind':rel.kind,'reason':rel.reason,'anchor':anchor,
