@@ -24,6 +24,8 @@ if command -v uv >/dev/null; then
 else
   backend/.venv/bin/python -m pip install "${graphify_parser_requirements[@]}"
 fi
+echo 'Installing reproducible corrections for JSX, C# pointers and PostgreSQL syntax'
+backend/.venv/bin/python scripts/install-parser-fixes.py
 echo '[2/2] Installing and building web interface'
 (cd frontend && npm install && npm run build)
 if [[ ! -f .env ]]; then cp .env.example .env; fi

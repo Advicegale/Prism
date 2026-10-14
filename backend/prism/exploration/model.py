@@ -4,7 +4,7 @@ from dataclasses import dataclass, field, asdict
 import hashlib
 
 SCHEMA = 2
-ADAPTER_VERSION = "graphify-0.9.86-registry-composition-11"
+ADAPTER_VERSION = "graphify-0.9.86-registry-composition-12"
 
 
 def identity(*parts) -> str:

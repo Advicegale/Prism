@@ -27,6 +27,7 @@ class GenericFileAdapter(FileAdapter):
     def declare(self,node,scope):
         if not hasattr(self,'generic_ready'):
             self.config=generic_config(self.config);self.generic_ready=True
+            self.indirect_assignments=[]
         self.scopes[node.id]=scope
         typ=node.type
         if typ in self.config.class_types | self.config.function_types:
@@ -59,6 +60,13 @@ class GenericFileAdapter(FileAdapter):
                 # Grammars such as C#/Swift/Kotlin expose an unnamed initializer.
                 after=[c for c in node.named_children if c.start_byte>=target.end_byte and c.type not in {'type_identifier','type_annotation','user_type','predefined_type','modifiers'}]
                 if any(c.type in {'=','==',':='} and self.text(c) in {'=',':='} for c in node.children) and after:value=after[-1]
+            # A dereferenced write changes pointed-to memory, not the pointer
+            # binding. Parsing it successfully must not invent value identity.
+            operand=target
+            while operand and operand.type=='parenthesized_expression' and len(operand.named_children)==1:
+                operand=operand.named_children[0]
+            if operand and operand.type in {'prefix_unary_expression','pointer_expression','unary_expression'} and self.text(operand).lstrip().startswith('*'):
+                self.indirect_assignments.append(node);target=None
             if target:
                 if self.member_parts(target):self.values.append((target,value,()))
                 else:
@@ -74,6 +82,11 @@ class GenericFileAdapter(FileAdapter):
                         self.declarations[(name.start_byte,name.end_byte)]=ref
                         if value:self.values.append((ref,rhs[i] if len(names)==len(rhs) else value,() if len(names)==1 or len(names)==len(rhs) else ('?',)))
         for child in node.named_children:self.declare(child,scope)
+
+    def enrich(self):
+        super().enrich()
+        for node in self.indirect_assignments:
+            self.boundary_refs(node,'unsupported','Pointer writes require memory-alias analysis; this branch stops at the assignment.')
 
     def binding_name(self,node):
         if node is None:return None

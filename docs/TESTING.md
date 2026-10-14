@@ -18,6 +18,16 @@ Python tests cover Git revisions/diff ranges, Graphify association, legacy repor
 
 Frontend regressions cover Split/Unified alignment and side-specific anchors, source ordering and word changes, topic/file coverage, architecture layout, escaped offline HTML, generic UTF-16 click offsets, selection preservation, renamed revision paths, viewport bounds and merged/cyclic file layout. Production build type-checks the React integration.
 
+Parser regressions in `test_parser_fixes.py` cover literal JSX ampersands (including Unicode/CRLF, multiple labels and fragments), PostgreSQL migration constructs and C# pointer assignments. They verify exact retained source and symbol anchors, following declarations, assignment operands, explicit pointer-memory boundaries and continued diagnostics for malformed syntax. Run setup before these tests so the corrected parser wheels are installed.
+
+To audit both retained revisions of every report currently in the local preview data:
+
+```bash
+backend/.venv/bin/python scripts/audit-preview-parsers.py --output /tmp/parser-audit.json
+```
+
+The audit reads immutable Git blobs, uses Graphify's filename/suffix/shebang dispatch and checks every available syntax grammar, including unchanged files. It exits nonzero for remaining failures and records locations, missing tokens and package versions. No GitHub request, AI run, compilation or execution of reviewed source occurs. [Current preview evidence](exploration-parser-audit.json) records the before/after results.
+
 ## Desktop symbol exploration QA
 
 Use `./scripts/dev.sh`, or build the frontend and run `./start.sh`. Open a retained report from Recent reports; reanalysis is unnecessary.

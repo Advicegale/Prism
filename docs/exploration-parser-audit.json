@@ -1,0 +1,3303 @@
+{
+  "date": "2026-10-14",
+  "baseline": {
+    "summary": {
+      "reports": 8,
+      "revisions": 16,
+      "parsed_files": 3512,
+      "failing_files": 57,
+      "unique_failing_paths": 9
+    },
+    "reports": [
+      {
+        "report": "55f22d055d36db9244e36d02",
+        "repository": "Advicegale/AHOY",
+        "pr": 25,
+        "side": "old",
+        "revision": "11966a0d86b3060c445af6512e32eeded8a3ef16",
+        "files": 142,
+        "parsed": 120,
+        "issues": [
+          {
+            "path": "server/migrations/0011_task_assignments_and_push.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 31,
+                "column": 0,
+                "end_line": 31,
+                "parent": "program",
+                "text": "drop trigger if exists member_clear_task_assignments on member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0014_calendar_events_and_vacations.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 51,
+                "column": 12,
+                "end_line": 51,
+                "parent": "insert",
+                "text": "(id)"
+              },
+              {
+                "type": "ERROR",
+                "line": 64,
+                "column": 42,
+                "end_line": 65,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 69,
+                "column": 30,
+                "end_line": 69,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 76,
+                "column": 0,
+                "end_line": 76,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_participant on member;"
+              },
+              {
+                "type": "ERROR",
+                "line": 84,
+                "column": 42,
+                "end_line": 85,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 89,
+                "column": 30,
+                "end_line": 89,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 96,
+                "column": 0,
+                "end_line": 96,
+                "parent": "program",
+                "text": "drop trigger if exists managed_member_remove_calendar_participant on managed_household_members;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0016_household_shift_owners.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 33,
+                "column": 0,
+                "end_line": 33,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_shifts on member;"
+              }
+            ]
+          }
+        ],
+        "omissions": []
+      },
+      {
+        "report": "55f22d055d36db9244e36d02",
+        "repository": "Advicegale/AHOY",
+        "pr": 25,
+        "side": "new",
+        "revision": "252cc55ceded3c335927e1b76bcd8741caa0b815",
+        "files": 146,
+        "parsed": 124,
+        "issues": [
+          {
+            "path": "server/migrations/0011_task_assignments_and_push.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 31,
+                "column": 0,
+                "end_line": 31,
+                "parent": "program",
+                "text": "drop trigger if exists member_clear_task_assignments on member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0014_calendar_events_and_vacations.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 51,
+                "column": 12,
+                "end_line": 51,
+                "parent": "insert",
+                "text": "(id)"
+              },
+              {
+                "type": "ERROR",
+                "line": 64,
+                "column": 42,
+                "end_line": 65,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 69,
+                "column": 30,
+                "end_line": 69,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 76,
+                "column": 0,
+                "end_line": 76,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_participant on member;"
+              },
+              {
+                "type": "ERROR",
+                "line": 84,
+                "column": 42,
+                "end_line": 85,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 89,
+                "column": 30,
+                "end_line": 89,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 96,
+                "column": 0,
+                "end_line": 96,
+                "parent": "program",
+                "text": "drop trigger if exists managed_member_remove_calendar_participant on managed_household_members;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0016_household_shift_owners.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 33,
+                "column": 0,
+                "end_line": 33,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_shifts on member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0019_delayed_notification_inbox.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 82,
+                "column": 16,
+                "end_line": 83,
+                "parent": "select",
+                "text": "ON (job.household_id, job.mutation_id, job.recipient_user_id)\n  'legacy-assignment-' || md5"
+              },
+              {
+                "type": "ERROR",
+                "line": 83,
+                "column": 2,
+                "end_line": 83,
+                "parent": "term",
+                "text": "'legacy-assignment-' ||"
+              },
+              {
+                "type": "ERROR",
+                "line": 83,
+                "column": 23,
+                "end_line": 83,
+                "parent": "ERROR",
+                "text": "||"
+              }
+            ]
+          }
+        ],
+        "omissions": []
+      },
+      {
+        "report": "57bda6dca1a7b31540ac42f4",
+        "repository": "Advicegale/AHOY",
+        "pr": 48,
+        "side": "old",
+        "revision": "9c053217ca036889261c51b8af9bebdc7f1341b8",
+        "files": 205,
+        "parsed": 180,
+        "issues": [
+          {
+            "path": "server/migrations/0011_task_assignments_and_push.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 31,
+                "column": 0,
+                "end_line": 31,
+                "parent": "program",
+                "text": "drop trigger if exists member_clear_task_assignments on member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0014_calendar_events_and_vacations.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 51,
+                "column": 12,
+                "end_line": 51,
+                "parent": "insert",
+                "text": "(id)"
+              },
+              {
+                "type": "ERROR",
+                "line": 64,
+                "column": 42,
+                "end_line": 65,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 69,
+                "column": 30,
+                "end_line": 69,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 76,
+                "column": 0,
+                "end_line": 76,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_participant on member;"
+              },
+              {
+                "type": "ERROR",
+                "line": 84,
+                "column": 42,
+                "end_line": 85,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 89,
+                "column": 30,
+                "end_line": 89,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 96,
+                "column": 0,
+                "end_line": 96,
+                "parent": "program",
+                "text": "drop trigger if exists managed_member_remove_calendar_participant on managed_household_members;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0016_household_shift_owners.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 33,
+                "column": 0,
+                "end_line": 33,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_shifts on member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0019_delayed_notification_inbox.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 82,
+                "column": 16,
+                "end_line": 83,
+                "parent": "select",
+                "text": "ON (job.household_id, job.mutation_id, job.recipient_user_id)\n  'legacy-assignment-' || md5"
+              },
+              {
+                "type": "ERROR",
+                "line": 83,
+                "column": 2,
+                "end_line": 83,
+                "parent": "term",
+                "text": "'legacy-assignment-' ||"
+              },
+              {
+                "type": "ERROR",
+                "line": 83,
+                "column": 23,
+                "end_line": 83,
+                "parent": "ERROR",
+                "text": "||"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0022_home_upkeep.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 17,
+                "column": 48,
+                "end_line": 32,
+                "parent": "constraint",
+                "text": "length(btrim(name)) BETWEEN 1 AND 160),\n  CONSTRAINT upkeep_rooms_one_claimant CHECK (num_nonnulls(claimed_user_id, claimed_managed_member_id) <= 1),\n  UNIQUE (household_id, normalized_name)\n);\n\nCREATE INDEX upkeep_rooms_household_attention_idx\n  ON upkeep_rooms (household_id, attention_state, name,"
+              },
+              {
+                "type": "ERROR",
+                "line": 17,
+                "column": 82,
+                "end_line": 18,
+                "parent": "between_expression",
+                "text": "160),\n  CONSTRAINT upkeep_rooms_one_claimant CHECK"
+              },
+              {
+                "type": "ERROR",
+                "line": 23,
+                "column": 59,
+                "end_line": 25,
+                "parent": "binary_expression",
+                "text": ";\n\nCREATE"
+              },
+              {
+                "type": "ERROR",
+                "line": 25,
+                "column": 10,
+                "end_line": 29,
+                "parent": "binary_expression",
+                "text": "REPLACE FUNCTION clear_departed_member_upkeep_claims()\nRETURNS trigger LANGUAGE plpgsql AS $$\nBEGIN\n  UPDATE upkeep_rooms\n     SET"
+              },
+              {
+                "type": "ERROR",
+                "line": 30,
+                "column": 27,
+                "end_line": 31,
+                "parent": "binary_expression",
+                "text": ",\n         version"
+              },
+              {
+                "type": "ERROR",
+                "line": 33,
+                "column": 31,
+                "end_line": 41,
+                "parent": "object_reference",
+                "text": "\"userId\";\n  RETURN OLD;\nEND;\n$$;\n\nDROP TRIGGER IF EXISTS member_clear_upkeep_claims ON member;\nCREATE TRIGGER member_clear_upkeep_claims\nBEFORE DELETE ON member\nFOR EACH ROW EXECUTE FUNCTION"
+              },
+              {
+                "type": "ERROR",
+                "line": 41,
+                "column": 67,
+                "end_line": 45,
+                "parent": "constraint",
+                "text": ";\n\nCREATE TABLE laundry_presets (\n  id text PRIMARY KEY,\n  household_id text NOT NULL REFERENCES organization(id"
+              },
+              {
+                "type": "ERROR",
+                "line": 45,
+                "column": 57,
+                "end_line": 52,
+                "parent": "column_definitions",
+                "text": "ON DELETE CASCADE,\n  name text NOT NULL,\n  normalized_name text NOT NULL,\n  temperature text,\n  program text,\n  spin text,\n  version bigint NOT NULL DEFAULT 1,\n  created_by text NOT NULL REFERENCES \"user\"(id"
+              },
+              {
+                "type": "ERROR",
+                "line": 52,
+                "column": 49,
+                "end_line": 54,
+                "parent": "create_table",
+                "text": "ON DELETE RESTRICT,\n  updated_by text NOT NULL REFERENCES \"user\"(id) ON DELETE RESTRICT,\n  created_at timestamptz NOT NULL"
+              },
+              {
+                "type": "ERROR",
+                "line": 54,
+                "column": 42,
+                "end_line": 55,
+                "parent": "create_table",
+                "text": "now(),\n  updated_at timestamptz NOT NULL"
+              },
+              {
+                "type": "ERROR",
+                "line": 55,
+                "column": 42,
+                "end_line": 61,
+                "parent": "program",
+                "text": "now(),\n  CONSTRAINT laundry_presets_name_not_blank CHECK (length(btrim(name)) BETWEEN 1 AND 160),\n  CONSTRAINT laundry_presets_temperature_valid CHECK (temperature IS NULL OR length(btrim(temperature)) BETWEEN 1 AND 40),\n  CONSTRAINT laundry_presets_program_valid CHECK (program IS NULL OR length(btr"
+              },
+              {
+                "type": "ERROR",
+                "line": 84,
+                "column": 83,
+                "end_line": 85,
+                "parent": "between_expression",
+                "text": "160),\n  CONSTRAINT laundry_loads_temperature_valid CHECK"
+              },
+              {
+                "type": "ERROR",
+                "line": 85,
+                "column": 119,
+                "end_line": 86,
+                "parent": "binary_expression",
+                "text": ",\n  CONSTRAINT laundry_loads_program_valid CHECK (program"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0025_task_notes.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 6,
+                "column": 28,
+                "end_line": 8,
+                "parent": "column_definitions",
+                "text": "CHECK (char_length(btrim(author_name)) BETWEEN 1 AND 160),\n  recipient_user_id text NOT NULL REFERENCES \"user\"(id) ON DELETE CASCADE,\n  text text NOT NULL CHECK (char_length(btrim(text)) BETWEEN 1 AND 500)"
+              },
+              {
+                "type": "ERROR",
+                "line": 6,
+                "column": 35,
+                "end_line": 8,
+                "parent": "ERROR",
+                "text": "char_length(btrim(author_name)) BETWEEN 1 AND 160),\n  recipient_user_id text NOT NULL REFERENCES \"user\"(id) ON DELETE CASCADE,\n  text text NOT NULL CHECK"
+              },
+              {
+                "type": "ERROR",
+                "line": 6,
+                "column": 84,
+                "end_line": 8,
+                "parent": "ERROR",
+                "text": "),\n  recipient_user_id text NOT NULL REFERENCES \"user\"(id) ON DELETE CASCADE,\n  text text"
+              },
+              {
+                "type": "ERROR",
+                "line": 41,
+                "column": 0,
+                "end_line": 41,
+                "parent": "program",
+                "text": "DROP TRIGGER IF EXISTS member_clear_task_notes ON member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0027_bills_runway.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 11,
+                "column": 23,
+                "end_line": 12,
+                "parent": "column_definition",
+                "text": "integer check (reminder_days_before between 0 and 30),\n  created_by"
+              },
+              {
+                "type": "ERROR",
+                "line": 26,
+                "column": 30,
+                "end_line": 27,
+                "parent": "column_definitions",
+                "text": "check (percentage between 1 and 100),\n  check ((registered_user_id is not null)::integer + (managed_member_id is not null)::integer = 1)"
+              },
+              {
+                "type": "ERROR",
+                "line": 26,
+                "column": 62,
+                "end_line": 27,
+                "parent": "between_expression",
+                "text": "100),\n  check"
+              },
+              {
+                "type": "ERROR",
+                "line": 74,
+                "column": 0,
+                "end_line": 74,
+                "parent": "program",
+                "text": "drop trigger if exists member_reset_bill_funding on member;"
+              },
+              {
+                "type": "ERROR",
+                "line": 99,
+                "column": 0,
+                "end_line": 99,
+                "parent": "program",
+                "text": "drop trigger if exists managed_member_reset_bill_funding on managed_household_members;"
+              }
+            ]
+          },
+          {
+            "path": "src/screens/TasksScreen.tsx",
+            "grammar": "tree_sitter_typescript",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 1050,
+                "column": 64,
+                "end_line": 1050,
+                "parent": "jsx_element",
+                "text": "& reminder"
+              }
+            ]
+          }
+        ],
+        "omissions": []
+      },
+      {
+        "report": "57bda6dca1a7b31540ac42f4",
+        "repository": "Advicegale/AHOY",
+        "pr": 48,
+        "side": "new",
+        "revision": "40ef9f5fa9819f2ea0ba1078413d72ea4396e2f8",
+        "files": 207,
+        "parsed": 181,
+        "issues": [
+          {
+            "path": "server/migrations/0011_task_assignments_and_push.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 31,
+                "column": 0,
+                "end_line": 31,
+                "parent": "program",
+                "text": "drop trigger if exists member_clear_task_assignments on member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0014_calendar_events_and_vacations.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 51,
+                "column": 12,
+                "end_line": 51,
+                "parent": "insert",
+                "text": "(id)"
+              },
+              {
+                "type": "ERROR",
+                "line": 64,
+                "column": 42,
+                "end_line": 65,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 69,
+                "column": 30,
+                "end_line": 69,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 76,
+                "column": 0,
+                "end_line": 76,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_participant on member;"
+              },
+              {
+                "type": "ERROR",
+                "line": 84,
+                "column": 42,
+                "end_line": 85,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 89,
+                "column": 30,
+                "end_line": 89,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 96,
+                "column": 0,
+                "end_line": 96,
+                "parent": "program",
+                "text": "drop trigger if exists managed_member_remove_calendar_participant on managed_household_members;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0016_household_shift_owners.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 33,
+                "column": 0,
+                "end_line": 33,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_shifts on member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0019_delayed_notification_inbox.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 82,
+                "column": 16,
+                "end_line": 83,
+                "parent": "select",
+                "text": "ON (job.household_id, job.mutation_id, job.recipient_user_id)\n  'legacy-assignment-' || md5"
+              },
+              {
+                "type": "ERROR",
+                "line": 83,
+                "column": 2,
+                "end_line": 83,
+                "parent": "term",
+                "text": "'legacy-assignment-' ||"
+              },
+              {
+                "type": "ERROR",
+                "line": 83,
+                "column": 23,
+                "end_line": 83,
+                "parent": "ERROR",
+                "text": "||"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0022_home_upkeep.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 17,
+                "column": 48,
+                "end_line": 32,
+                "parent": "constraint",
+                "text": "length(btrim(name)) BETWEEN 1 AND 160),\n  CONSTRAINT upkeep_rooms_one_claimant CHECK (num_nonnulls(claimed_user_id, claimed_managed_member_id) <= 1),\n  UNIQUE (household_id, normalized_name)\n);\n\nCREATE INDEX upkeep_rooms_household_attention_idx\n  ON upkeep_rooms (household_id, attention_state, name,"
+              },
+              {
+                "type": "ERROR",
+                "line": 17,
+                "column": 82,
+                "end_line": 18,
+                "parent": "between_expression",
+                "text": "160),\n  CONSTRAINT upkeep_rooms_one_claimant CHECK"
+              },
+              {
+                "type": "ERROR",
+                "line": 23,
+                "column": 59,
+                "end_line": 25,
+                "parent": "binary_expression",
+                "text": ";\n\nCREATE"
+              },
+              {
+                "type": "ERROR",
+                "line": 25,
+                "column": 10,
+                "end_line": 29,
+                "parent": "binary_expression",
+                "text": "REPLACE FUNCTION clear_departed_member_upkeep_claims()\nRETURNS trigger LANGUAGE plpgsql AS $$\nBEGIN\n  UPDATE upkeep_rooms\n     SET"
+              },
+              {
+                "type": "ERROR",
+                "line": 30,
+                "column": 27,
+                "end_line": 31,
+                "parent": "binary_expression",
+                "text": ",\n         version"
+              },
+              {
+                "type": "ERROR",
+                "line": 33,
+                "column": 31,
+                "end_line": 41,
+                "parent": "object_reference",
+                "text": "\"userId\";\n  RETURN OLD;\nEND;\n$$;\n\nDROP TRIGGER IF EXISTS member_clear_upkeep_claims ON member;\nCREATE TRIGGER member_clear_upkeep_claims\nBEFORE DELETE ON member\nFOR EACH ROW EXECUTE FUNCTION"
+              },
+              {
+                "type": "ERROR",
+                "line": 41,
+                "column": 67,
+                "end_line": 45,
+                "parent": "constraint",
+                "text": ";\n\nCREATE TABLE laundry_presets (\n  id text PRIMARY KEY,\n  household_id text NOT NULL REFERENCES organization(id"
+              },
+              {
+                "type": "ERROR",
+                "line": 45,
+                "column": 57,
+                "end_line": 52,
+                "parent": "column_definitions",
+                "text": "ON DELETE CASCADE,\n  name text NOT NULL,\n  normalized_name text NOT NULL,\n  temperature text,\n  program text,\n  spin text,\n  version bigint NOT NULL DEFAULT 1,\n  created_by text NOT NULL REFERENCES \"user\"(id"
+              },
+              {
+                "type": "ERROR",
+                "line": 52,
+                "column": 49,
+                "end_line": 54,
+                "parent": "create_table",
+                "text": "ON DELETE RESTRICT,\n  updated_by text NOT NULL REFERENCES \"user\"(id) ON DELETE RESTRICT,\n  created_at timestamptz NOT NULL"
+              },
+              {
+                "type": "ERROR",
+                "line": 54,
+                "column": 42,
+                "end_line": 55,
+                "parent": "create_table",
+                "text": "now(),\n  updated_at timestamptz NOT NULL"
+              },
+              {
+                "type": "ERROR",
+                "line": 55,
+                "column": 42,
+                "end_line": 61,
+                "parent": "program",
+                "text": "now(),\n  CONSTRAINT laundry_presets_name_not_blank CHECK (length(btrim(name)) BETWEEN 1 AND 160),\n  CONSTRAINT laundry_presets_temperature_valid CHECK (temperature IS NULL OR length(btrim(temperature)) BETWEEN 1 AND 40),\n  CONSTRAINT laundry_presets_program_valid CHECK (program IS NULL OR length(btr"
+              },
+              {
+                "type": "ERROR",
+                "line": 84,
+                "column": 83,
+                "end_line": 85,
+                "parent": "between_expression",
+                "text": "160),\n  CONSTRAINT laundry_loads_temperature_valid CHECK"
+              },
+              {
+                "type": "ERROR",
+                "line": 85,
+                "column": 119,
+                "end_line": 86,
+                "parent": "binary_expression",
+                "text": ",\n  CONSTRAINT laundry_loads_program_valid CHECK (program"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0025_task_notes.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 6,
+                "column": 28,
+                "end_line": 8,
+                "parent": "column_definitions",
+                "text": "CHECK (char_length(btrim(author_name)) BETWEEN 1 AND 160),\n  recipient_user_id text NOT NULL REFERENCES \"user\"(id) ON DELETE CASCADE,\n  text text NOT NULL CHECK (char_length(btrim(text)) BETWEEN 1 AND 500)"
+              },
+              {
+                "type": "ERROR",
+                "line": 6,
+                "column": 35,
+                "end_line": 8,
+                "parent": "ERROR",
+                "text": "char_length(btrim(author_name)) BETWEEN 1 AND 160),\n  recipient_user_id text NOT NULL REFERENCES \"user\"(id) ON DELETE CASCADE,\n  text text NOT NULL CHECK"
+              },
+              {
+                "type": "ERROR",
+                "line": 6,
+                "column": 84,
+                "end_line": 8,
+                "parent": "ERROR",
+                "text": "),\n  recipient_user_id text NOT NULL REFERENCES \"user\"(id) ON DELETE CASCADE,\n  text text"
+              },
+              {
+                "type": "ERROR",
+                "line": 41,
+                "column": 0,
+                "end_line": 41,
+                "parent": "program",
+                "text": "DROP TRIGGER IF EXISTS member_clear_task_notes ON member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0027_bills_runway.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 11,
+                "column": 23,
+                "end_line": 12,
+                "parent": "column_definition",
+                "text": "integer check (reminder_days_before between 0 and 30),\n  created_by"
+              },
+              {
+                "type": "ERROR",
+                "line": 26,
+                "column": 30,
+                "end_line": 27,
+                "parent": "column_definitions",
+                "text": "check (percentage between 1 and 100),\n  check ((registered_user_id is not null)::integer + (managed_member_id is not null)::integer = 1)"
+              },
+              {
+                "type": "ERROR",
+                "line": 26,
+                "column": 62,
+                "end_line": 27,
+                "parent": "between_expression",
+                "text": "100),\n  check"
+              },
+              {
+                "type": "ERROR",
+                "line": 74,
+                "column": 0,
+                "end_line": 74,
+                "parent": "program",
+                "text": "drop trigger if exists member_reset_bill_funding on member;"
+              },
+              {
+                "type": "ERROR",
+                "line": 99,
+                "column": 0,
+                "end_line": 99,
+                "parent": "program",
+                "text": "drop trigger if exists managed_member_reset_bill_funding on managed_household_members;"
+              }
+            ]
+          },
+          {
+            "path": "src/screens/TasksScreen.tsx",
+            "grammar": "tree_sitter_typescript",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 1050,
+                "column": 64,
+                "end_line": 1050,
+                "parent": "jsx_element",
+                "text": "& reminder"
+              }
+            ]
+          }
+        ],
+        "omissions": []
+      },
+      {
+        "report": "768c452120a872be8dd12d64",
+        "repository": "Advicegale/AHOY",
+        "pr": 40,
+        "side": "old",
+        "revision": "bc4f54df9062e831f0629d498ce7c0e75a199b44",
+        "files": 178,
+        "parsed": 153,
+        "issues": [
+          {
+            "path": "server/migrations/0011_task_assignments_and_push.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 31,
+                "column": 0,
+                "end_line": 31,
+                "parent": "program",
+                "text": "drop trigger if exists member_clear_task_assignments on member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0014_calendar_events_and_vacations.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 51,
+                "column": 12,
+                "end_line": 51,
+                "parent": "insert",
+                "text": "(id)"
+              },
+              {
+                "type": "ERROR",
+                "line": 64,
+                "column": 42,
+                "end_line": 65,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 69,
+                "column": 30,
+                "end_line": 69,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 76,
+                "column": 0,
+                "end_line": 76,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_participant on member;"
+              },
+              {
+                "type": "ERROR",
+                "line": 84,
+                "column": 42,
+                "end_line": 85,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 89,
+                "column": 30,
+                "end_line": 89,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 96,
+                "column": 0,
+                "end_line": 96,
+                "parent": "program",
+                "text": "drop trigger if exists managed_member_remove_calendar_participant on managed_household_members;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0016_household_shift_owners.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 33,
+                "column": 0,
+                "end_line": 33,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_shifts on member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0019_delayed_notification_inbox.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 82,
+                "column": 16,
+                "end_line": 83,
+                "parent": "select",
+                "text": "ON (job.household_id, job.mutation_id, job.recipient_user_id)\n  'legacy-assignment-' || md5"
+              },
+              {
+                "type": "ERROR",
+                "line": 83,
+                "column": 2,
+                "end_line": 83,
+                "parent": "term",
+                "text": "'legacy-assignment-' ||"
+              },
+              {
+                "type": "ERROR",
+                "line": 83,
+                "column": 23,
+                "end_line": 83,
+                "parent": "ERROR",
+                "text": "||"
+              }
+            ]
+          },
+          {
+            "path": "src/screens/TasksScreen.tsx",
+            "grammar": "tree_sitter_typescript",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 640,
+                "column": 64,
+                "end_line": 640,
+                "parent": "jsx_element",
+                "text": "& reminder"
+              }
+            ]
+          }
+        ],
+        "omissions": []
+      },
+      {
+        "report": "768c452120a872be8dd12d64",
+        "repository": "Advicegale/AHOY",
+        "pr": 40,
+        "side": "new",
+        "revision": "bc282d46f1b9b4cd7529364443b3f26890984335",
+        "files": 185,
+        "parsed": 160,
+        "issues": [
+          {
+            "path": "server/migrations/0011_task_assignments_and_push.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 31,
+                "column": 0,
+                "end_line": 31,
+                "parent": "program",
+                "text": "drop trigger if exists member_clear_task_assignments on member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0014_calendar_events_and_vacations.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 51,
+                "column": 12,
+                "end_line": 51,
+                "parent": "insert",
+                "text": "(id)"
+              },
+              {
+                "type": "ERROR",
+                "line": 64,
+                "column": 42,
+                "end_line": 65,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 69,
+                "column": 30,
+                "end_line": 69,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 76,
+                "column": 0,
+                "end_line": 76,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_participant on member;"
+              },
+              {
+                "type": "ERROR",
+                "line": 84,
+                "column": 42,
+                "end_line": 85,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 89,
+                "column": 30,
+                "end_line": 89,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 96,
+                "column": 0,
+                "end_line": 96,
+                "parent": "program",
+                "text": "drop trigger if exists managed_member_remove_calendar_participant on managed_household_members;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0016_household_shift_owners.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 33,
+                "column": 0,
+                "end_line": 33,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_shifts on member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0019_delayed_notification_inbox.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 82,
+                "column": 16,
+                "end_line": 83,
+                "parent": "select",
+                "text": "ON (job.household_id, job.mutation_id, job.recipient_user_id)\n  'legacy-assignment-' || md5"
+              },
+              {
+                "type": "ERROR",
+                "line": 83,
+                "column": 2,
+                "end_line": 83,
+                "parent": "term",
+                "text": "'legacy-assignment-' ||"
+              },
+              {
+                "type": "ERROR",
+                "line": 83,
+                "column": 23,
+                "end_line": 83,
+                "parent": "ERROR",
+                "text": "||"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0022_home_upkeep.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 17,
+                "column": 48,
+                "end_line": 32,
+                "parent": "constraint",
+                "text": "length(btrim(name)) BETWEEN 1 AND 160),\n  CONSTRAINT upkeep_rooms_one_claimant CHECK (num_nonnulls(claimed_user_id, claimed_managed_member_id) <= 1),\n  UNIQUE (household_id, normalized_name)\n);\n\nCREATE INDEX upkeep_rooms_household_attention_idx\n  ON upkeep_rooms (household_id, attention_state, name,"
+              },
+              {
+                "type": "ERROR",
+                "line": 17,
+                "column": 82,
+                "end_line": 18,
+                "parent": "between_expression",
+                "text": "160),\n  CONSTRAINT upkeep_rooms_one_claimant CHECK"
+              },
+              {
+                "type": "ERROR",
+                "line": 23,
+                "column": 59,
+                "end_line": 25,
+                "parent": "binary_expression",
+                "text": ";\n\nCREATE"
+              },
+              {
+                "type": "ERROR",
+                "line": 25,
+                "column": 10,
+                "end_line": 29,
+                "parent": "binary_expression",
+                "text": "REPLACE FUNCTION clear_departed_member_upkeep_claims()\nRETURNS trigger LANGUAGE plpgsql AS $$\nBEGIN\n  UPDATE upkeep_rooms\n     SET"
+              },
+              {
+                "type": "ERROR",
+                "line": 30,
+                "column": 27,
+                "end_line": 31,
+                "parent": "binary_expression",
+                "text": ",\n         version"
+              },
+              {
+                "type": "ERROR",
+                "line": 33,
+                "column": 31,
+                "end_line": 41,
+                "parent": "object_reference",
+                "text": "\"userId\";\n  RETURN OLD;\nEND;\n$$;\n\nDROP TRIGGER IF EXISTS member_clear_upkeep_claims ON member;\nCREATE TRIGGER member_clear_upkeep_claims\nBEFORE DELETE ON member\nFOR EACH ROW EXECUTE FUNCTION"
+              },
+              {
+                "type": "ERROR",
+                "line": 41,
+                "column": 67,
+                "end_line": 45,
+                "parent": "constraint",
+                "text": ";\n\nCREATE TABLE laundry_presets (\n  id text PRIMARY KEY,\n  household_id text NOT NULL REFERENCES organization(id"
+              },
+              {
+                "type": "ERROR",
+                "line": 45,
+                "column": 57,
+                "end_line": 52,
+                "parent": "column_definitions",
+                "text": "ON DELETE CASCADE,\n  name text NOT NULL,\n  normalized_name text NOT NULL,\n  temperature text,\n  program text,\n  spin text,\n  version bigint NOT NULL DEFAULT 1,\n  created_by text NOT NULL REFERENCES \"user\"(id"
+              },
+              {
+                "type": "ERROR",
+                "line": 52,
+                "column": 49,
+                "end_line": 54,
+                "parent": "create_table",
+                "text": "ON DELETE RESTRICT,\n  updated_by text NOT NULL REFERENCES \"user\"(id) ON DELETE RESTRICT,\n  created_at timestamptz NOT NULL"
+              },
+              {
+                "type": "ERROR",
+                "line": 54,
+                "column": 42,
+                "end_line": 55,
+                "parent": "create_table",
+                "text": "now(),\n  updated_at timestamptz NOT NULL"
+              },
+              {
+                "type": "ERROR",
+                "line": 55,
+                "column": 42,
+                "end_line": 61,
+                "parent": "program",
+                "text": "now(),\n  CONSTRAINT laundry_presets_name_not_blank CHECK (length(btrim(name)) BETWEEN 1 AND 160),\n  CONSTRAINT laundry_presets_temperature_valid CHECK (temperature IS NULL OR length(btrim(temperature)) BETWEEN 1 AND 40),\n  CONSTRAINT laundry_presets_program_valid CHECK (program IS NULL OR length(btr"
+              },
+              {
+                "type": "ERROR",
+                "line": 84,
+                "column": 83,
+                "end_line": 85,
+                "parent": "between_expression",
+                "text": "160),\n  CONSTRAINT laundry_loads_temperature_valid CHECK"
+              },
+              {
+                "type": "ERROR",
+                "line": 85,
+                "column": 119,
+                "end_line": 86,
+                "parent": "binary_expression",
+                "text": ",\n  CONSTRAINT laundry_loads_program_valid CHECK (program"
+              }
+            ]
+          },
+          {
+            "path": "src/screens/TasksScreen.tsx",
+            "grammar": "tree_sitter_typescript",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 718,
+                "column": 64,
+                "end_line": 718,
+                "parent": "jsx_element",
+                "text": "& reminder"
+              }
+            ]
+          }
+        ],
+        "omissions": []
+      },
+      {
+        "report": "8af8b8da268ac4cddd4bdb0d",
+        "repository": "Advicegale/WFArsenal",
+        "pr": 41,
+        "side": "old",
+        "revision": "a72c56cafe1cd4935535e1a2797658c89e50dada",
+        "files": 86,
+        "parsed": 60,
+        "issues": [],
+        "omissions": [
+          {
+            "path": "all_items_timeline.csv",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "image_dump.csv",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportCustoms_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportFlavour_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportManifest.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportRecipes_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportRelicArcane_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportResources_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportUpgrades_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportWeapons_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          }
+        ]
+      },
+      {
+        "report": "8af8b8da268ac4cddd4bdb0d",
+        "repository": "Advicegale/WFArsenal",
+        "pr": 41,
+        "side": "new",
+        "revision": "51931d5fb9d1c1834b76071ef30ded46231f0002",
+        "files": 86,
+        "parsed": 60,
+        "issues": [],
+        "omissions": [
+          {
+            "path": "all_items_timeline.csv",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "image_dump.csv",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportCustoms_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportFlavour_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportManifest.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportRecipes_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportRelicArcane_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportResources_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportUpgrades_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportWeapons_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          }
+        ]
+      },
+      {
+        "report": "90fede40cead4494fd87beb6",
+        "repository": "Advicegale/WFArsenal",
+        "pr": 37,
+        "side": "old",
+        "revision": "fda8778a3957c9b50819bb380a76d0872bd5c7d6",
+        "files": 58,
+        "parsed": 38,
+        "issues": [],
+        "omissions": [
+          {
+            "path": "audit_crops/audit_crops_manifest.csv",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "image_dump.csv",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportCustoms_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportFlavour_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportManifest.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportRecipes_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportRelicArcane_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportResources_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportUpgrades_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportWeapons_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          }
+        ]
+      },
+      {
+        "report": "90fede40cead4494fd87beb6",
+        "repository": "Advicegale/WFArsenal",
+        "pr": 37,
+        "side": "new",
+        "revision": "605ccad4e0b5f2e89f09ed9b3c085636332ddf13",
+        "files": 58,
+        "parsed": 38,
+        "issues": [],
+        "omissions": [
+          {
+            "path": "audit_crops/audit_crops_manifest.csv",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "image_dump.csv",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportCustoms_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportFlavour_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportManifest.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportRecipes_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportRelicArcane_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportResources_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportUpgrades_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportWeapons_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          }
+        ]
+      },
+      {
+        "report": "a37a5008843a9105e71c0966",
+        "repository": "Advicegale/AHOY",
+        "pr": 31,
+        "side": "old",
+        "revision": "ee69e2022f07bebea73fef470e8b29f70b45a930",
+        "files": 161,
+        "parsed": 138,
+        "issues": [
+          {
+            "path": "server/migrations/0011_task_assignments_and_push.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 31,
+                "column": 0,
+                "end_line": 31,
+                "parent": "program",
+                "text": "drop trigger if exists member_clear_task_assignments on member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0014_calendar_events_and_vacations.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 51,
+                "column": 12,
+                "end_line": 51,
+                "parent": "insert",
+                "text": "(id)"
+              },
+              {
+                "type": "ERROR",
+                "line": 64,
+                "column": 42,
+                "end_line": 65,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 69,
+                "column": 30,
+                "end_line": 69,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 76,
+                "column": 0,
+                "end_line": 76,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_participant on member;"
+              },
+              {
+                "type": "ERROR",
+                "line": 84,
+                "column": 42,
+                "end_line": 85,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 89,
+                "column": 30,
+                "end_line": 89,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 96,
+                "column": 0,
+                "end_line": 96,
+                "parent": "program",
+                "text": "drop trigger if exists managed_member_remove_calendar_participant on managed_household_members;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0016_household_shift_owners.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 33,
+                "column": 0,
+                "end_line": 33,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_shifts on member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0019_delayed_notification_inbox.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 82,
+                "column": 16,
+                "end_line": 83,
+                "parent": "select",
+                "text": "ON (job.household_id, job.mutation_id, job.recipient_user_id)\n  'legacy-assignment-' || md5"
+              },
+              {
+                "type": "ERROR",
+                "line": 83,
+                "column": 2,
+                "end_line": 83,
+                "parent": "term",
+                "text": "'legacy-assignment-' ||"
+              },
+              {
+                "type": "ERROR",
+                "line": 83,
+                "column": 23,
+                "end_line": 83,
+                "parent": "ERROR",
+                "text": "||"
+              }
+            ]
+          }
+        ],
+        "omissions": []
+      },
+      {
+        "report": "a37a5008843a9105e71c0966",
+        "repository": "Advicegale/AHOY",
+        "pr": 31,
+        "side": "new",
+        "revision": "9fa86a16c613149fabdb8644bbf50a022004b6b1",
+        "files": 165,
+        "parsed": 142,
+        "issues": [
+          {
+            "path": "server/migrations/0011_task_assignments_and_push.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 31,
+                "column": 0,
+                "end_line": 31,
+                "parent": "program",
+                "text": "drop trigger if exists member_clear_task_assignments on member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0014_calendar_events_and_vacations.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 51,
+                "column": 12,
+                "end_line": 51,
+                "parent": "insert",
+                "text": "(id)"
+              },
+              {
+                "type": "ERROR",
+                "line": 64,
+                "column": 42,
+                "end_line": 65,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 69,
+                "column": 30,
+                "end_line": 69,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 76,
+                "column": 0,
+                "end_line": 76,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_participant on member;"
+              },
+              {
+                "type": "ERROR",
+                "line": 84,
+                "column": 42,
+                "end_line": 85,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 89,
+                "column": 30,
+                "end_line": 89,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 96,
+                "column": 0,
+                "end_line": 96,
+                "parent": "program",
+                "text": "drop trigger if exists managed_member_remove_calendar_participant on managed_household_members;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0016_household_shift_owners.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 33,
+                "column": 0,
+                "end_line": 33,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_shifts on member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0019_delayed_notification_inbox.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 82,
+                "column": 16,
+                "end_line": 83,
+                "parent": "select",
+                "text": "ON (job.household_id, job.mutation_id, job.recipient_user_id)\n  'legacy-assignment-' || md5"
+              },
+              {
+                "type": "ERROR",
+                "line": 83,
+                "column": 2,
+                "end_line": 83,
+                "parent": "term",
+                "text": "'legacy-assignment-' ||"
+              },
+              {
+                "type": "ERROR",
+                "line": 83,
+                "column": 23,
+                "end_line": 83,
+                "parent": "ERROR",
+                "text": "||"
+              }
+            ]
+          }
+        ],
+        "omissions": []
+      },
+      {
+        "report": "acd7aeaffd5e782880a64156",
+        "repository": "themeldingwars/PIN",
+        "pr": 41,
+        "side": "old",
+        "revision": "67c344c896d153ae75b8c8452df316981a442823",
+        "files": 933,
+        "parsed": 898,
+        "issues": [
+          {
+            "path": "Lib/Shared.Udp/Serializer.cs",
+            "grammar": "tree_sitter_c_sharp",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 19,
+                "column": 31,
+                "end_line": 19,
+                "parent": "element_access_expression",
+                "text": "= source"
+              },
+              {
+                "type": "!",
+                "line": 19,
+                "column": 42,
+                "end_line": 19,
+                "parent": "postfix_unary_expression",
+                "text": ""
+              },
+              {
+                "type": "ERROR",
+                "line": 27,
+                "column": 31,
+                "end_line": 27,
+                "parent": "element_access_expression",
+                "text": "= source"
+              },
+              {
+                "type": "!",
+                "line": 27,
+                "column": 42,
+                "end_line": 27,
+                "parent": "postfix_unary_expression",
+                "text": ""
+              }
+            ]
+          }
+        ],
+        "omissions": []
+      },
+      {
+        "report": "acd7aeaffd5e782880a64156",
+        "repository": "themeldingwars/PIN",
+        "pr": 41,
+        "side": "new",
+        "revision": "1543f6a9e38a6bfce3b5ba823b2d46246ba2ae45",
+        "files": 933,
+        "parsed": 898,
+        "issues": [
+          {
+            "path": "Lib/Shared.Udp/Serializer.cs",
+            "grammar": "tree_sitter_c_sharp",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 19,
+                "column": 31,
+                "end_line": 19,
+                "parent": "element_access_expression",
+                "text": "= source"
+              },
+              {
+                "type": "!",
+                "line": 19,
+                "column": 42,
+                "end_line": 19,
+                "parent": "postfix_unary_expression",
+                "text": ""
+              },
+              {
+                "type": "ERROR",
+                "line": 27,
+                "column": 31,
+                "end_line": 27,
+                "parent": "element_access_expression",
+                "text": "= source"
+              },
+              {
+                "type": "!",
+                "line": 27,
+                "column": 42,
+                "end_line": 27,
+                "parent": "postfix_unary_expression",
+                "text": ""
+              }
+            ]
+          }
+        ],
+        "omissions": []
+      },
+      {
+        "report": "ef8d5221d3b6fda6e000d428",
+        "repository": "Advicegale/AHOY",
+        "pr": 39,
+        "side": "old",
+        "revision": "beeaa0b11a870217c7148dd3a02c6da9236119c6",
+        "files": 185,
+        "parsed": 160,
+        "issues": [
+          {
+            "path": "server/migrations/0011_task_assignments_and_push.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 31,
+                "column": 0,
+                "end_line": 31,
+                "parent": "program",
+                "text": "drop trigger if exists member_clear_task_assignments on member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0014_calendar_events_and_vacations.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 51,
+                "column": 12,
+                "end_line": 51,
+                "parent": "insert",
+                "text": "(id)"
+              },
+              {
+                "type": "ERROR",
+                "line": 64,
+                "column": 42,
+                "end_line": 65,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 69,
+                "column": 30,
+                "end_line": 69,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 76,
+                "column": 0,
+                "end_line": 76,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_participant on member;"
+              },
+              {
+                "type": "ERROR",
+                "line": 84,
+                "column": 42,
+                "end_line": 85,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 89,
+                "column": 30,
+                "end_line": 89,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 96,
+                "column": 0,
+                "end_line": 96,
+                "parent": "program",
+                "text": "drop trigger if exists managed_member_remove_calendar_participant on managed_household_members;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0016_household_shift_owners.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 33,
+                "column": 0,
+                "end_line": 33,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_shifts on member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0019_delayed_notification_inbox.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 82,
+                "column": 16,
+                "end_line": 83,
+                "parent": "select",
+                "text": "ON (job.household_id, job.mutation_id, job.recipient_user_id)\n  'legacy-assignment-' || md5"
+              },
+              {
+                "type": "ERROR",
+                "line": 83,
+                "column": 2,
+                "end_line": 83,
+                "parent": "term",
+                "text": "'legacy-assignment-' ||"
+              },
+              {
+                "type": "ERROR",
+                "line": 83,
+                "column": 23,
+                "end_line": 83,
+                "parent": "ERROR",
+                "text": "||"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0022_home_upkeep.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 17,
+                "column": 48,
+                "end_line": 32,
+                "parent": "constraint",
+                "text": "length(btrim(name)) BETWEEN 1 AND 160),\n  CONSTRAINT upkeep_rooms_one_claimant CHECK (num_nonnulls(claimed_user_id, claimed_managed_member_id) <= 1),\n  UNIQUE (household_id, normalized_name)\n);\n\nCREATE INDEX upkeep_rooms_household_attention_idx\n  ON upkeep_rooms (household_id, attention_state, name,"
+              },
+              {
+                "type": "ERROR",
+                "line": 17,
+                "column": 82,
+                "end_line": 18,
+                "parent": "between_expression",
+                "text": "160),\n  CONSTRAINT upkeep_rooms_one_claimant CHECK"
+              },
+              {
+                "type": "ERROR",
+                "line": 23,
+                "column": 59,
+                "end_line": 25,
+                "parent": "binary_expression",
+                "text": ";\n\nCREATE"
+              },
+              {
+                "type": "ERROR",
+                "line": 25,
+                "column": 10,
+                "end_line": 29,
+                "parent": "binary_expression",
+                "text": "REPLACE FUNCTION clear_departed_member_upkeep_claims()\nRETURNS trigger LANGUAGE plpgsql AS $$\nBEGIN\n  UPDATE upkeep_rooms\n     SET"
+              },
+              {
+                "type": "ERROR",
+                "line": 30,
+                "column": 27,
+                "end_line": 31,
+                "parent": "binary_expression",
+                "text": ",\n         version"
+              },
+              {
+                "type": "ERROR",
+                "line": 33,
+                "column": 31,
+                "end_line": 41,
+                "parent": "object_reference",
+                "text": "\"userId\";\n  RETURN OLD;\nEND;\n$$;\n\nDROP TRIGGER IF EXISTS member_clear_upkeep_claims ON member;\nCREATE TRIGGER member_clear_upkeep_claims\nBEFORE DELETE ON member\nFOR EACH ROW EXECUTE FUNCTION"
+              },
+              {
+                "type": "ERROR",
+                "line": 41,
+                "column": 67,
+                "end_line": 45,
+                "parent": "constraint",
+                "text": ";\n\nCREATE TABLE laundry_presets (\n  id text PRIMARY KEY,\n  household_id text NOT NULL REFERENCES organization(id"
+              },
+              {
+                "type": "ERROR",
+                "line": 45,
+                "column": 57,
+                "end_line": 52,
+                "parent": "column_definitions",
+                "text": "ON DELETE CASCADE,\n  name text NOT NULL,\n  normalized_name text NOT NULL,\n  temperature text,\n  program text,\n  spin text,\n  version bigint NOT NULL DEFAULT 1,\n  created_by text NOT NULL REFERENCES \"user\"(id"
+              },
+              {
+                "type": "ERROR",
+                "line": 52,
+                "column": 49,
+                "end_line": 54,
+                "parent": "create_table",
+                "text": "ON DELETE RESTRICT,\n  updated_by text NOT NULL REFERENCES \"user\"(id) ON DELETE RESTRICT,\n  created_at timestamptz NOT NULL"
+              },
+              {
+                "type": "ERROR",
+                "line": 54,
+                "column": 42,
+                "end_line": 55,
+                "parent": "create_table",
+                "text": "now(),\n  updated_at timestamptz NOT NULL"
+              },
+              {
+                "type": "ERROR",
+                "line": 55,
+                "column": 42,
+                "end_line": 61,
+                "parent": "program",
+                "text": "now(),\n  CONSTRAINT laundry_presets_name_not_blank CHECK (length(btrim(name)) BETWEEN 1 AND 160),\n  CONSTRAINT laundry_presets_temperature_valid CHECK (temperature IS NULL OR length(btrim(temperature)) BETWEEN 1 AND 40),\n  CONSTRAINT laundry_presets_program_valid CHECK (program IS NULL OR length(btr"
+              },
+              {
+                "type": "ERROR",
+                "line": 84,
+                "column": 83,
+                "end_line": 85,
+                "parent": "between_expression",
+                "text": "160),\n  CONSTRAINT laundry_loads_temperature_valid CHECK"
+              },
+              {
+                "type": "ERROR",
+                "line": 85,
+                "column": 119,
+                "end_line": 86,
+                "parent": "binary_expression",
+                "text": ",\n  CONSTRAINT laundry_loads_program_valid CHECK (program"
+              }
+            ]
+          },
+          {
+            "path": "src/screens/TasksScreen.tsx",
+            "grammar": "tree_sitter_typescript",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 718,
+                "column": 64,
+                "end_line": 718,
+                "parent": "jsx_element",
+                "text": "& reminder"
+              }
+            ]
+          }
+        ],
+        "omissions": []
+      },
+      {
+        "report": "ef8d5221d3b6fda6e000d428",
+        "repository": "Advicegale/AHOY",
+        "pr": 39,
+        "side": "new",
+        "revision": "f24352ef01143c17101f93e31b01d2c857f64275",
+        "files": 187,
+        "parsed": 162,
+        "issues": [
+          {
+            "path": "server/migrations/0011_task_assignments_and_push.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 31,
+                "column": 0,
+                "end_line": 31,
+                "parent": "program",
+                "text": "drop trigger if exists member_clear_task_assignments on member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0014_calendar_events_and_vacations.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 51,
+                "column": 12,
+                "end_line": 51,
+                "parent": "insert",
+                "text": "(id)"
+              },
+              {
+                "type": "ERROR",
+                "line": 64,
+                "column": 42,
+                "end_line": 65,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 69,
+                "column": 30,
+                "end_line": 69,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 76,
+                "column": 0,
+                "end_line": 76,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_participant on member;"
+              },
+              {
+                "type": "ERROR",
+                "line": 84,
+                "column": 42,
+                "end_line": 85,
+                "parent": "from",
+                "text": "participant\n   using calendar_blocks block"
+              },
+              {
+                "type": "ERROR",
+                "line": 89,
+                "column": 30,
+                "end_line": 89,
+                "parent": "from",
+                "text": "block"
+              },
+              {
+                "type": "ERROR",
+                "line": 96,
+                "column": 0,
+                "end_line": 96,
+                "parent": "program",
+                "text": "drop trigger if exists managed_member_remove_calendar_participant on managed_household_members;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0016_household_shift_owners.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 33,
+                "column": 0,
+                "end_line": 33,
+                "parent": "program",
+                "text": "drop trigger if exists member_remove_calendar_shifts on member;"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0019_delayed_notification_inbox.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 82,
+                "column": 16,
+                "end_line": 83,
+                "parent": "select",
+                "text": "ON (job.household_id, job.mutation_id, job.recipient_user_id)\n  'legacy-assignment-' || md5"
+              },
+              {
+                "type": "ERROR",
+                "line": 83,
+                "column": 2,
+                "end_line": 83,
+                "parent": "term",
+                "text": "'legacy-assignment-' ||"
+              },
+              {
+                "type": "ERROR",
+                "line": 83,
+                "column": 23,
+                "end_line": 83,
+                "parent": "ERROR",
+                "text": "||"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0022_home_upkeep.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 17,
+                "column": 48,
+                "end_line": 32,
+                "parent": "constraint",
+                "text": "length(btrim(name)) BETWEEN 1 AND 160),\n  CONSTRAINT upkeep_rooms_one_claimant CHECK (num_nonnulls(claimed_user_id, claimed_managed_member_id) <= 1),\n  UNIQUE (household_id, normalized_name)\n);\n\nCREATE INDEX upkeep_rooms_household_attention_idx\n  ON upkeep_rooms (household_id, attention_state, name,"
+              },
+              {
+                "type": "ERROR",
+                "line": 17,
+                "column": 82,
+                "end_line": 18,
+                "parent": "between_expression",
+                "text": "160),\n  CONSTRAINT upkeep_rooms_one_claimant CHECK"
+              },
+              {
+                "type": "ERROR",
+                "line": 23,
+                "column": 59,
+                "end_line": 25,
+                "parent": "binary_expression",
+                "text": ";\n\nCREATE"
+              },
+              {
+                "type": "ERROR",
+                "line": 25,
+                "column": 10,
+                "end_line": 29,
+                "parent": "binary_expression",
+                "text": "REPLACE FUNCTION clear_departed_member_upkeep_claims()\nRETURNS trigger LANGUAGE plpgsql AS $$\nBEGIN\n  UPDATE upkeep_rooms\n     SET"
+              },
+              {
+                "type": "ERROR",
+                "line": 30,
+                "column": 27,
+                "end_line": 31,
+                "parent": "binary_expression",
+                "text": ",\n         version"
+              },
+              {
+                "type": "ERROR",
+                "line": 33,
+                "column": 31,
+                "end_line": 41,
+                "parent": "object_reference",
+                "text": "\"userId\";\n  RETURN OLD;\nEND;\n$$;\n\nDROP TRIGGER IF EXISTS member_clear_upkeep_claims ON member;\nCREATE TRIGGER member_clear_upkeep_claims\nBEFORE DELETE ON member\nFOR EACH ROW EXECUTE FUNCTION"
+              },
+              {
+                "type": "ERROR",
+                "line": 41,
+                "column": 67,
+                "end_line": 45,
+                "parent": "constraint",
+                "text": ";\n\nCREATE TABLE laundry_presets (\n  id text PRIMARY KEY,\n  household_id text NOT NULL REFERENCES organization(id"
+              },
+              {
+                "type": "ERROR",
+                "line": 45,
+                "column": 57,
+                "end_line": 52,
+                "parent": "column_definitions",
+                "text": "ON DELETE CASCADE,\n  name text NOT NULL,\n  normalized_name text NOT NULL,\n  temperature text,\n  program text,\n  spin text,\n  version bigint NOT NULL DEFAULT 1,\n  created_by text NOT NULL REFERENCES \"user\"(id"
+              },
+              {
+                "type": "ERROR",
+                "line": 52,
+                "column": 49,
+                "end_line": 54,
+                "parent": "create_table",
+                "text": "ON DELETE RESTRICT,\n  updated_by text NOT NULL REFERENCES \"user\"(id) ON DELETE RESTRICT,\n  created_at timestamptz NOT NULL"
+              },
+              {
+                "type": "ERROR",
+                "line": 54,
+                "column": 42,
+                "end_line": 55,
+                "parent": "create_table",
+                "text": "now(),\n  updated_at timestamptz NOT NULL"
+              },
+              {
+                "type": "ERROR",
+                "line": 55,
+                "column": 42,
+                "end_line": 61,
+                "parent": "program",
+                "text": "now(),\n  CONSTRAINT laundry_presets_name_not_blank CHECK (length(btrim(name)) BETWEEN 1 AND 160),\n  CONSTRAINT laundry_presets_temperature_valid CHECK (temperature IS NULL OR length(btrim(temperature)) BETWEEN 1 AND 40),\n  CONSTRAINT laundry_presets_program_valid CHECK (program IS NULL OR length(btr"
+              },
+              {
+                "type": "ERROR",
+                "line": 84,
+                "column": 83,
+                "end_line": 85,
+                "parent": "between_expression",
+                "text": "160),\n  CONSTRAINT laundry_loads_temperature_valid CHECK"
+              },
+              {
+                "type": "ERROR",
+                "line": 85,
+                "column": 119,
+                "end_line": 86,
+                "parent": "binary_expression",
+                "text": ",\n  CONSTRAINT laundry_loads_program_valid CHECK (program"
+              }
+            ]
+          },
+          {
+            "path": "server/migrations/0025_task_notes.sql",
+            "grammar": "tree_sitter_sql",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 6,
+                "column": 28,
+                "end_line": 8,
+                "parent": "column_definitions",
+                "text": "CHECK (char_length(btrim(author_name)) BETWEEN 1 AND 160),\n  recipient_user_id text NOT NULL REFERENCES \"user\"(id) ON DELETE CASCADE,\n  text text NOT NULL CHECK (char_length(btrim(text)) BETWEEN 1 AND 500)"
+              },
+              {
+                "type": "ERROR",
+                "line": 6,
+                "column": 35,
+                "end_line": 8,
+                "parent": "ERROR",
+                "text": "char_length(btrim(author_name)) BETWEEN 1 AND 160),\n  recipient_user_id text NOT NULL REFERENCES \"user\"(id) ON DELETE CASCADE,\n  text text NOT NULL CHECK"
+              },
+              {
+                "type": "ERROR",
+                "line": 6,
+                "column": 84,
+                "end_line": 8,
+                "parent": "ERROR",
+                "text": "),\n  recipient_user_id text NOT NULL REFERENCES \"user\"(id) ON DELETE CASCADE,\n  text text"
+              },
+              {
+                "type": "ERROR",
+                "line": 41,
+                "column": 0,
+                "end_line": 41,
+                "parent": "program",
+                "text": "DROP TRIGGER IF EXISTS member_clear_task_notes ON member;"
+              }
+            ]
+          },
+          {
+            "path": "src/screens/TasksScreen.tsx",
+            "grammar": "tree_sitter_typescript",
+            "errors": [
+              {
+                "type": "ERROR",
+                "line": 981,
+                "column": 64,
+                "end_line": 981,
+                "parent": "jsx_element",
+                "text": "& reminder"
+              }
+            ]
+          }
+        ],
+        "omissions": []
+      }
+    ]
+  },
+  "corrected": {
+    "parser_versions": {
+      "tree-sitter-rust": "0.24.2",
+      "tree-sitter-java": "0.23.5",
+      "tree-sitter-groovy": "0.1.2",
+      "tree-sitter-ruby": "0.23.1",
+      "tree-sitter-json": "0.24.8",
+      "tree-sitter-zig": "1.1.2",
+      "tree-sitter-powershell": "0.26.4",
+      "tree-sitter-c": "0.24.2",
+      "tree-sitter-php": "0.24.1",
+      "tree-sitter-scala": "0.26.2",
+      "tree-sitter-objc": "3.0.2",
+      "tree-sitter-elixir": "0.3.5",
+      "tree-sitter-fortran": "0.6.0",
+      "tree-sitter": "0.25.2",
+      "tree-sitter-python": "0.25.0",
+      "tree-sitter-go": "0.25.0",
+      "tree-sitter-julia": "0.23.1",
+      "tree-sitter-cpp": "0.23.4",
+      "tree-sitter-bash": "0.25.1",
+      "tree-sitter-verilog": "1.0.3",
+      "tree-sitter-kotlin": "1.1.0",
+      "tree-sitter-swift": "0.7.4",
+      "tree-sitter-lua": "0.5.0",
+      "tree-sitter-hcl": "1.2.0",
+      "tree-sitter-yaml": "0.7.2",
+      "tree-sitter-embedded-template": "0.25.0",
+      "tree-sitter-commonlisp": "0.4.1",
+      "tree-sitter-pascal": "0.11.0",
+      "tree-sitter-solidity": "1.2.13",
+      "tree-sitter-vb-dotnet": "0.3.0",
+      "tree-sitter-dm": "0.26.0",
+      "tree-sitter-ocaml": "0.26.0",
+      "tree-sitter-language-pack": "0.11.0",
+      "tree-sitter-c-sharp": "0.23.5+prism.1",
+      "tree-sitter-typescript": "0.23.2+prism.1",
+      "tree-sitter-javascript": "0.25.0+prism.1",
+      "tree-sitter-sql": "0.3.11+prism.2"
+    },
+    "reports": [
+      {
+        "report": "55f22d055d36db9244e36d02",
+        "repository": "Advicegale/AHOY",
+        "pr": 25,
+        "side": "old",
+        "revision": "11966a0d86b3060c445af6512e32eeded8a3ef16",
+        "files": 142,
+        "parsed": 120,
+        "issues": [],
+        "omissions": []
+      },
+      {
+        "report": "55f22d055d36db9244e36d02",
+        "repository": "Advicegale/AHOY",
+        "pr": 25,
+        "side": "new",
+        "revision": "252cc55ceded3c335927e1b76bcd8741caa0b815",
+        "files": 146,
+        "parsed": 124,
+        "issues": [],
+        "omissions": []
+      },
+      {
+        "report": "57bda6dca1a7b31540ac42f4",
+        "repository": "Advicegale/AHOY",
+        "pr": 48,
+        "side": "old",
+        "revision": "9c053217ca036889261c51b8af9bebdc7f1341b8",
+        "files": 205,
+        "parsed": 180,
+        "issues": [],
+        "omissions": []
+      },
+      {
+        "report": "57bda6dca1a7b31540ac42f4",
+        "repository": "Advicegale/AHOY",
+        "pr": 48,
+        "side": "new",
+        "revision": "40ef9f5fa9819f2ea0ba1078413d72ea4396e2f8",
+        "files": 207,
+        "parsed": 181,
+        "issues": [],
+        "omissions": []
+      },
+      {
+        "report": "768c452120a872be8dd12d64",
+        "repository": "Advicegale/AHOY",
+        "pr": 40,
+        "side": "old",
+        "revision": "bc4f54df9062e831f0629d498ce7c0e75a199b44",
+        "files": 178,
+        "parsed": 153,
+        "issues": [],
+        "omissions": []
+      },
+      {
+        "report": "768c452120a872be8dd12d64",
+        "repository": "Advicegale/AHOY",
+        "pr": 40,
+        "side": "new",
+        "revision": "bc282d46f1b9b4cd7529364443b3f26890984335",
+        "files": 185,
+        "parsed": 160,
+        "issues": [],
+        "omissions": []
+      },
+      {
+        "report": "8af8b8da268ac4cddd4bdb0d",
+        "repository": "Advicegale/WFArsenal",
+        "pr": 41,
+        "side": "old",
+        "revision": "a72c56cafe1cd4935535e1a2797658c89e50dada",
+        "files": 86,
+        "parsed": 60,
+        "issues": [],
+        "omissions": [
+          {
+            "path": "all_items_timeline.csv",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "image_dump.csv",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportCustoms_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportFlavour_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportManifest.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportRecipes_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportRelicArcane_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportResources_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportUpgrades_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportWeapons_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          }
+        ]
+      },
+      {
+        "report": "8af8b8da268ac4cddd4bdb0d",
+        "repository": "Advicegale/WFArsenal",
+        "pr": 41,
+        "side": "new",
+        "revision": "51931d5fb9d1c1834b76071ef30ded46231f0002",
+        "files": 86,
+        "parsed": 60,
+        "issues": [],
+        "omissions": [
+          {
+            "path": "all_items_timeline.csv",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "image_dump.csv",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportCustoms_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportFlavour_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportManifest.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportRecipes_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportRelicArcane_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportResources_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportUpgrades_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportWeapons_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          }
+        ]
+      },
+      {
+        "report": "90fede40cead4494fd87beb6",
+        "repository": "Advicegale/WFArsenal",
+        "pr": 37,
+        "side": "old",
+        "revision": "fda8778a3957c9b50819bb380a76d0872bd5c7d6",
+        "files": 58,
+        "parsed": 38,
+        "issues": [],
+        "omissions": [
+          {
+            "path": "audit_crops/audit_crops_manifest.csv",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "image_dump.csv",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportCustoms_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportFlavour_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportManifest.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportRecipes_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportRelicArcane_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportResources_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportUpgrades_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportWeapons_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          }
+        ]
+      },
+      {
+        "report": "90fede40cead4494fd87beb6",
+        "repository": "Advicegale/WFArsenal",
+        "pr": 37,
+        "side": "new",
+        "revision": "605ccad4e0b5f2e89f09ed9b3c085636332ddf13",
+        "files": 58,
+        "parsed": 38,
+        "issues": [],
+        "omissions": [
+          {
+            "path": "audit_crops/audit_crops_manifest.csv",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "image_dump.csv",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportCustoms_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportFlavour_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportManifest.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportRecipes_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportRelicArcane_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportResources_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportUpgrades_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          },
+          {
+            "path": "viewer/lzma/ExportWeapons_en.json",
+            "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+          }
+        ]
+      },
+      {
+        "report": "a37a5008843a9105e71c0966",
+        "repository": "Advicegale/AHOY",
+        "pr": 31,
+        "side": "old",
+        "revision": "ee69e2022f07bebea73fef470e8b29f70b45a930",
+        "files": 161,
+        "parsed": 138,
+        "issues": [],
+        "omissions": []
+      },
+      {
+        "report": "a37a5008843a9105e71c0966",
+        "repository": "Advicegale/AHOY",
+        "pr": 31,
+        "side": "new",
+        "revision": "9fa86a16c613149fabdb8644bbf50a022004b6b1",
+        "files": 165,
+        "parsed": 142,
+        "issues": [],
+        "omissions": []
+      },
+      {
+        "report": "acd7aeaffd5e782880a64156",
+        "repository": "themeldingwars/PIN",
+        "pr": 41,
+        "side": "old",
+        "revision": "67c344c896d153ae75b8c8452df316981a442823",
+        "files": 933,
+        "parsed": 898,
+        "issues": [],
+        "omissions": []
+      },
+      {
+        "report": "acd7aeaffd5e782880a64156",
+        "repository": "themeldingwars/PIN",
+        "pr": 41,
+        "side": "new",
+        "revision": "1543f6a9e38a6bfce3b5ba823b2d46246ba2ae45",
+        "files": 933,
+        "parsed": 898,
+        "issues": [],
+        "omissions": []
+      },
+      {
+        "report": "ef8d5221d3b6fda6e000d428",
+        "repository": "Advicegale/AHOY",
+        "pr": 39,
+        "side": "old",
+        "revision": "beeaa0b11a870217c7148dd3a02c6da9236119c6",
+        "files": 185,
+        "parsed": 160,
+        "issues": [],
+        "omissions": []
+      },
+      {
+        "report": "ef8d5221d3b6fda6e000d428",
+        "repository": "Advicegale/AHOY",
+        "pr": 39,
+        "side": "new",
+        "revision": "f24352ef01143c17101f93e31b01d2c857f64275",
+        "files": 187,
+        "parsed": 162,
+        "issues": [],
+        "omissions": []
+      }
+    ],
+    "summary": {
+      "reports": 8,
+      "revisions": 16,
+      "parsed_files": 3512,
+      "failing_files": 0,
+      "unique_failing_paths": 0
+    }
+  },
+  "rebuilt_exploration_indexes": [
+    {
+      "report": "55f22d055d36db9244e36d02",
+      "repository": "Advicegale/AHOY",
+      "pr": 25,
+      "side": "old",
+      "revision": "11966a0d86b3060c445af6512e32eeded8a3ef16",
+      "timing_ms": 3463.54,
+      "cache_hit": false,
+      "coverage_complete": true,
+      "omitted": [],
+      "provider_errors": {},
+      "native_files": 127,
+      "syntax_files": 120,
+      "entities": 5492,
+      "relationships": 22095
+    },
+    {
+      "report": "55f22d055d36db9244e36d02",
+      "repository": "Advicegale/AHOY",
+      "pr": 25,
+      "side": "new",
+      "revision": "252cc55ceded3c335927e1b76bcd8741caa0b815",
+      "timing_ms": 4272.52,
+      "cache_hit": false,
+      "coverage_complete": true,
+      "omitted": [],
+      "provider_errors": {},
+      "native_files": 131,
+      "syntax_files": 124,
+      "entities": 5687,
+      "relationships": 22801
+    },
+    {
+      "report": "57bda6dca1a7b31540ac42f4",
+      "repository": "Advicegale/AHOY",
+      "pr": 48,
+      "side": "old",
+      "revision": "9c053217ca036889261c51b8af9bebdc7f1341b8",
+      "timing_ms": 7982.11,
+      "cache_hit": false,
+      "coverage_complete": true,
+      "omitted": [],
+      "provider_errors": {},
+      "native_files": 189,
+      "syntax_files": 180,
+      "entities": 9150,
+      "relationships": 38246
+    },
+    {
+      "report": "57bda6dca1a7b31540ac42f4",
+      "repository": "Advicegale/AHOY",
+      "pr": 48,
+      "side": "new",
+      "revision": "40ef9f5fa9819f2ea0ba1078413d72ea4396e2f8",
+      "timing_ms": 8691.07,
+      "cache_hit": false,
+      "coverage_complete": true,
+      "omitted": [],
+      "provider_errors": {},
+      "native_files": 190,
+      "syntax_files": 181,
+      "entities": 9478,
+      "relationships": 39845
+    },
+    {
+      "report": "768c452120a872be8dd12d64",
+      "repository": "Advicegale/AHOY",
+      "pr": 40,
+      "side": "old",
+      "revision": "bc4f54df9062e831f0629d498ce7c0e75a199b44",
+      "timing_ms": 5811.43,
+      "cache_hit": false,
+      "coverage_complete": true,
+      "omitted": [],
+      "provider_errors": {},
+      "native_files": 162,
+      "syntax_files": 153,
+      "entities": 6893,
+      "relationships": 27476
+    },
+    {
+      "report": "768c452120a872be8dd12d64",
+      "repository": "Advicegale/AHOY",
+      "pr": 40,
+      "side": "new",
+      "revision": "bc282d46f1b9b4cd7529364443b3f26890984335",
+      "timing_ms": 6613.69,
+      "cache_hit": false,
+      "coverage_complete": true,
+      "omitted": [],
+      "provider_errors": {},
+      "native_files": 169,
+      "syntax_files": 160,
+      "entities": 7491,
+      "relationships": 30496
+    },
+    {
+      "report": "8af8b8da268ac4cddd4bdb0d",
+      "repository": "Advicegale/WFArsenal",
+      "pr": 41,
+      "side": "old",
+      "revision": "a72c56cafe1cd4935535e1a2797658c89e50dada",
+      "timing_ms": 4485.95,
+      "cache_hit": false,
+      "coverage_complete": false,
+      "omitted": [
+        {
+          "path": "all_items_timeline.csv",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "image_dump.csv",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportCustoms_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportFlavour_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportManifest.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportRecipes_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportRelicArcane_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportResources_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportUpgrades_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportWeapons_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        }
+      ],
+      "provider_errors": {},
+      "native_files": 62,
+      "syntax_files": 60,
+      "entities": 5526,
+      "relationships": 21674
+    },
+    {
+      "report": "8af8b8da268ac4cddd4bdb0d",
+      "repository": "Advicegale/WFArsenal",
+      "pr": 41,
+      "side": "new",
+      "revision": "51931d5fb9d1c1834b76071ef30ded46231f0002",
+      "timing_ms": 3693.9,
+      "cache_hit": false,
+      "coverage_complete": false,
+      "omitted": [
+        {
+          "path": "all_items_timeline.csv",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "image_dump.csv",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportCustoms_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportFlavour_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportManifest.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportRecipes_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportRelicArcane_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportResources_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportUpgrades_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportWeapons_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        }
+      ],
+      "provider_errors": {},
+      "native_files": 62,
+      "syntax_files": 60,
+      "entities": 5592,
+      "relationships": 21880
+    },
+    {
+      "report": "90fede40cead4494fd87beb6",
+      "repository": "Advicegale/WFArsenal",
+      "pr": 37,
+      "side": "old",
+      "revision": "fda8778a3957c9b50819bb380a76d0872bd5c7d6",
+      "timing_ms": 2622.89,
+      "cache_hit": false,
+      "coverage_complete": false,
+      "omitted": [
+        {
+          "path": "audit_crops/audit_crops_manifest.csv",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "image_dump.csv",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportCustoms_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportFlavour_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportManifest.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportRecipes_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportRelicArcane_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportResources_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportUpgrades_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportWeapons_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        }
+      ],
+      "provider_errors": {},
+      "native_files": 40,
+      "syntax_files": 38,
+      "entities": 3374,
+      "relationships": 13162
+    },
+    {
+      "report": "90fede40cead4494fd87beb6",
+      "repository": "Advicegale/WFArsenal",
+      "pr": 37,
+      "side": "new",
+      "revision": "605ccad4e0b5f2e89f09ed9b3c085636332ddf13",
+      "timing_ms": 2106.55,
+      "cache_hit": false,
+      "coverage_complete": false,
+      "omitted": [
+        {
+          "path": "audit_crops/audit_crops_manifest.csv",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "image_dump.csv",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportCustoms_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportFlavour_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportManifest.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportRecipes_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportRelicArcane_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportResources_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportUpgrades_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        },
+        {
+          "path": "viewer/lzma/ExportWeapons_en.json",
+          "reason": "Source exceeds PRISM_MAX_FILE_BYTES."
+        }
+      ],
+      "provider_errors": {},
+      "native_files": 40,
+      "syntax_files": 38,
+      "entities": 3374,
+      "relationships": 13166
+    },
+    {
+      "report": "a37a5008843a9105e71c0966",
+      "repository": "Advicegale/AHOY",
+      "pr": 31,
+      "side": "old",
+      "revision": "ee69e2022f07bebea73fef470e8b29f70b45a930",
+      "timing_ms": 5626.82,
+      "cache_hit": false,
+      "coverage_complete": true,
+      "omitted": [],
+      "provider_errors": {},
+      "native_files": 145,
+      "syntax_files": 138,
+      "entities": 6152,
+      "relationships": 24290
+    },
+    {
+      "report": "a37a5008843a9105e71c0966",
+      "repository": "Advicegale/AHOY",
+      "pr": 31,
+      "side": "new",
+      "revision": "9fa86a16c613149fabdb8644bbf50a022004b6b1",
+      "timing_ms": 4818.01,
+      "cache_hit": false,
+      "coverage_complete": true,
+      "omitted": [],
+      "provider_errors": {},
+      "native_files": 149,
+      "syntax_files": 142,
+      "entities": 6202,
+      "relationships": 24433
+    },
+    {
+      "report": "acd7aeaffd5e782880a64156",
+      "repository": "themeldingwars/PIN",
+      "pr": 41,
+      "side": "old",
+      "revision": "67c344c896d153ae75b8c8452df316981a442823",
+      "timing_ms": 37844.49,
+      "cache_hit": false,
+      "coverage_complete": true,
+      "omitted": [],
+      "provider_errors": {},
+      "native_files": 919,
+      "syntax_files": 898,
+      "entities": 14524,
+      "relationships": 23792
+    },
+    {
+      "report": "acd7aeaffd5e782880a64156",
+      "repository": "themeldingwars/PIN",
+      "pr": 41,
+      "side": "new",
+      "revision": "1543f6a9e38a6bfce3b5ba823b2d46246ba2ae45",
+      "timing_ms": 38418.35,
+      "cache_hit": false,
+      "coverage_complete": true,
+      "omitted": [],
+      "provider_errors": {},
+      "native_files": 919,
+      "syntax_files": 898,
+      "entities": 14610,
+      "relationships": 24112
+    },
+    {
+      "report": "ef8d5221d3b6fda6e000d428",
+      "repository": "Advicegale/AHOY",
+      "pr": 39,
+      "side": "old",
+      "revision": "beeaa0b11a870217c7148dd3a02c6da9236119c6",
+      "timing_ms": 6958.6,
+      "cache_hit": false,
+      "coverage_complete": true,
+      "omitted": [],
+      "provider_errors": {},
+      "native_files": 169,
+      "syntax_files": 160,
+      "entities": 7491,
+      "relationships": 30496
+    },
+    {
+      "report": "ef8d5221d3b6fda6e000d428",
+      "repository": "Advicegale/AHOY",
+      "pr": 39,
+      "side": "new",
+      "revision": "f24352ef01143c17101f93e31b01d2c857f64275",
+      "timing_ms": 6755.52,
+      "cache_hit": false,
+      "coverage_complete": true,
+      "omitted": [],
+      "provider_errors": {},
+      "native_files": 171,
+      "syntax_files": 162,
+      "entities": 7759,
+      "relationships": 32129
+    }
+  ],
+  "validation": {
+    "backend_tests": 165,
+    "new_parser_tests": 39,
+    "source_modified": false,
+    "reviewed_code_executed": false,
+    "github_or_ai_runs": false,
+    "preview": "http://localhost:4780",
+    "browser": {
+      "rendered_report": "AHOY25",
+      "rendered_symbol": "notification_events",
+      "parser_warnings": false,
+      "live_api_roots": [
+        {
+          "report": "AHOY40",
+          "symbol": "TasksScreen",
+          "status": "resolved",
+          "coverage_complete": true
+        },
+        {
+          "report": "AHOY48",
+          "symbol": "household_bills",
+          "status": "resolved",
+          "coverage_complete": true
+        },
+        {
+          "report": "PIN41",
+          "symbol": "Serializer",
+          "status": "resolved",
+          "coverage_complete": true
+        }
+      ],
+      "tasks_label_preserved": "Repeat & reminder",
+      "tasks_label_click": "ignored"
+    }
+  },
+  "remaining_limits": [
+    "WFArsenal: ten oversized CSV/JSON inventory files omitted per revision by existing PRISM_MAX_FILE_BYTES configuration. No native provider errors or parser failures remain.",
+    "Syntax coverage is not a claim of complete runtime/value-flow analysis; pointer writes stop explicitly at a memory-alias boundary."
+  ]
+}

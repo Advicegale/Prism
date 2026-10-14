@@ -1,0 +1,21 @@
+diff --git a/grammar.js b/grammar.js
+index f08d840..85e1334 100644
+--- a/grammar.js
++++ b/grammar.js
+@@ -44,6 +44,7 @@ export default grammar({
+   name: 'c_sharp',
+ 
+   conflicts: $ => [
++    [$.expression, $.assignment_expression],
+     [$._simple_name, $.generic_name],
+     [$._simple_name, $.type_parameter],
+     [$._simple_name, $.subpattern],
+@@ -1465,7 +1466,7 @@ export default grammar({
+ 
+     _pointer_indirection_expression: $ => prec.right(PREC.UNARY, seq(
+       '*',
+-      $.lvalue_expression,
++      $.expression,
+     )),
+ 
+     query_expression: $ => seq($.from_clause, $._query_body),

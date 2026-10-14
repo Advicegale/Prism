@@ -6,7 +6,7 @@ Prism is a **localhost-first web app** for Linux and macOS. No Electron, Apple a
 
 ## Quick start
 
-Requirements: **Python 3.11+**, **Node.js 20+ + npm**, **Git**. `uv` is preferred but optional. Internet access is needed for first-time dependency installation and fetching GitHub PRs.
+Requirements: **Python 3.11+**, **Node.js 20+ + npm**, **Git**, and a **C compiler** (`cc`, `gcc` or `clang`) for the first parser build. `uv` is preferred but optional. Internet access is needed for first-time dependency installation and fetching GitHub PRs.
 
 ```bash
 unzip prism-pr-review.zip
@@ -18,6 +18,8 @@ cd prism-pr-review
 Open **http://127.0.0.1:4780** (or `http://localhost:4780`). The backend and built frontend share that port. Nothing binds to the public network interface by default.
 
 `setup.sh` creates `backend/.venv/`, installs Graphify (`graphifyy`) + Tree-sitter grammars and FastAPI locally, runs `npm install` in `frontend/`, builds React/Vite, and creates `.env` from `.env.example`. **Do not separately install Graphify or Tree-sitter.** No global Python installs are required.
+
+Setup also builds pinned corrections for JSX text, C# pointer assignments and PostgreSQL syntax used by the retained reports. Existing installations can run `backend/.venv/bin/python scripts/install-parser-fixes.py` and restart Prism. See [parser fixes and upstream provenance](scripts/grammar-fixes/README.md). Changed parser versions automatically invalidate exploration caches; another AI analysis is unnecessary.
 
 The home screen starts clean: **no example report loads automatically**. There is an internal `/api/demo` fixture for tests and developers, but no demo shortcut on the homepage.
 

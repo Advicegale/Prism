@@ -488,7 +488,7 @@ class Analyzer:
                     self.native.parser_errors[path]=str(exc)
                     continue
                 if self.files[path].tree.root_node.has_error:
-                    omitted.append({'path':path,'reason':'Syntax contains parser errors; affected bindings may be incomplete.'})
+                    omitted.append({'path':path,'reason':'Parser could not fully analyze this syntax; affected bindings may be incomplete.'})
         self.native.load()
         omitted.extend(self.native.omissions())
         self.facts.coverage = {'languages':dict(languages),'omitted':omitted,'complete':not omitted,

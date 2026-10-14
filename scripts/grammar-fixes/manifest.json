@@ -1,0 +1,17 @@
+{
+  "compiler": {
+    "version": "0.26.3",
+    "sha256": {
+      "tree-sitter-linux-arm64.gz": "456d880b2c81e3e1905c8cbd93bebd3f7f47efb743facef729070e71fb648c71",
+      "tree-sitter-linux-x64.gz": "4f65c8d9ba32a3e37198302569b3306f037f12d8313e3f28cdf1b80c9f2b3a3a",
+      "tree-sitter-macos-arm64.gz": "04a056504077c1531ebebc4193c389bbfe086a3b590692500b6efd81871f17d1",
+      "tree-sitter-macos-x64.gz": "9c43a86c196d64c5671ca7b8b470ef08bb6644348a070eac072a341cbc671b19"
+    }
+  },
+  "parsers": [
+    {"package": "tree-sitter-javascript", "upstream_version": "0.25.0", "version": "0.25.0+prism.1", "repository": "tree-sitter/tree-sitter-javascript", "commit": "44c892e0be055ac465d5eeddae6d3e194424e7de", "patch": "javascript.patch", "generate": []},
+    {"package": "tree-sitter-typescript", "upstream_version": "0.23.2", "version": "0.23.2+prism.1", "repository": "tree-sitter/tree-sitter-typescript", "commit": "f975a621f4e7f532fe322e13c4f79495e0a7b2e7", "patch": "typescript.patch", "generate": []},
+    {"package": "tree-sitter-c-sharp", "upstream_version": "0.23.5", "version": "0.23.5+prism.1", "repository": "tree-sitter/tree-sitter-c-sharp", "commit": "cac6d5fb595f5811a076336682d5d595ac1c9e85", "patch": "csharp.patch", "generate": ["."]},
+    {"package": "tree-sitter-sql", "upstream_version": "0.3.11", "version": "0.3.11+prism.2", "repository": "DerekStride/tree-sitter-sql", "commit": "7b51ecda191d36b92f5a90a8d1bc3faef1c7b8b8", "patch": "sql.patch", "generate": ["."]}
+  ]
+}

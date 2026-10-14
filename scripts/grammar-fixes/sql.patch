@@ -1,0 +1,78 @@
+diff --git a/grammar.js b/grammar.js
+index 485bc3a..30dbdc5 100644
+--- a/grammar.js
++++ b/grammar.js
+@@ -471,7 +471,7 @@ module.exports = grammar({
+ 
+     keyword_array: _ => make_keyword("array"), // not included in _type since it's a constructor literal
+ 
+-    _type: $ => prec.left(
++    _type: $ => prec.right(
+       seq(
+         choice(
+           $.keyword_boolean,
+@@ -627,7 +627,7 @@ module.exports = grammar({
+       choice(
+         seq(
+           "[",
+-          comma_list($._expression),
++          optional(comma_list($._expression)),
+           "]"
+         ),
+         seq(
+@@ -917,7 +917,7 @@ module.exports = grammar({
+     select: $ => seq(
+       $.keyword_select,
+       seq(
+-        optional($.keyword_distinct),
++        optional(seq($.keyword_distinct, optional(seq($.keyword_on, $.list)))),
+         $.select_expression,
+       ),
+     ),
+@@ -962,7 +962,8 @@ module.exports = grammar({
+       optional(
+         $.keyword_only,
+       ),
+-      $.object_reference,
++      $.relation,
++      optional(seq($.keyword_using, comma_list($.relation, true))),
+       optional($.where),
+       optional($.order_by),
+       optional($.limit),
+@@ -2088,6 +2089,7 @@ module.exports = grammar({
+ 
+     _drop_statement: $ => seq(
+       choice(
++        $.drop_trigger,
+         $.drop_table,
+         $.drop_view,
+         $.drop_index,
+@@ -2101,6 +2103,11 @@ module.exports = grammar({
+       ),
+     ),
+ 
++    drop_trigger: $ => seq(
++      $.keyword_drop, $.keyword_trigger, optional($._if_exists),
++      $.identifier, $.keyword_on, $.object_reference, optional($._drop_behavior),
++    ),
++
+     drop_table: $ => seq(
+       $.keyword_drop,
+       $.keyword_table,
+@@ -2351,6 +2358,7 @@ module.exports = grammar({
+     _on_conflict: $ => seq(
+       $.keyword_on,
+       $.keyword_conflict,
++      optional(seq(alias($._column_list, $.list), optional($.where))),
+       seq(
+         $.keyword_do,
+         choice(
+@@ -2774,7 +2782,7 @@ module.exports = grammar({
+         )
+       ),
+       $.keyword_check,
+-      wrapped_in_parenthesis($.binary_expression)
++      wrapped_in_parenthesis($._expression)
+     ),
+ 
+     _default_expression: $ => seq(
