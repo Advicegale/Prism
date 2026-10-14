@@ -1,3 +1,4 @@
+import {isTestPath} from './testPaths'
 import type {MouseEvent} from 'react'
 import type {ExplorationBoundary, ExplorationConnection, ExplorationNode, ExplorationProjection, SourceAnchor} from './types'
 import type {DiffSide, IndexedDiffRow} from './diff'
@@ -87,6 +88,29 @@ export type ExplorationViews = Partial<Record<ExplorationDirection, ExplorationP
 export type ExplorationTree = Omit<ExplorationProjection, 'direction' | 'query_id'> & {direction: 'both'; focus: SourceAnchor}
 export const FILE_CARD_WIDTH = 268
 export const FILE_CARD_HEIGHT = 160
+/** Extra room, and the divider label's height, for a column's test group. */
+export const TEST_GROUP_GAP = 32
+export const TEST_LABEL_HEIGHT = 22
+
+export {isTestPath}
+
+/** Drop test files (never the clicked file) with their edges, then anything that was
+ * only reachable through them, so no card is left floating without a connection. */
+export function hideTests<T extends Pick<ExplorationTree, 'nodes' | 'connections' | 'boundaries'>>(tree: T, focusPath: string): T & {hiddenTests: number} {
+  const keep = new Set(tree.nodes.filter(n => n.path === focusPath || !isTestPath(n.path)).map(n => n.path))
+  const connections = tree.connections.filter(c => keep.has(c.source) && keep.has(c.target))
+  const reached = new Set([focusPath]), queue = [focusPath]
+  while (queue.length) {
+    const path = queue.pop()!
+    for (const c of connections) {
+      const next = c.source === path ? c.target : c.target === path ? c.source : null
+      if (next && !reached.has(next)) {reached.add(next); queue.push(next)}
+    }
+  }
+  const nodes = tree.nodes.filter(n => reached.has(n.path)), removed = new Set(tree.nodes.filter(n => !reached.has(n.path)).map(n => n.path))
+  return {...tree, nodes, connections: connections.filter(c => reached.has(c.source) && reached.has(c.target)),
+    boundaries: tree.boundaries.filter(b => reached.has(b.anchor.path) || (!removed.has(b.anchor.path) && !isTestPath(b.anchor.path))), hiddenTests: tree.nodes.filter(n => !reached.has(n.path) && isTestPath(n.path)).length}
+}
 
 /** Display the independently scoped queries together; never traverse through a
  * shared origin into another consumer. Origins edges become causal arrows. */
@@ -171,19 +195,31 @@ export function fileMapLayout(projection: Pick<ExplorationProjection, 'root' | '
     columns.set(rank, [...(columns.get(rank) || []), node])
   }
   const ranks = [...columns.keys()], minRank = Math.min(0, ...ranks), maxRank = Math.max(0, ...ranks)
-  const maxRows = Math.max(1, ...[...columns.values()].map(nodes => nodes.length)), above = Math.floor((maxRows - 1) / 2), below = Math.ceil((maxRows - 1) / 2)
+  // Test files sit in their own group below the other cards of each column. The clicked file always stays with the first group so the map keeps its centre.
   const gapX = FILE_CARD_WIDTH + 112, gapY = FILE_CARD_HEIGHT + 40
-  const marginX = Math.max(28, (viewport.width - FILE_CARD_WIDTH) / 2), marginY = Math.max(28, (viewport.height - FILE_CARD_HEIGHT) / 2)
-  const centerY = marginY + above * gapY
-  const positions = new Map<string, {x: number; y: number}>()
+  const split = new Map<number, {main: ExplorationNode[]; tests: ExplorationNode[]}>()
   for (const [rank, nodes] of columns) {
     nodes.sort((a, b) => a.path === focusPath ? -1 : b.path === focusPath ? 1 : a.path.localeCompare(b.path))
-    nodes.forEach((node, i) => {
-      const row = i === 0 ? 0 : i % 2 ? (i + 1) / 2 : -i / 2
-      positions.set(node.path, {x: marginX + (rank - minRank) * gapX, y: centerY + row * gapY})
-    })
+    const tests = nodes.filter(n => n.path !== focusPath && isTestPath(n.path))
+    split.set(rank, {main: nodes.filter(n => !tests.includes(n)), tests})
   }
-  return {positions, width: marginX * 2 + FILE_CARD_WIDTH + (maxRank - minRank) * gapX, height: marginY * 2 + FILE_CARD_HEIGHT + (above + below) * gapY}
+  const lowestRow = (count: number) => count ? Math.ceil((count - 1) / 2) : -1
+  const above = Math.max(0, ...[...split.values()].map(g => g.main.length ? Math.floor((g.main.length - 1) / 2) : 0))
+  const bottom = Math.max(0, ...[...split.values()].map(g => g.tests.length ? (lowestRow(g.main.length) + g.tests.length) * gapY + (g.main.length ? TEST_GROUP_GAP : 0) : lowestRow(g.main.length) * gapY))
+  const marginX = Math.max(28, (viewport.width - FILE_CARD_WIDTH) / 2), marginY = Math.max(28, (viewport.height - FILE_CARD_HEIGHT) / 2)
+  const centerY = marginY + above * gapY
+  const positions = new Map<string, {x: number; y: number}>(), testGroups: {x: number; y: number}[] = []
+  for (const [rank, {main, tests}] of split) {
+    const x = marginX + (rank - minRank) * gapX
+    main.forEach((node, i) => {
+      const row = i === 0 ? 0 : i % 2 ? (i + 1) / 2 : -i / 2
+      positions.set(node.path, {x, y: centerY + row * gapY})
+    })
+    const start = lowestRow(main.length) + 1, offset = main.length ? TEST_GROUP_GAP : 0
+    tests.forEach((node, i) => positions.set(node.path, {x, y: centerY + (start + i) * gapY + offset}))
+    if (tests.length) testGroups.push({x, y: centerY + start * gapY + offset - TEST_LABEL_HEIGHT})
+  }
+  return {positions, testGroups, width: marginX * 2 + FILE_CARD_WIDTH + (maxRank - minRank) * gapX, height: marginY * 2 + FILE_CARD_HEIGHT + above * gapY + bottom}
 }
 
 export type MapPositions = Map<string, {x: number; y: number}>
@@ -222,4 +258,38 @@ export function describeConnection(edge: Pick<ExplorationConnection, 'indirect' 
   const kinds = [...new Set(edge.evidence.map(e => e.kind))], count = edge.evidence.length, hidden = edge.hidden_paths.length
   const via = edge.indirect ? `, via ${hidden} unchanged ${hidden === 1 ? 'file' : 'files'}` : ''
   return {kinds, text: `${kinds.join(' → ')} · ${count} ${count === 1 ? 'connection' : 'connections'}${via}`}
+}
+
+export const MIN_ZOOM = 0.4
+export const MAX_ZOOM = 2
+export const clampZoom = (zoom: number) => Number.isFinite(zoom) ? Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom)) : 1
+
+/** Exponential wheel zoom: equal wheel travel scales by the same factor in both directions. */
+export function wheelZoom(zoom: number, deltaY: number) {
+  return clampZoom(zoom * Math.exp(-Math.max(-240, Math.min(240, deltaY)) * 0.0015))
+}
+
+/** Scroll offset that keeps the content point under `cursor` (viewport coordinates) fixed while zooming.
+ * `pad` is the constant empty margin around the scaled content inside the scroll area. */
+export function zoomScroll(scroll: {left: number; top: number}, cursor: {x: number; y: number}, from: number, to: number, pad = {x: 0, y: 0}) {
+  const ratio = to / from
+  return {left: (scroll.left + cursor.x - pad.x) * ratio + pad.x - cursor.x, top: (scroll.top + cursor.y - pad.y) * ratio + pad.y - cursor.y}
+}
+
+/** Empty space kept around the map so it can always be dragged, even when everything fits. */
+export const PAN_SLACK = 0.35
+export const panPadding = (viewport: {width: number; height: number}) => ({x: Math.round(viewport.width * PAN_SLACK), y: Math.round(viewport.height * PAN_SLACK)})
+
+/** Card positions in scroll-area pixels: scaled by `zoom`, then shifted by the pan padding. */
+export function scalePositions(positions: MapPositions, zoom: number, pad = {x: 0, y: 0}): MapPositions {
+  return new Map([...positions].map(([path, point]) => [path, {x: point.x * zoom + pad.x, y: point.y * zoom + pad.y}]))
+}
+
+/** Largest zoom (never above 100%) at which every card fits the viewport with padding. */
+export function fitZoom(positions: MapPositions, card: {width: number; height: number}, viewport: {width: number; height: number}, pad = 24) {
+  const points = [...positions.values()]
+  if (!points.length || viewport.width <= 0 || viewport.height <= 0) return 1
+  const width = Math.max(...points.map(p => p.x + card.width)) - Math.min(...points.map(p => p.x))
+  const height = Math.max(...points.map(p => p.y + card.height)) - Math.min(...points.map(p => p.y))
+  return clampZoom(Math.min(1, (viewport.width - 2 * pad) / width, (viewport.height - 2 * pad) / height))
 }

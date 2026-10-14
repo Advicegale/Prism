@@ -1,7 +1,7 @@
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react'
 import {createPortal} from 'react-dom'
-import {ArrowLeft, ArrowRight, FileCode2, GitBranch, GripHorizontal, LoaderCircle, Maximize2, Minimize2, X} from 'lucide-react'
-import {clampFrame, clampSplit, describeConnection, fileMapLayout, mergeExplorationViews, moveFrame, nextMapScroll, popoverBounds, resizeFrame, sourceClick, FILE_CARD_HEIGHT, FILE_CARD_WIDTH, WIDE_FRAME_WIDTH, type ExplorationDirection, type ExplorationViews, type Frame, type PopoverMode, type ResizeEdges, type SymbolSelection} from '../exploration'
+import {ArrowLeft, ArrowRight, FileCode2, GitBranch, GripHorizontal, LoaderCircle, Maximize2, Minimize2, ZoomIn, ZoomOut, X} from 'lucide-react'
+import {clampFrame, clampSplit, clampZoom, describeConnection, fileMapLayout, fitZoom, hideTests as withoutTests, initialMapScroll, isTestPath, mergeExplorationViews, moveFrame, nextMapScroll, panPadding, popoverBounds, resizeFrame, scalePositions, sourceClick, wheelZoom, zoomScroll, FILE_CARD_HEIGHT, FILE_CARD_WIDTH, TEST_LABEL_HEIGHT, WIDE_FRAME_WIDTH, type ExplorationDirection, type ExplorationViews, type Frame, type PopoverMode, type ResizeEdges, type SymbolSelection} from '../exploration'
 import type {ExplorationConnection, ExplorationProjection, ExplorationResult, ExplorationSource, SourceAnchor} from '../types'
 import {SyntaxCode} from './CodeDiff'
 
@@ -12,14 +12,14 @@ const headerInteractive='button,#exploration-title,#exploration-description'
 const labels:Record<string,string>={usage:'Usage endpoint',unresolved:'Unresolved relationship',unsupported:'Unsupported construct',cycle:'Composition cycle',
   no_further_changed_files:'No further changed files',no_further_eligible_connections:'No further eligible connections',partial:'Analysis is incomplete'}
 
-interface WindowLayout {mode:PopoverMode; custom:Frame|null; wide:number; stacked:number}
+interface WindowLayout {mode:PopoverMode; custom:Frame|null; wide:number; stacked:number; hideTests:boolean}
 const LAYOUT_KEY='prism.exploration.layout'
-const defaultLayout:WindowLayout={mode:'half',custom:null,wide:0.6,stacked:0.5}
+const defaultLayout:WindowLayout={mode:'half',custom:null,wide:0.6,stacked:0.5,hideTests:false}
 const finite=(v:unknown):v is number=>typeof v==='number'&&Number.isFinite(v)
 function loadLayout():WindowLayout {
   try{
     const saved=JSON.parse(localStorage.getItem(LAYOUT_KEY)||'null'),c=saved?.custom
-    return {mode:saved?.mode==='full'?'full':'half',wide:finite(saved?.wide)?saved.wide:defaultLayout.wide,stacked:finite(saved?.stacked)?saved.stacked:defaultLayout.stacked,
+    return {mode:saved?.mode==='full'?'full':'half',hideTests:saved?.hideTests===true,wide:finite(saved?.wide)?saved.wide:defaultLayout.wide,stacked:finite(saved?.stacked)?saved.stacked:defaultLayout.stacked,
       custom:c&&[c.left,c.top,c.width,c.height].every(finite)?{left:c.left,top:c.top,width:c.width,height:c.height}:null}
   }catch{return defaultLayout}
 }
@@ -46,15 +46,20 @@ export function SymbolExplorationPopover({reportId,selection,onSelect}:Props) {
   const [changed,setChanged]=useState(true),[focusVersion,setFocusVersion]=useState(0)
   const [busy,setBusy]=useState(''),[error,setError]=useState(''),[anchor,setAnchor]=useState<SourceAnchor|null>(null)
   const [connection,setConnection]=useState<ExplorationConnection|null>(null),[source,setSource]=useState<ExplorationSource|null>(null),[sourceError,setSourceError]=useState('')
-  const [mapViewport,setMapViewport]=useState({width:0,height:0}),[focus,setFocus]=useState<'both'|'map'|'source'>('both')
+  const [mapViewport,setMapViewport]=useState({width:0,height:0}),[focus,setFocus]=useState<'both'|'map'|'source'>('both'),[zoom,setZoom]=useState(1),[fitTick,setFitTick]=useState(0)
   const box=useRef<HTMLDivElement>(null),body=useRef<HTMLDivElement>(null),map=useRef<HTMLDivElement>(null),sourceScroller=useRef<HTMLDivElement>(null),closeButton=useRef<HTMLButtonElement>(null),returnFocus=useRef<HTMLElement|null>(null)
   const pending=useRef<AbortController|null>(null),generation=useRef(0),views=useRef(new Map<string,ExplorationProjection>())
-  const scroll=useRef<{version:number;x:number;y:number;left:number;top:number;width:number;height:number}|null>(null)
+  const scroll=useRef<{version:number;x:number;y:number;left:number;top:number;width:number;height:number;zoom:number}|null>(null)
   const current=useRef({result,changed,projections});current.current={result,changed,projections}
   const placement=useRef({open,layout:layoutState,anchorX:typeof window==='undefined'?0:window.innerWidth/2});placement.current.open=open;placement.current.layout=layoutState
   const wide=!!bounds&&bounds.width>=WIDE_FRAME_WIDTH
-  const tree=useMemo(()=>result?.root?mergeExplorationViews(projections,result.occurrence||result.root.definition):null,[projections,result])
+  const fullTree=useMemo(()=>result?.root?mergeExplorationViews(projections,result.occurrence||result.root.definition):null,[projections,result])
+  const testCount=fullTree?fullTree.nodes.filter(n=>n.path!==fullTree.focus.path&&isTestPath(n.path)).length:0
+  const filtered=useMemo(()=>fullTree&&layoutState.hideTests&&testCount?withoutTests(fullTree,fullTree.focus.path):null,[fullTree,layoutState.hideTests,testCount])
+  const tree=filtered||fullTree,hiddenTests=filtered?.hiddenTests||0
   const layout=useMemo(()=>tree?fileMapLayout(tree,tree.focus.path,mapViewport):null,[tree,mapViewport])
+  const pad=panPadding(mapViewport),padRef=useRef(pad);padRef.current=pad
+  const zoomRef=useRef(1),zoomJob=useRef<{left:number;top:number}|null>(null),fitJob=useRef(false)
 
   function dismiss() {setOpen(false);returnFocus.current?.focus({preventScroll:true})}
   /** A dragged/resized frame wins; otherwise sit opposite the clicked token. */
@@ -99,7 +104,7 @@ export function SymbolExplorationPopover({reportId,selection,onSelect}:Props) {
         if(first){
           openAt(selection!.x);setOpen(true)
           if(!selection!.returnFocus?.closest('.symbol-exploration'))returnFocus.current=selection!.returnFocus||returnFocus.current
-          setResult(data);setProjections({});setAnchor(null);setConnection(null);views.current.clear();setFocusVersion(gen);setFocus('both');first=false
+          setResult(data);setProjections({});setAnchor(null);setConnection(null);views.current.clear();setFocusVersion(gen);setFocus('both');zoomRef.current=1;zoomJob.current=null;fitJob.current=false;setZoom(1);first=false
         }
         if(data.status==='indexing'){
           setBusy(data.message||'Indexing committed source');await pause(controller.signal);continue
@@ -149,10 +154,15 @@ export function SymbolExplorationPopover({reportId,selection,onSelect}:Props) {
     if(!open||!element||!tree||!layout)return
     const point=layout.positions.get(tree.focus.path)
     if(!point)return
-    const next=nextMapScroll(scroll.current,focusVersion,layout.positions,tree.focus.path,mapViewport,{width:FILE_CARD_WIDTH,height:FILE_CARD_HEIGHT})
-    element.scrollLeft=next.left;element.scrollTop=next.top
-    scroll.current={version:focusVersion,x:point.x,y:point.y,left:element.scrollLeft,top:element.scrollTop,width:mapViewport.width,height:mapViewport.height}
-  },[open,tree,layout,focusVersion,mapViewport])
+    const scaled=scalePositions(layout.positions,zoom,pad),card={width:FILE_CARD_WIDTH*zoom,height:FILE_CARD_HEIGHT*zoom},at=scaled.get(tree.focus.path)!
+    const previous=scroll.current&&scroll.current.zoom===zoom?scroll.current:null
+    let left:number,top:number
+    if(zoomJob.current){({left,top}=zoomJob.current);zoomJob.current=null}
+    else if(fitJob.current){fitJob.current=false;({left,top}=initialMapScroll(scaled,tree.focus.path,mapViewport,card))}
+    else{const next=nextMapScroll(previous,focusVersion,scaled,tree.focus.path,mapViewport,card);left=next.left;top=next.top}
+    element.scrollLeft=left;element.scrollTop=top
+    scroll.current={version:focusVersion,x:at.x,y:at.y,left:element.scrollLeft,top:element.scrollTop,width:mapViewport.width,height:mapViewport.height,zoom}
+  },[open,tree,layout,focusVersion,mapViewport,zoom,fitTick])
   useLayoutEffect(()=>{
     const scroller=sourceScroller.current,active=scroller?.querySelector<HTMLElement>('.exploration-source-line.active')
     if(scroller&&active)scroller.scrollTop=Math.max(0,active.getBoundingClientRect().top-scroller.getBoundingClientRect().top+scroller.scrollTop-80)
@@ -238,6 +248,48 @@ export function SymbolExplorationPopover({reportId,selection,onSelect}:Props) {
   function headerDoubleClick(e:React.MouseEvent<HTMLElement>) {if(!(e.target as HTMLElement).closest(headerInteractive))toggleSize()}
   /** Inspecting source from a maximized map brings the snippet back so the choice is visible. */
   function inspect(next:SourceAnchor,edge:ExplorationConnection|null=null){setAnchor(next);setConnection(edge);setFocus(f=>f==='map'?'both':f)}
+  // Scroll wheel zooms about the cursor. A native non-passive listener is required to stop the page from scrolling.
+  useEffect(()=>{
+    const element=map.current;if(!open||!element)return
+    const wheel=(e:WheelEvent)=>{
+      e.preventDefault()
+      const from=zoomRef.current,to=wheelZoom(from,e.deltaMode===1?e.deltaY*16:e.deltaMode===2?e.deltaY*400:e.deltaY)
+      if(to===from)return
+      const box=element.getBoundingClientRect(),base=zoomJob.current||{left:element.scrollLeft,top:element.scrollTop}
+      zoomJob.current=zoomScroll(base,{x:e.clientX-box.left,y:e.clientY-box.top},from,to,padRef.current);zoomRef.current=to;setZoom(to)
+    }
+    element.addEventListener('wheel',wheel,{passive:false})
+    return()=>element.removeEventListener('wheel',wheel)
+  },[open,!!tree])
+  function zoomBy(factor:number) {
+    const element=map.current;if(!element)return
+    const from=zoomRef.current,to=clampZoom(from*factor);if(to===from)return
+    const base=zoomJob.current||{left:element.scrollLeft,top:element.scrollTop}
+    zoomJob.current=zoomScroll(base,{x:element.clientWidth/2,y:element.clientHeight/2},from,to,padRef.current);zoomRef.current=to;setZoom(to)
+  }
+  function fitMap() {
+    if(!layout||!tree)return
+    const to=fitZoom(layout.positions,{width:FILE_CARD_WIDTH,height:FILE_CARD_HEIGHT},mapViewport)
+    zoomJob.current=null;fitJob.current=true;zoomRef.current=to;setZoom(to);setFitTick(tick=>tick+1)
+  }
+  function startPan(e:React.PointerEvent<HTMLDivElement>) {
+    if(e.button!==0||(e.target as HTMLElement).closest('button,a,input,.exploration-edge-hit'))return
+    const element=e.currentTarget,startX=e.clientX,startY=e.clientY,left=element.scrollLeft,top=element.scrollTop,id=e.pointerId
+    let moved=false
+    const move=(ev:PointerEvent)=>{
+      const dx=ev.clientX-startX,dy=ev.clientY-startY
+      if(!moved){if(Math.hypot(dx,dy)<3)return;moved=true;element.classList.add('panning');element.setPointerCapture(id)}
+      element.scrollLeft=left-dx;element.scrollTop=top-dy
+    }
+    const end=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',end);element.classList.remove('panning');if(moved&&element.hasPointerCapture(id))element.releasePointerCapture(id)}
+    window.addEventListener('pointermove',move);window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end)
+  }
+  function mapKeys(e:React.KeyboardEvent<HTMLDivElement>) {
+    if(e.ctrlKey||e.metaKey||e.altKey||e.target!==e.currentTarget)return
+    if(e.key==='+'||e.key==='='){e.preventDefault();zoomBy(1.25)}
+    else if(e.key==='-'||e.key==='_'){e.preventDefault();zoomBy(0.8)}
+    else if(e.key==='0'){e.preventDefault();fitMap()}
+  }
   function clickedSource(){
     if(!result?.occurrence)return
     inspect(result.occurrence)
@@ -263,6 +315,7 @@ export function SymbolExplorationPopover({reportId,selection,onSelect}:Props) {
     {open&&bounds&&createPortal(<div className={`symbol-exploration${wide?' wide':''}`} ref={box} style={bounds} role="dialog" aria-modal="false" aria-labelledby="exploration-title" aria-describedby="exploration-description">
       <header className="exploration-heading" onPointerDown={startMove} onDoubleClick={headerDoubleClick}><GripHorizontal className="exploration-grip" size={18}/><div className="exploration-heading-text"><h3 id="exploration-title">{result?.root?.name||result?.name||'Symbol connections'}</h3><p id="exploration-description">{result?.root?.kind&&<span>{result.root.kind} </span>}{result?.side==='old'?'Before':'After'}{result?.revision&&<code>{result.revision.slice(0,8)}</code>}{result?.occurrence&&<span title={result.occurrence.path}>{result.occurrence.path}:{result.occurrence.line}</span>}</p></div><div className="exploration-window-actions"><button type="button" className="exploration-size" aria-label={layoutState.mode==='half'?'Enlarge to full window':'Shrink to half window'} title={layoutState.mode==='half'?'Full window':'Half window, opposite the clicked token'} onClick={toggleSize}>{layoutState.mode==='half'?<Maximize2 size={19}/>:<Minimize2 size={19}/>}</button><button type="button" className="exploration-close" aria-label="Close symbol exploration" ref={closeButton} onClick={dismiss}><X size={23}/></button></div></header>
       {result?.root&&<div className="exploration-toolbar"><label title="Changed files only"><input type="checkbox" checked={changed} disabled={!!busy} onChange={e=>void changeFilter(e.target.checked)}/> Changed only</label>
+        <label title={testCount?`Hide ${testCount} test ${testCount===1?'file':'files'} from the map`:'No test files in this map'}><input type="checkbox" checked={layoutState.hideTests} disabled={!testCount&&!layoutState.hideTests} onChange={e=>setLayoutState(l=>({...l,hideTests:e.target.checked}))}/> Hide tests{testCount>0&&<span className="exploration-count">{testCount}</span>}</label>
         <button type="button" aria-label={projections.origins?.has_more?'Expand upstream':'Upstream complete'} title={projections.origins?.has_more?'Expand upstream':'Upstream complete'} disabled={!!busy||!projections.origins?.has_more} onClick={()=>void expandDirection('origins')}><ArrowLeft size={16}/>{projections.origins?.has_more?'Upstream':'Upstream ✓'}</button>
         <button type="button" aria-label={projections.consumers?.has_more?'Expand downstream':'Downstream complete'} title={projections.consumers?.has_more?'Expand downstream':'Downstream complete'} disabled={!!busy||!projections.consumers?.has_more} onClick={()=>void expandDirection('consumers')}>{projections.consumers?.has_more?'Downstream':'Downstream ✓'}<ArrowRight size={16}/></button>
         <div className="exploration-toolbar-end">{result.occurrence&&<button type="button" onClick={clickedSource}>Clicked source</button>}<button type="button" className="exploration-definition" onClick={()=>inspect(result.root!.definition)}>Definition</button></div></div>}
@@ -273,7 +326,7 @@ export function SymbolExplorationPopover({reportId,selection,onSelect}:Props) {
         {!tree.coverage.complete&&<details className="exploration-coverage"><summary>Some source could not be analyzed</summary><ul>{tree.coverage.omitted.map((o,i)=><li key={i}>{o.path&&<code>{o.path}: </code>}{o.reason}</li>)}</ul></details>}
         <div className="exploration-body" data-focus={focus} ref={body} style={focus==='both'?split:single}>
           <section className="exploration-tree-pane" aria-label="Upstream and downstream connections">
-            <div className="exploration-map" ref={map} role="region" tabIndex={0} aria-label="Composition and import file map" onScroll={()=>{if(scroll.current&&map.current){scroll.current.left=map.current.scrollLeft;scroll.current.top=map.current.scrollTop}}}><div className="exploration-map-canvas" style={{width:layout.width,height:layout.height}}>
+            <div className="exploration-map-wrap"><div className="exploration-map" ref={map} role="region" tabIndex={0} aria-label="Composition and import file map. Drag to pan, scroll to zoom, plus and minus keys zoom, zero fits." onPointerDown={startPan} onKeyDown={mapKeys} onScroll={()=>{if(scroll.current&&map.current){scroll.current.left=map.current.scrollLeft;scroll.current.top=map.current.scrollTop}}}><div className="exploration-map-canvas" style={{width:layout.width*zoom+2*pad.x,height:layout.height*zoom+2*pad.y}}><div className="exploration-map-scaled" style={{left:pad.x,top:pad.y,width:layout.width,height:layout.height,transform:`scale(${zoom})`}}>
               <svg width={layout.width} height={layout.height} aria-label="File connections"><defs><marker id="exploration-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#82b4dc"/></marker></defs>{tree.connections.map(edge=>{
                 const a=layout.positions.get(edge.source),b=layout.positions.get(edge.target);if(!a||!b)return null
                 const parallel=tree.connections.filter(e=>e.source===edge.source&&e.target===edge.target),lane=(parallel.findIndex(e=>e.id===edge.id)-(parallel.length-1)/2)*24
@@ -282,11 +335,13 @@ export function SymbolExplorationPopover({reportId,selection,onSelect}:Props) {
                 const described=describeConnection(edge)
                 return <g key={edge.id} className={edge.indirect?'exploration-indirect':''}><path d={d} className={`exploration-edge${connection?.id===edge.id?' selected':''}`} markerEnd="url(#exploration-arrow)"/><path d={d} className="exploration-edge-hit" role="button" tabIndex={0} aria-label={`Inspect connection from ${edge.source} to ${edge.target}: ${described.text}`} onClick={()=>inspect(edge.evidence.at(-1)!.anchor,edge)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();inspect(edge.evidence.at(-1)!.anchor,edge)}}}><title>{described.text}</title></path>{edge.indirect&&<text x={mid} y={(y+endY)/2-9} textAnchor="middle">via {edge.hidden_paths.length} unchanged {edge.hidden_paths.length===1?'file':'files'}</text>}</g>
               })}</svg>
-              {tree.nodes.map(node=>{const pos=layout.positions.get(node.path)!;const focused=node.path===tree.focus.path;return <div key={node.path} className={`exploration-file${node.changed?' changed':' unchanged'}${node.path===anchor?.path?' selected':''}${focused?' focus':''}`} style={{left:pos.x,top:pos.y,width:FILE_CARD_WIDTH,height:FILE_CARD_HEIGHT}}>
-                <button type="button" className="exploration-file-name" onClick={()=>inspect(focused?tree.focus:node.symbols[0].anchor)} title={node.path}><FileCode2 size={17}/><strong>{basename(node.path)}</strong></button><small title={node.path}>{node.path.includes('/')?node.path.slice(0,node.path.lastIndexOf('/')):'Repository root'}</small><div className="exploration-file-context">{focused&&<span>Clicked source</span>}<span className={`exploration-status ${node.changed?'changed':'unchanged'}`}>{node.changed?'Changed':'Unchanged'}</span></div><div className="exploration-file-symbols">{node.symbols.filter((symbol,i,all)=>all.findIndex(s=>s.name===symbol.name)===i).map((symbol,i)=><button type="button" key={`${symbol.anchor.start_byte}-${i}`} onClick={()=>inspect(symbol.anchor)} title={`${symbol.name} · line ${symbol.anchor.line}`}>{symbol.name}</button>)}</div>
+              {layout.testGroups.map(group=><div key={`${group.x}`} className="exploration-test-group" aria-hidden="true" style={{left:group.x,top:group.y,width:FILE_CARD_WIDTH,height:TEST_LABEL_HEIGHT}}>Tests</div>)}
+              {tree.nodes.map(node=>{const pos=layout.positions.get(node.path)!;const focused=node.path===tree.focus.path,test=isTestPath(node.path);return <div key={node.path} className={`exploration-file${node.changed?' changed':' unchanged'}${test?' test':''}${node.path===anchor?.path?' selected':''}${focused?' focus':''}`} style={{left:pos.x,top:pos.y,width:FILE_CARD_WIDTH,height:FILE_CARD_HEIGHT}}>
+                <button type="button" className="exploration-file-name" onClick={()=>inspect(focused?tree.focus:node.symbols[0].anchor)} title={node.path}><FileCode2 size={17}/><strong>{basename(node.path)}</strong></button><small title={node.path}>{node.path.includes('/')?node.path.slice(0,node.path.lastIndexOf('/')):'Repository root'}</small><div className="exploration-file-context">{focused&&<span>Clicked source</span>}{test&&<span className="exploration-test-badge" title="Test file (detected from its path)">Test</span>}<span className={`exploration-status ${node.changed?'changed':'unchanged'}`}>{node.changed?'Changed':'Unchanged'}</span></div><div className="exploration-file-symbols">{node.symbols.filter((symbol,i,all)=>all.findIndex(s=>s.name===symbol.name)===i).map((symbol,i)=><button type="button" key={`${symbol.anchor.start_byte}-${i}`} onClick={()=>inspect(symbol.anchor)} title={`${symbol.name} · line ${symbol.anchor.line}`}>{symbol.name}</button>)}</div>
               </div>})}
-            </div></div>
-            <div className="exploration-map-footer"><span>{tree.nodes.length} {tree.nodes.length===1?'file':'files'}{tree.status==='partial'?' · Analysis is incomplete':''}</span><span className="exploration-flow">Inputs → clicked source → consumers</span><span className="exploration-swatches"><i className="changed" aria-hidden="true"/>Changed<i className="unchanged" aria-hidden="true"/>Unchanged</span><button type="button" className="exploration-pane-toggle" aria-label={focus==='map'?'Show both panes':'Maximize map'} title={focus==='map'?'Show both panes':'Maximize map'} onClick={()=>setFocus(f=>f==='map'?'both':'map')}>{focus==='map'?<Minimize2 size={15}/>:<Maximize2 size={15}/>}</button></div>
+            </div></div></div>
+            <div className="exploration-zoom" role="group" aria-label="Map zoom" title="Scroll to zoom, drag to pan"><button type="button" aria-label="Zoom out" disabled={zoom<=0.4+1e-9} onClick={()=>zoomBy(0.8)}><ZoomOut size={15}/></button><output aria-live="off">{Math.round(zoom*100)}%</output><button type="button" aria-label="Zoom in" disabled={zoom>=2-1e-9} onClick={()=>zoomBy(1.25)}><ZoomIn size={15}/></button><button type="button" className="exploration-fit" onClick={fitMap} title="Fit all files (0)">Fit</button></div></div>
+            <div className="exploration-map-footer"><span>{tree.nodes.length} {tree.nodes.length===1?'file':'files'}{hiddenTests>0&&` · ${hiddenTests} ${hiddenTests===1?'test':'tests'} hidden`}{tree.status==='partial'?' · Analysis is incomplete':''}</span><span className="exploration-flow">Inputs → clicked source → consumers</span><span className="exploration-swatches"><i className="changed" aria-hidden="true"/>Changed<i className="unchanged" aria-hidden="true"/>Unchanged</span><button type="button" className="exploration-pane-toggle" aria-label={focus==='map'?'Show both panes':'Maximize map'} title={focus==='map'?'Show both panes':'Maximize map'} onClick={()=>setFocus(f=>f==='map'?'both':'map')}>{focus==='map'?<Minimize2 size={15}/>:<Maximize2 size={15}/>}</button></div>
           </section>
           <div className="exploration-splitter" role="separator" tabIndex={0} aria-orientation={wide?'vertical':'horizontal'} aria-label="Resize map and source panes" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round((wide?layoutState.wide:layoutState.stacked)*100)} onPointerDown={startSplit} onKeyDown={nudgeSplit} onDoubleClick={()=>setLayoutState(l=>({...l,[wide?'wide':'stacked']:defaultLayout[wide?'wide':'stacked']}))}/>
           <section className="exploration-inspector" aria-label="Revision source snippets"><header><strong title={anchor?.path}>{anchor?.path||'Select a file or connection'}</strong>{anchor&&<span>Line {anchor.line} · {tree.side==='old'?'Before':'After'}</span>}<button type="button" className="exploration-pane-toggle" aria-label={focus==='source'?'Show both panes':'Maximize source'} title={focus==='source'?'Show both panes':'Maximize source'} onClick={()=>setFocus(f=>f==='source'?'both':'source')}>{focus==='source'?<Minimize2 size={15}/>:<Maximize2 size={15}/>}</button></header>

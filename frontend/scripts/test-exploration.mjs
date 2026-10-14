@@ -8,9 +8,9 @@ import {createRequire} from 'node:module'
 const root=dirname(dirname(fileURLToPath(import.meta.url))),temp=mkdtempSync(join(tmpdir(),'prism-exploration-'))
 try {
   const entry=join(temp,'entry.ts'),bundle=join(temp,'bundle.cjs')
-  writeFileSync(entry,`export * from ${JSON.stringify(join(root,'src/exploration.ts'))};export * from ${JSON.stringify(join(root,'src/diff.ts'))};`)
+  writeFileSync(entry,`export * from ${JSON.stringify(join(root,'src/exploration.ts'))};export * from ${JSON.stringify(join(root,'src/diff.ts'))};export * from ${JSON.stringify(join(root,'src/testPaths.ts'))};`)
   execFileSync(join(root,'node_modules/.bin/esbuild'),[entry,'--bundle','--platform=node','--format=cjs',`--outfile=${bundle}`],{stdio:'pipe'})
-  const {clampFrame,clampSplit,moveFrame,resizeFrame,fileMapLayout,initialMapScroll,nextMapScroll,describeConnection,mergeExplorationViews,popoverBounds,sourceClick,diffSourcePosition,parseDiffRows,FILE_CARD_WIDTH,FILE_CARD_HEIGHT}=createRequire(import.meta.url)(bundle)
+  const {panPadding,PAN_SLACK,clampZoom,wheelZoom,zoomScroll,scalePositions,fitZoom,MIN_ZOOM,MAX_ZOOM,clampFrame,clampSplit,moveFrame,resizeFrame,fileMapLayout,isTestPath,testsLast,hideTests,initialMapScroll,nextMapScroll,describeConnection,mergeExplorationViews,popoverBounds,sourceClick,diffSourcePosition,parseDiffRows,FILE_CARD_WIDTH,FILE_CARD_HEIGHT}=createRequire(import.meta.url)(bundle)
   const rows=parseDiffRows('@@ -8,2 +10,2 @@\n same\n-oldName\n+newName')
   assert.deepEqual(diffSourcePosition(rows[2],'both','new.ts','old.ts'),{side:'old',path:'old.ts',line:9})
   assert.deepEqual(diffSourcePosition(rows[3],'both','new.ts','old.ts'),{side:'new',path:'new.ts',line:11})
@@ -54,6 +54,24 @@ try {
   assert.ok(inside(clampFrame({left:1300,top:800,width:2000,height:2000},1440,900),1440,900),'saved frames are clamped to a smaller viewport')
   assert.equal(clampSplit(0.01,1000),0.22);assert.equal(clampSplit(0.99,1000),0.78);assert.equal(clampSplit(0.6,1000),0.6)
   assert.equal(clampSplit(0.1,300),0.5,'a tiny body cannot starve either pane');assert.equal(clampSplit(NaN,800),0.5)
+  assert.equal(clampZoom(0.1),MIN_ZOOM);assert.equal(clampZoom(9),MAX_ZOOM);assert.equal(clampZoom(NaN),1);assert.equal(clampZoom(1.2),1.2)
+  assert.ok(wheelZoom(1,-100)>1&&wheelZoom(1,100)<1,'wheel up zooms in, wheel down zooms out')
+  assert.ok(Math.abs(wheelZoom(wheelZoom(1,-100),100)-1)<1e-9,'equal opposite wheel travel returns to the same zoom')
+  assert.equal(wheelZoom(1,1e9),wheelZoom(1,240),'huge wheel deltas are bounded');assert.equal(wheelZoom(MAX_ZOOM,-500),MAX_ZOOM);assert.equal(wheelZoom(MIN_ZOOM,500),MIN_ZOOM)
+  const zs=zoomScroll({left:100,top:50},{x:200,y:80},1,2)
+  assert.deepEqual(zs,{left:400,top:180},'content point under the cursor stays fixed')
+  const content={x:(100+200)/1,y:(50+80)/1},after={x:(zs.left+200)/2,y:(zs.top+80)/2};assert.deepEqual(after,content)
+  assert.deepEqual(zoomScroll({left:7,top:9},{x:3,y:4},1.5,1.5),{left:7,top:9},'no zoom change keeps the scroll')
+  const padded=zoomScroll({left:120,top:90},{x:200,y:80},1,2,{x:50,y:40}),paddedPoint={x:(120+200-50)/1,y:(90+80-40)/1}
+  assert.deepEqual({x:(padded.left+200-50)/2,y:(padded.top+80-40)/2},paddedPoint,'the content point stays fixed with pan padding')
+  assert.deepEqual(panPadding({width:800,height:600}),{x:Math.round(800*PAN_SLACK),y:Math.round(600*PAN_SLACK)});assert.deepEqual(panPadding({width:0,height:0}),{x:0,y:0})
+  assert.deepEqual(scalePositions(new Map([['a',{x:10,y:20}]]),2,{x:5,y:7}).get('a'),{x:25,y:47},'positions are scaled then offset by the padding')
+  const scaled=scalePositions(new Map([['a',{x:10,y:20}]]),0.5);assert.deepEqual(scaled.get('a'),{x:5,y:10})
+  const card={width:268,height:160}
+  assert.equal(fitZoom(new Map([['a',{x:0,y:0}]]),card,{width:800,height:600}),1,'a graph that fits is not zoomed in')
+  const farApart=new Map([['a',{x:0,y:0}],['b',{x:1000,y:0}]]);const fz=fitZoom(farApart,card,{width:700,height:500})
+  assert.ok(fz<1&&fz>=MIN_ZOOM&&(1268*fz)<=700-48+1e-6,'a wide graph is scaled to fit with padding')
+  assert.equal(fitZoom(new Map(),card,{width:700,height:500}),1);assert.equal(fitZoom(farApart,card,{width:0,height:0}),1)
   const projection={root:{definition:{path:'a.ts'}},nodes:['a.ts','b.ts','c.ts','d.ts'].map(path=>({path})),connections:[{source:'a.ts',target:'b.ts'},{source:'a.ts',target:'c.ts'},{source:'b.ts',target:'d.ts'},{source:'c.ts',target:'d.ts'}]}
   const layout=fileMapLayout(projection)
   assert.equal(layout.positions.size,4,'merged files appear once even with a cycle')
@@ -73,6 +91,27 @@ try {
   assert.equal(cycle.positions.size,4)
   assert.deepEqual(fileMapLayout(cyclic),cycle,'File cycles terminate deterministically')
   for(const [a,p] of cycle.positions)for(const [b,q] of cycle.positions){if(a!==b)assert.ok(p.x+FILE_CARD_WIDTH<=q.x||q.x+FILE_CARD_WIDTH<=p.x||p.y+FILE_CARD_HEIGHT<=q.y||q.y+FILE_CARD_HEIGHT<=p.y)}
+  const testPaths=['src/__tests__/a.ts','tests/test_x.py','pkg/test_x.py','pkg/conftest.py','web/app.test.tsx','web/app.spec.js','web/app.e2e.ts','api/foo_test.go','api/foo_spec.rb','lib/foo_test.dart','src/test/java/FooBar.java','src/main/FooTest.java','src/main/FooTests.cs','src/main/FooSpec.kt','src/main/FooIT.java','src/main/TestFoo.java','svc/itest/Runner.java','svc/ITest/Runner.java','crate/tests/it.rs','spec/models/user.rb','e2e/login.ts','testdata/sample.json','cmd/unit_test.cc']
+  for(const path of testPaths)assert.equal(isTestPath(path),true,`${path} is a test`)
+  for(const path of ['src/latest.ts','src/contest.py','src/Test.java','src/attest.go','src/main.rs','src/components/Submit.tsx','src/EDIT.ts','src/protest/a.ts','src/specification.ts','lib/testing.ts','src/app.ts'])assert.equal(isTestPath(path),false,`${path} is not a test`)
+  assert.deepEqual(testsLast([{path:'a.test.ts',n:1},{path:'b.ts',n:2},{path:'tests/c.ts',n:3},{path:'d.ts',n:4}]).map(i=>i.n),[2,4,1,3],'tests go last; order is kept inside each group')
+  const withTests={root:{definition:{path:'a.ts'}},nodes:['a.ts','b.ts','b.test.ts','tests/c.ts','d.ts'].map(path=>({path,changed:true,symbols:[]})),connections:[{source:'a.ts',target:'b.ts'},{source:'b.ts',target:'b.test.ts'},{source:'a.ts',target:'tests/c.ts'},{source:'b.test.ts',target:'d.ts'}],boundaries:[{anchor:{path:'b.test.ts'}},{anchor:{path:'b.ts'}},{anchor:{path:'unchanged.test.ts'}},{anchor:{path:'unchanged.ts'}}]}
+  const grouped=fileMapLayout(withTests)
+  const column=grouped.positions.get('b.ts').x
+  assert.equal(grouped.positions.get('tests/c.ts').x,column,'tests share their column with the other cards')
+  assert.ok(grouped.positions.get('b.test.ts').x>column,'a test one hop on stays one column on')
+  assert.ok(grouped.positions.get('tests/c.ts').y>grouped.positions.get('b.ts').y,'a test card sits below the other cards of its column')
+  assert.equal(grouped.testGroups.length,2,'each column holding tests gets one divider')
+  for(const [a,p] of grouped.positions)for(const [b,q] of grouped.positions){if(a===b)continue;assert.ok(p.x+FILE_CARD_WIDTH<=q.x||q.x+FILE_CARD_WIDTH<=p.x||p.y+FILE_CARD_HEIGHT<=q.y||q.y+FILE_CARD_HEIGHT<=p.y,`${a} and ${b} do not overlap`)}
+  for(const group of grouped.testGroups)assert.ok(grouped.positions.get('tests/c.ts').y-group.y>=22,'the divider label has room above its first test card')
+  assert.deepEqual(fileMapLayout({...withTests,nodes:withTests.nodes.filter(n=>n.path==='a.ts'||n.path==='b.ts'),connections:[withTests.connections[0]]}).testGroups,[],'no divider without tests')
+  assert.equal(fileMapLayout(withTests,'tests/c.ts').positions.get('tests/c.ts').y,fileMapLayout(withTests,'tests/c.ts').positions.get('a.ts').y,'the clicked file is never moved into the tests group')
+  const shown=hideTests(withTests,'a.ts')
+  assert.deepEqual(shown.nodes.map(n=>n.path),['a.ts','b.ts'],'tests and files reachable only through them are hidden')
+  assert.deepEqual(shown.connections,[withTests.connections[0]]);assert.equal(shown.hiddenTests,2)
+  assert.deepEqual(shown.boundaries.map(b=>b.anchor.path),['b.ts','unchanged.ts'],'stops in test files are hidden with them')
+  assert.equal(hideTests(withTests,'b.test.ts').nodes.some(n=>n.path==='b.test.ts'),true,'the clicked file stays even when it is a test')
+  assert.equal(withTests.nodes.length,5,'hiding never mutates the tree')
   const anchor=(path,start=0)=>({path,start_byte:start,end_byte:start+6,revision:'rev',line:1,column:start,end_line:1,end_column:start+6})
   const rootEntity={id:'root',name:'channel',ref:{entity:'channel',fields:[]},definition:anchor('definition.ts')}
   const fileNode=path=>({id:path,path,changed:true,symbols:[{name:'channel',entity_id:'channel',anchor:anchor(path)}]})
@@ -116,5 +155,5 @@ try {
   assert.equal(repeated.text,'import → wrapping · 3 connections')
   assert.equal(describeConnection({indirect:true,hidden_paths:['mid.ts'],evidence:[evidence('import'),evidence('wrapping')]}).text,'import → wrapping · 2 connections, via 1 unchanged file','indirect via one file is singular')
   assert.equal(describeConnection({indirect:true,hidden_paths:['m1.ts','m2.ts'],evidence:[evidence('usage')]}).text,'usage · 1 connection, via 2 unchanged files','indirect via two files is plural')
-  console.log('Exploration checks passed: source offsets/revisions, opposite-side half window placement, drag/resize/clamp limits, splitter limits, near-viewport bounds, clicked-source centering, independently scoped bidirectional merging, causal arrows, cycle-safe layout, resize-stable map panning, whole-graph initial fit and connection summaries.')
+  console.log('Exploration checks passed: source offsets/revisions, opposite-side half window placement, drag/resize/clamp limits, splitter limits, wheel zoom/anchor/fit helpers, near-viewport bounds, clicked-source centering, independently scoped bidirectional merging, causal arrows, cycle-safe layout, resize-stable map panning, whole-graph initial fit and connection summaries.')
 }finally{rmSync(temp,{recursive:true,force:true})}
