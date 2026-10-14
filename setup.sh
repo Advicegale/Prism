@@ -17,6 +17,13 @@ else
   python3 -m venv backend/.venv
   backend/.venv/bin/python -m pip install -e './backend[test]'
 fi
+echo 'Installing language parsers declared by Graphify'
+mapfile -t graphify_parser_requirements < <(backend/.venv/bin/python scripts/graphify-language-requirements.py)
+if command -v uv >/dev/null; then
+  uv pip install --python backend/.venv/bin/python "${graphify_parser_requirements[@]}"
+else
+  backend/.venv/bin/python -m pip install "${graphify_parser_requirements[@]}"
+fi
 echo '[2/2] Installing and building web interface'
 (cd frontend && npm install && npm run build)
 if [[ ! -f .env ]]; then cp .env.example .env; fi

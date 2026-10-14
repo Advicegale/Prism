@@ -10,7 +10,17 @@ export interface AIGroup {id:string;summary:string;before_after:string;impact:st
 export interface TopicConnection {topic_id:string;count:number;kind:'direct'|'shared context'}
 export interface ChangeTopic {id:string;title:string;focus?:string;source:'ai'|'paths';group_ids:string[];changed_count:number;files:string[];graph:GraphData;connections:TopicConnection[]}
 export interface AIReport {harness:string;model:string;effort:string;overview:string;key_changes:string[];review_order?:ReviewStep[];schema_version?:number;groups:AIGroup[];topics?:ChangeTopic[]}
-export interface Report {id:string;demo:boolean;created_at:string;meta:{owner:string;repo:string;number:number;title:string;body:string;url:string;author:string;head:string};stats:{changed_files:number;changed_symbols:number;groups:number;indexed_files:number;total_graph_nodes:number;total_graph_edges:number};files:DiffFile[];groups:ChangeGroup[];overview:GraphData;topics?:ChangeTopic[];architecture?:ArchitectureData;evidence?:Record<string,{path:string;start_line:number;end_line:number;language:string;side:string;code:string;truncated:boolean}>;ai:AIReport|null}
+export interface Report {id:string;demo:boolean;created_at:string;meta:{owner:string;repo:string;number:number;title:string;body:string;url:string;author:string;head:string;merge_base?:string};stats:{changed_files:number;changed_symbols:number;groups:number;indexed_files:number;total_graph_nodes:number;total_graph_edges:number};files:DiffFile[];groups:ChangeGroup[];overview:GraphData;topics?:ChangeTopic[];architecture?:ArchitectureData;evidence?:Record<string,{path:string;start_line:number;end_line:number;language:string;side:string;code:string;truncated:boolean}>;ai:AIReport|null}
+
+export interface SourceAnchor {revision:string;path:string;start_byte:number;end_byte:number;line:number;column:number;end_line:number;end_column:number}
+export interface ExplorationRoot {id:string;name:string;kind:string;definition:SourceAnchor;ref:{entity:string;fields:string[]}}
+export interface ExplorationNode {id:string;path:string;changed:boolean;symbols:{name:string;anchor:SourceAnchor;entity_id:string}[]}
+export interface ExplorationConnection {id:string;source:string;target:string;indirect:boolean;hidden_paths:string[];evidence:{id:string;kind:string;anchor:SourceAnchor}[]}
+export interface ExplorationBoundary {id:string;kind:string;reason:string;anchor:SourceAnchor;from:string;hidden:boolean}
+export interface ExplorationCoverage {complete:boolean;languages:Record<string,number>;omitted:{path:string|null;reason:string}[];adapter:string}
+export interface ExplorationProjection {query_id:string;root:ExplorationRoot;revision:string;side:'old'|'new';direction:'consumers'|'origins';changed_only:boolean;nodes:ExplorationNode[];connections:ExplorationConnection[];boundaries:ExplorationBoundary[];has_more:boolean;status:string;coverage:ExplorationCoverage}
+export interface ExplorationResult {status:string;root?:ExplorationRoot;projection?:ExplorationProjection;revision?:string;side?:'old'|'new';occurrence?:SourceAnchor;name?:string;reason?:string;message?:string;error?:string}
+export interface ExplorationSource {status:string;revision:string;side:'old'|'new';path:string;start_line:number;end_line:number;code:string;anchors:SourceAnchor[];bounded:boolean}
 export interface ReviewAssistantSettings {harness:'codex'|'claude';model:string;effort:string}
 export interface DiffLineAnchor {path:string;old_lines:number[];new_lines:number[]}
 export interface QuestionCitation {symbol_id?:string|null;path:string;line:number;end_line:number;label:string;reason:string;old_lines?:number[];new_lines?:number[]}

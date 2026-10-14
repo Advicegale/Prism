@@ -1,0 +1,114 @@
+{
+  "baseline": {
+    "diffScroll": 0,
+    "file": "config.ts",
+    "scrollY": 598
+  },
+  "before": {
+    "bounds": {
+      "bottom": 788,
+      "height": 680,
+      "left": 388,
+      "right": 1268,
+      "top": 108,
+      "width": 880,
+      "x": 388,
+      "y": 108
+    },
+    "text": "field Before8a7f85feconfig.ts",
+    "title": "config.transport.retries"
+  },
+  "dismissed": {
+    "closed": true,
+    "focus": "Code diff for config.ts",
+    "reopen": true
+  },
+  "expanded": {
+    "bounds": {
+      "bottom": 788,
+      "height": 680,
+      "left": 388,
+      "right": 1268,
+      "top": 108,
+      "width": 880,
+      "x": 388,
+      "y": 108
+    },
+    "indirect": [
+      "via 1 unchanged file",
+      "via 1 unchanged file"
+    ],
+    "nodes": [
+      "config.ts",
+      "screen.ts"
+    ],
+    "title": "config.transport.attempts"
+  },
+  "inlineChat": {
+    "exists": true,
+    "split": true,
+    "text": "Ask about these linesconfig.ts · +2Codex CLIModelCLI defaultGPT-6.1-SolGPT-6-AstraGPT-6-SolGPT-6-LunaGPT-5.6-SolGPT-5.6-"
+  },
+  "inspected": {
+    "bounds": {
+      "bottom": 788,
+      "height": 680,
+      "left": 388,
+      "right": 1268,
+      "top": 108,
+      "width": 880,
+      "x": 388,
+      "y": 108
+    },
+    "diffScroll": 0,
+    "file": "config.ts",
+    "scrollY": 598,
+    "snippet": "screen.tsLine 1 · After",
+    "title": "config.transport.attempts"
+  },
+  "literal": {
+    "closed": true,
+    "root": " Connectionsconfig.logging.level"
+  },
+  "open": {
+    "bounds": {
+      "bottom": 788,
+      "height": 680,
+      "left": 388,
+      "right": 1268,
+      "top": 108,
+      "width": 880,
+      "x": 388,
+      "y": 108
+    },
+    "changed": true,
+    "nodes": [
+      "config.ts"
+    ],
+    "title": "config.transport.attempts"
+  },
+  "snippetRoot": {
+    "bounds": {
+      "bottom": 788,
+      "height": 680,
+      "left": 388,
+      "right": 1268,
+      "top": 108,
+      "width": 880,
+      "x": 388,
+      "y": 108
+    },
+    "diffScroll": 0,
+    "file": "config.ts",
+    "nodes": [
+      "client.tsSourceRepository rootprimary",
+      "screen.tsChangedRepository rootclient"
+    ],
+    "scrollY": 598,
+    "title": "primary"
+  },
+  "textSelection": {
+    "closed": true,
+    "selection": "export const config = { transport: { attempts: 4 }, logging: { level: \"info\" } };"
+  }
+}

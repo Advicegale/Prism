@@ -1,0 +1,56 @@
+{
+  "dart": {
+    "bounds": {
+      "bottom": 788,
+      "height": 680,
+      "left": 388,
+      "right": 1268,
+      "top": 108,
+      "width": 880,
+      "x": 388,
+      "y": 108
+    },
+    "main": "native_helper.dart",
+    "source": "1int helper() { return 2; }\n",
+    "text": "helpersymbol Afterccccdf8enative_helper.dartWhere it goesWhere it comes from Changed files onlyDefinitionClicked sourcenative_helper.dartChangedRepository roothelper1 file · No further changed filesnative_helper.dartLine 1 · Afterhelper:1:5helper:1:51int helper() { return 2; }\nUnsupported construct native_helper.dart:1Native Graphify declarations/references are available; this provider does not expose a static initializer/member AST for additional composition enrichment.",
+    "title": "helper"
+  },
+  "go": {
+    "bounds": {
+      "bottom": 788,
+      "height": 680,
+      "left": 388,
+      "right": 1268,
+      "top": 108,
+      "width": 880,
+      "x": 388,
+      "y": 108
+    },
+    "diffScroll": 0,
+    "edges": [
+      "via 1 unchanged file",
+      "via 1 unchanged file",
+      "via 1 unchanged file",
+      "via 1 unchanged file",
+      "via 1 unchanged file"
+    ],
+    "main": "config.go",
+    "nodes": [
+      {
+        "names": "Config.Transport.Attempts",
+        "path": "prefs/config.go"
+      },
+      {
+        "names": "client.Primaryclient.Secondary",
+        "path": "logger/logger.go"
+      },
+      {
+        "names": "client.Primaryclient.Secondarypolicy.RetryPolicy",
+        "path": "screen/screen.go"
+      }
+    ],
+    "scroll": 686,
+    "source": "1package prefs\n2type Network struct { Attempts int }\n3type Logging struct { Level string }\n4var Config = struct { Transport Network; Logging Logging }{Transport: Network{Attempts: 4}, Logging: Logging{Level: \"info\"}}\n",
+    "title": "Config.Transport.Attempts"
+  }
+}

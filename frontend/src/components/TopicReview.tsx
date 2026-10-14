@@ -2,13 +2,17 @@ import {useEffect,useMemo,useState} from 'react'
 import {ArrowLeft,ArrowRight,Check,CheckCheck,ChevronDown,Copy,FileCode2,FolderOpen,LoaderCircle,Search} from 'lucide-react'
 import {buildReviewScopes} from '../reviewTopics'
 import {CodeDiff} from './CodeDiff'
+import {SymbolExplorationPopover} from './SymbolExplorationPopover'
+import type {SymbolSelection} from '../exploration'
 import {MarkdownContent} from './MarkdownContent'
 import type {Harnesses,Report,ReviewAssistantSettings} from '../types'
 interface Props {report:Report;assistant:ReviewAssistantSettings;harnesses:Harnesses|null;onAssistantChange:(s:ReviewAssistantSettings)=>void;viewedAvailable:boolean;viewedStates:Record<string,string>;viewedBusy:Set<string>;viewedError:string;onToggleViewed:(path:string,viewed:boolean)=>void;hideViewed:boolean;onShowViewed:()=>void;focusPath:string|null;focusRequest:number}
 const basename=(path:string)=>path.split('/').pop()||path
 export function TopicReview({report,assistant,harnesses,onAssistantChange,viewedAvailable,viewedStates,viewedBusy,viewedError,onToggleViewed,hideViewed,onShowViewed,focusPath,focusRequest}:Props){
  const scopes=useMemo(()=>buildReviewScopes(report),[report]),[scopeId,setScopeId]=useState(''),[paths,setPaths]=useState<Record<string,string>>({}),[query,setQuery]=useState(''),[copied,setCopied]=useState(false)
- useEffect(()=>{setScopeId('');setPaths({});setQuery('')},[report.id])
+ const [symbol,setSymbol]=useState<SymbolSelection|null>(null)
+ const explore=(selection:SymbolSelection)=>setSymbol({...selection,request:Date.now()})
+ useEffect(()=>{setScopeId('');setPaths({});setQuery('');setSymbol(null)},[report.id])
  useEffect(()=>{if(!focusPath)return;const owner=scopes.find(t=>t.files.some(f=>f.path===focusPath));if(owner){setScopeId(owner.id);setPaths(current=>({...current,[owner.id]:focusPath}));setQuery('')}},[focusPath,focusRequest,scopes])
  const scope=scopes.find(t=>t.id===scopeId)||scopes[0]
  const files=scope?.files.filter(f=>!hideViewed||viewedStates[f.path]!=='VIEWED')||[]
@@ -33,11 +37,12 @@ export function TopicReview({report,assistant,harnesses,onAssistantChange,viewed
     <header className="review-file-heading"><div className="review-file-heading-name"><FileCode2 size={19}/><div><h3>{basename(selected.path)}</h3><code>{selected.path}</code>{selected.file.status==='renamed'&&selected.file.old_path!==selected.path&&<small>Previously {selected.file.old_path}</small>}</div></div><div className="review-file-heading-actions"><span className={'review-change-tag '+selected.file.status}>{selected.file.status}</span>{viewedAvailable&&<button type="button" className={'review-mark-viewed '+(viewedStates[selected.path]==='VIEWED'?'is-viewed':'')} disabled={viewedBusy.has(selected.path)} onClick={()=>onToggleViewed(selected.path,viewedStates[selected.path]!=='VIEWED')}>{viewedBusy.has(selected.path)?<LoaderCircle size={14} className="spinning"/>:<Check size={14}/>} {viewedStates[selected.path]==='VIEWED'?'Viewed':'Mark viewed'}</button>}</div></header>
     {!!notes.length&&<section className="review-file-notes" aria-label="Saved change notes"><h4>Change notes</h4>{notes.map((n,i)=><MarkdownContent key={i} text={n.diff_summary||''}/>)}{checks.length>0&&<div className="review-file-checks"><strong>Worth checking</strong><ul>{checks.map((note,i)=><li key={i}><MarkdownContent text={note}/></li>)}</ul></div>}</section>}
     {!!selected.reason&&<details className="review-file-reason"><summary>Why this file is in the review order <ChevronDown size={13}/></summary><MarkdownContent text={selected.reason}/></details>}
-    <section className="review-file-diff" aria-label="Complete file diff"><div className="review-file-diff-heading"><strong>File diff</strong><span className="review-diff-count"><b>+{selected.added}</b><em>−{selected.removed}</em></span>{!!selected.file.patch&&<button type="button" onClick={copy}>{copied?<Check size={13}/>:<Copy size={13}/>} {copied?'Copied':'Copy diff'}</button>}</div>{selected.file.patch?<CodeDiff key={selected.path} patch={selected.file.patch} path={selected.path} inlineQuestion={!report.demo?{reportId:report.id,assistant,harnesses,onAssistantChange}:undefined}/>:<div className="review-file-no-diff">No text diff was captured for this file.</div>}</section>
+    <section className="review-file-diff" aria-label="Complete file diff"><div className="review-file-diff-heading"><strong>File diff</strong><span className="review-diff-count"><b>+{selected.added}</b><em>−{selected.removed}</em></span>{!!selected.file.patch&&<button type="button" onClick={copy}>{copied?<Check size={13}/>:<Copy size={13}/>} {copied?'Copied':'Copy diff'}</button>}</div>{selected.file.patch?<CodeDiff key={selected.path} patch={selected.file.patch} path={selected.path} oldPath={selected.file.old_path} onSymbolSelect={!report.demo?explore:undefined} inlineQuestion={!report.demo?{reportId:report.id,assistant,harnesses,onAssistantChange}:undefined}/>:<div className="review-file-no-diff">No text diff was captured for this file.</div>}</section>
     <footer className="review-file-navigation"><button type="button" disabled={!previous} onClick={()=>previous&&choose(previous.path)}><ArrowLeft size={14}/> Previous file</button><span>{currentIndex+1} of {visible.length}</span><button type="button" disabled={!next} onClick={()=>next&&choose(next.path)}>Next file <ArrowRight size={14}/></button></footer>
     {viewedError&&<p className="review-viewed-error" role="alert">{viewedError}</p>}
    </>:<div className="review-file-empty"><FolderOpen size={28}/><h3>{query?'No matching files':'Review complete for this topic'}</h3><p>{query?'Try a different file name or path.':'Choose another topic, or show viewed files to revisit the changes.'}</p></div>}</article>
    </div>
   </div>
+  {!report.demo&&<SymbolExplorationPopover reportId={report.id} selection={symbol} onSelect={explore}/>}
  </section>
 }

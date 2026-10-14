@@ -29,6 +29,10 @@ The home screen starts clean: **no example report loads automatically**. There i
 4. Use **Architecture** to understand file relationships. Re-click a selected file or connection to deselect it; choose **Review file** to open its changes.
 5. Switch to **Topics** to review a useful grouping of changes. Choose a topic, then a file from its searchable queue. Saved AI review order is used when available.
 6. Read the selected file's saved change notes and syntax-highlighted diff. Switch between **Split** (before/after) and **Unified**, toggle line wrapping or changed-word highlighting, and jump to the next change. Split is the desktop default; narrow screens start unified unless a mode was chosen. Longer diffs expand progressively; files omitted from saved topics appear under **Other changes**.
+
+Click an ordinary named symbol in a Topics diff to open **Connections**. The popover explores compositions and imports at that side's exact revision. **Where it goes** opens with **Changed files only** enabled; **Show more** crosses unchanged source and labels indirect paths. **Where it comes from** keeps the same root. File, connection and anchor selection shows committed-source snippets inside the stationary popover. Clicking another name in a snippet starts its own investigation there. X or Escape closes it; **Connections** reopens retained state. Text selection and source copying remain available. Comments, keywords and literal values do not open investigations.
+
+Exploration discovers every provider in Graphify’s native registry, including custom extractors, filename rules and shebang files. Shared syntax enrichment adds static compositions beyond native Graphify facts; the five original languages have additional precision rules. Dynamic ownership, computed keys and unsupported flow stop with source evidence; this is not a runtime impact proof or a general call graph. See [coverage, limits and measured performance](docs/SYMBOL_EXPLORATION.md).
 7. Mark files viewed on GitHub and use **Hide viewed** to narrow both views. Refresh status when reviewing elsewhere on GitHub.
 8. Ask follow-up questions from **Ask this PR**, or use the message icon beside a diff line for an inline chat. Shift-click another line in the same hunk to ask about a range.
 
@@ -52,6 +56,7 @@ The Configuration page detects available executables on the backend's `PATH`. Co
 - **File architecture map (default):** use **Discover architecture** to have the configured CLI trace exact-revision source and organize this project's changed/context files into its own architectural groups. Source evidence is inspectable; model-interpreted links stay distinct from extracted references. Supporting groups and coherent bundles reduce clutter without dropping changed files. Connection-aware ordering and separate routing lanes run in a background worker; crossings use bridge arcs and cards stay readable on a scrollable canvas. Re-click a selected file or connection to deselect it. Saved maps reopen without another AI run. Source-only mode offers a neutral graph; it does not impose folder-based architecture. See [the methodology](docs/ARCHITECTURE_METHODOLOGY.md).
 
 - **File-focused Topics:** a persistent topic list, searchable file queue, and one focused reading pane. Semantic AI groupings or deterministic fallback topics organize the changes; every changed file remains reviewable, including deleted files, documentation and configuration. Saved change notes, review-order reasons, complete cached diffs, viewed state and inline questions stay attached to files. Architecture and Topics retain their state across tab switches.
+- **Symbol connections:** unmarked source-name selection, separate origins/consumers, field-specific compositions, merged file branches and progressive traversal through unchanged intermediates. The fixed popover inspects exact-revision source without navigating the main reader. Analysis is local and works lazily with retained cached reports.
 - **Before/after graph context:** Graphify runs on the merge-base and PR head. Relationship topology is compared; removed connections remain inspectable.
 - **PR segmentation:** connected change clusters form separate graphs. Very large cohesive clusters are divided using structural connectivity and modularity; small contextual neighborhoods remain visible.
 - **Saved AI review notes:** concise diff-grounded notes and actionable checks are collected by file. Validated topic memberships and file review order guide the queue; symbol records remain internal report data rather than a second diagram.
@@ -90,6 +95,8 @@ cd backend
 ```
 
 The backend API includes `GET /api/health`, `GET /api/harnesses`, `POST /api/analyze`, `GET /api/jobs/{id}`, `GET /api/reports`, `GET /api/reports/{id}`, `POST /api/reports/{id}/architecture`, `POST /api/reports/{id}/explain`, `GET/POST /api/reports/{id}/viewed-files`, `POST /api/reports/{id}/questions` and `GET /api/demo`; interactive docs are under `/api/docs`.
+
+Symbol exploration adds report-scoped `POST /api/reports/{id}/exploration/resolve`, `POST .../expand` and `GET .../source`. Resolve accepts a path, old/new side, 1-based line and 0-based UTF-16 column. Revision selection is server-derived. See [the API and cache contract](docs/SYMBOL_EXPLORATION.md).
 
 ## Source structure
 

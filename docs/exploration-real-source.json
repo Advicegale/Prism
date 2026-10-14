@@ -1,0 +1,135 @@
+{
+  "adapter": "graphify-0.9.86-registry-composition-11",
+  "schema": 2,
+  "revision": "252cc55ceded3c335927e1b76bcd8741caa0b815",
+  "cold_build_ms": 4184.38,
+  "cache_hit": false,
+  "source_files": 146,
+  "parsed_code_files": 124,
+  "native_provider_files": 131,
+  "entities": 5687,
+  "relationships": 22787,
+  "samples": [
+    {
+      "path": "server/src/workspace.ts",
+      "name": "applyWorkspaceMutation",
+      "line": 296,
+      "root": {
+        "id": "2df8cef7e4a0b2e60c06b88b",
+        "ref": {
+          "entity": "f233e094dce0b31e1678e01b",
+          "fields": []
+        },
+        "name": "applyWorkspaceMutation",
+        "kind": "function",
+        "definition": {
+          "revision": "252cc55ceded3c335927e1b76bcd8741caa0b815",
+          "path": "server/src/workspace.ts",
+          "start_byte": 13386,
+          "end_byte": 13408,
+          "line": 296,
+          "column": 22,
+          "end_line": 296,
+          "end_column": 44
+        }
+      },
+      "nodes": [
+        [
+          "server/src/workspace.ts",
+          2
+        ],
+        [
+          "server/src/app.ts",
+          4
+        ]
+      ],
+      "connections": 1,
+      "boundaries": 3,
+      "query_ms": 0.62
+    },
+    {
+      "path": "server/src/workspace.ts",
+      "name": "enqueueNotificationEvent",
+      "line": 3,
+      "root": {
+        "id": "73f1aa8ab986618c726c7798",
+        "ref": {
+          "entity": "07c658c32527fd03cd1344d9",
+          "fields": []
+        },
+        "name": "enqueueNotificationEvent",
+        "kind": "function",
+        "definition": {
+          "revision": "252cc55ceded3c335927e1b76bcd8741caa0b815",
+          "path": "server/src/notificationInbox.ts",
+          "start_byte": 1114,
+          "end_byte": 1138,
+          "line": 41,
+          "column": 22,
+          "end_line": 41,
+          "end_column": 46
+        }
+      },
+      "nodes": [
+        [
+          "server/src/notificationInbox.ts",
+          2
+        ],
+        [
+          "server/src/app.ts",
+          3
+        ],
+        [
+          "server/src/workspace.ts",
+          2
+        ]
+      ],
+      "connections": 2,
+      "boundaries": 3,
+      "query_ms": 0.43
+    }
+  ],
+  "real_declaration_resolution": {
+    "type:resolved": 102,
+    "field:resolved": 758,
+    "function:resolved": 230,
+    "variable:resolved": 1888,
+    "parameter:resolved": 1549,
+    "method:resolved": 3
+  },
+  "declaration_sweep_policy": "Named declaration anchors whose exact retained bytes equal their name; excludes external imports and synthetic expression-wide default bindings.",
+  "disk_warm_ms": 361.68,
+  "coverage_omissions": [
+    {
+      "path": "server/migrations/0011_task_assignments_and_push.sql",
+      "reason": "Syntax contains parser errors; affected bindings may be incomplete."
+    },
+    {
+      "path": "server/migrations/0014_calendar_events_and_vacations.sql",
+      "reason": "Syntax contains parser errors; affected bindings may be incomplete."
+    },
+    {
+      "path": "server/migrations/0016_household_shift_owners.sql",
+      "reason": "Syntax contains parser errors; affected bindings may be incomplete."
+    },
+    {
+      "path": "server/migrations/0019_delayed_notification_inbox.sql",
+      "reason": "Syntax contains parser errors; affected bindings may be incomplete."
+    }
+  ],
+  "synthetic_chain": {
+    "files": 501,
+    "entities": 1502,
+    "relationships": 2001,
+    "cold_ms": 575.83,
+    "query_ms": 40.02,
+    "nodes": [
+      "config.ts",
+      "link500.ts"
+    ],
+    "hidden_files": [
+      499
+    ],
+    "status": "no_further_changed_files"
+  }
+}

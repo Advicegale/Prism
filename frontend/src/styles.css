@@ -1021,3 +1021,81 @@ body,.workspace{background:var(--page)}
 @media print{.diff-reader-controls{display:none}.diff-code .diff-split-heading{position:static}}
 .diff-code.diff-no-wrap .diff-split-heading{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
 .diff-split-heading>span{font-family:system-ui,sans-serif}
+
+/* Symbol exploration shares the reader's palette; the diagram is the focal point. */
+.symbol-exploration{position:fixed;z-index:60;display:flex;flex-direction:column;overflow:hidden;border:1px solid #526c84;border-radius:9px;background:#101720;color:#e5edf4;box-shadow:0 18px 65px #000a;font:12px/1.5 system-ui,sans-serif;isolation:isolate}
+.symbol-exploration button{font:inherit;color:inherit;cursor:pointer;border:1px solid #3d4d5d;background:#192633;border-radius:4px;padding:4px 8px}
+.symbol-exploration button:hover{background:#25394b;border-color:#82b4dc}
+.symbol-exploration button:focus-visible{outline:2px solid #c4def3;outline-offset:2px}
+.symbol-exploration button:disabled{opacity:.5;cursor:default}
+.exploration-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:14px 16px 10px;background:#172433;flex-shrink:0;border-bottom:1px solid #334758}
+.exploration-heading h3{font:600 18px/1.25 Candara,"Trebuchet MS",sans-serif;margin:0;overflow-wrap:anywhere}
+.exploration-heading p{display:flex;gap:10px;flex-wrap:wrap;color:#a9bfd2;font-size:11px;margin:6px 0 0}
+.exploration-heading p>span:last-child{max-width:490px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.symbol-exploration .exploration-close{display:grid;place-items:center;background:transparent;border:0;padding:3px;color:#c4d4e3;flex-shrink:0}
+.exploration-controls{display:flex;align-items:center;gap:10px;padding:10px 14px;flex-wrap:wrap;border-bottom:1px solid #293e50;flex-shrink:0}
+.exploration-controls>div{display:flex;gap:0}
+.exploration-controls>div button{border-radius:0;background:transparent}
+.exploration-controls>div button:first-child{border-radius:4px 0 0 4px}
+.exploration-controls>div button:last-child{border-radius:0 4px 4px 0}
+.exploration-controls button[aria-pressed=true]{background:#25455e;border-color:#82b4dc}
+.exploration-controls label{display:flex;align-items:center;gap:5px;color:#b5c8d8;font-size:11px;margin-right:auto}
+.exploration-controls input{accent-color:#82b4dc}
+.exploration-controls>button{font-size:11px;border-color:transparent;background:transparent}
+.exploration-progress{display:flex;gap:8px;align-items:center;padding:7px 14px;color:#b4d7ef;background:#1a2b3b;flex-shrink:0}
+.exploration-progress button{margin-left:auto;padding:1px 6px}
+.exploration-error,.exploration-empty{padding:12px 16px;color:#efc99a;margin:0;overflow:auto}
+.exploration-empty strong{color:#e5edf4}
+.exploration-map{height:265px;min-height:150px;flex:1 1 265px;overflow:auto;background:radial-gradient(circle,#273849 1px,transparent 1px);background-size:18px 18px;scrollbar-width:thin}
+.exploration-map-canvas{position:relative;min-width:100%}
+.exploration-map-canvas>svg{position:absolute;inset:0;overflow:visible}
+.exploration-edge{fill:none;stroke:#82b4dc;stroke-width:1.7;opacity:.8}
+.exploration-indirect .exploration-edge{stroke-dasharray:4 4}
+.exploration-edge-hit{fill:none;stroke:transparent;stroke-width:14;cursor:pointer}
+.exploration-edge-hit:hover,.exploration-edge-hit:focus{stroke:#b9d6ec66;outline:none}
+.exploration-map text{fill:#bdcad6;font:9px system-ui,sans-serif;paint-order:stroke;stroke:#101720;stroke-width:5px;stroke-linejoin:round}
+.exploration-file{position:absolute;width:210px;height:96px;padding:8px 10px;border:1px solid #496178;border-radius:5px;background:#172433;overflow:hidden;box-sizing:border-box}
+.exploration-file.root{border-left:3px solid #82b4dc}
+.exploration-file.selected{border-color:#b0d1ed;background:#1e3347;box-shadow:0 0 0 1px #82b4dc44}
+.symbol-exploration .exploration-file-name{display:flex;align-items:center;gap:6px;background:transparent;border:0;width:100%;padding:0;text-align:left;white-space:nowrap}
+.exploration-file-name strong{overflow:hidden;text-overflow:ellipsis;font-size:12px}
+.exploration-file-name svg{color:#89b7d7;flex-shrink:0}
+.exploration-file-name>span{margin-left:auto;color:#a9bfd2;font-size:9px}
+.exploration-file small{display:block;color:#91a7bb;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:3px 0 7px}
+.exploration-file-symbols{display:flex;gap:4px;overflow:auto;scrollbar-width:thin}
+.symbol-exploration .exploration-file-symbols button{white-space:nowrap;font-size:10px;padding:2px 5px;border-color:#3c5870;background:#20384c}
+.exploration-map-footer{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-shrink:0;padding:7px 14px;border-top:1px solid #293e50;border-bottom:1px solid #293e50;color:#a9bfd2;font-size:11px}
+.exploration-coverage{padding:5px 14px;color:#e5bf8b;background:#30281e;flex-shrink:0;max-height:90px;overflow:auto}
+.exploration-coverage summary{cursor:pointer}
+.exploration-inspector{display:flex;flex-direction:column;flex:1 1 220px;min-height:160px;overflow:hidden;background:#0d141c}
+.exploration-inspector>header{display:flex;justify-content:space-between;gap:8px;padding:8px 14px;font-size:11px;flex-shrink:0}
+.exploration-inspector>header strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.exploration-inspector>header span{color:#9ab0c3;white-space:nowrap}
+.exploration-anchor-list{display:flex;gap:5px;padding:0 14px 7px;overflow:auto;flex-shrink:0}
+.exploration-anchor-list:empty{display:none}
+.symbol-exploration .exploration-anchor-list button{white-space:nowrap;font-size:10px;padding:2px 6px}
+.exploration-anchor-list button[aria-pressed=true]{border-color:#82b4dc;background:#23435c}
+.exploration-source-scroll{flex:1;min-height:0;overflow:auto;scrollbar-width:thin}
+.exploration-source{margin:0;padding:5px 0 12px;font:11px/1.8 "Cascadia Code","SFMono-Regular",Consolas,monospace;white-space:pre-wrap;tab-size:4;overflow-wrap:anywhere}
+.exploration-source-line{display:flex;align-items:baseline;padding:0 14px 0 0}
+.exploration-source-line.active{background:#28465b55}
+.exploration-line-number{min-width:5ch;color:#758ba1;text-align:right;padding-right:12px;user-select:none;font-size:10px;flex-shrink:0}
+.exploration-source-code{min-width:0;flex:1}
+.exploration-source .syntax-code{font:inherit;color:#dce6f0}
+.exploration-source .token.keyword{color:#79c5f5}
+.exploration-source .token.function,.exploration-source .token.class-name{color:#f3ca78}
+.exploration-source .token.string{color:#92d982}
+.exploration-source .token.number,.exploration-source .token.boolean{color:#c6a6f4}
+.exploration-source .token.comment{color:#718796}
+.exploration-source .diff-word-change{color:inherit;background:#537a9b55;outline:1px solid #82b4dc66;border-radius:2px}
+.exploration-boundaries,.exploration-hidden-boundaries ul{list-style:none;margin:0;padding:5px 14px 12px}
+.exploration-boundaries li{margin-top:8px;border-left:2px solid #8d704e;padding-left:9px}
+.symbol-exploration .exploration-boundaries button{background:transparent;border:0;padding:0;font-size:10px;color:#afc3d3;text-align:left}
+.exploration-boundaries button>span{color:#e8c18e;margin-right:6px}
+.exploration-boundaries p,.exploration-hidden-boundaries p{margin:3px 0;color:#8fa5b8;font-size:10px}
+.exploration-hidden-boundaries{padding:5px 14px 12px;color:#b5c8d8;font-size:11px}
+.exploration-hidden-boundaries summary{cursor:pointer}
+.exploration-reopen{display:flex;align-items:center;gap:7px;position:fixed;right:22px;bottom:22px;z-index:40;padding:8px 12px;border:1px solid #526c84;border-radius:6px;background:#1a2b3b;color:#c3def2;font:12px system-ui,sans-serif;box-shadow:0 4px 18px #0006;max-width:370px;cursor:pointer}
+.exploration-reopen span{font-size:10px;color:#9bb6cc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:210px}
+.exploration-reopen:focus-visible{outline:2px solid #c4def3;outline-offset:3px}
+@media(max-width:650px){.exploration-controls{gap:7px;padding:8px}.exploration-heading{padding:10px}.exploration-heading p>span:last-child{max-width:200px}.exploration-controls label{font-size:10px}.exploration-reopen{right:12px;bottom:12px}.exploration-reopen span{max-width:140px}}

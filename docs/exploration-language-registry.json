@@ -1,0 +1,806 @@
+{
+  "graphify_version": "0.9.86",
+  "extensions": 114,
+  "providers": 54,
+  "registry": [
+    {
+      "extension": ".F",
+      "provider": "extract_fortran",
+      "grammar": "tree_sitter_fortran",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".F03",
+      "provider": "extract_fortran",
+      "grammar": "tree_sitter_fortran",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".F08",
+      "provider": "extract_fortran",
+      "grammar": "tree_sitter_fortran",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".F90",
+      "provider": "extract_fortran",
+      "grammar": "tree_sitter_fortran",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".F95",
+      "provider": "extract_fortran",
+      "grammar": "tree_sitter_fortran",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".asd",
+      "provider": "extract_commonlisp",
+      "grammar": "tree_sitter_commonlisp",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".astro",
+      "provider": "extract_astro",
+      "grammar": "tree_sitter_typescript",
+      "grammar_factory": "language_typescript",
+      "grammar_available": true
+    },
+    {
+      "extension": ".bash",
+      "provider": "extract_bash",
+      "grammar": "tree_sitter_bash",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".c",
+      "provider": "extract_c",
+      "grammar": "tree_sitter_c",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".cbl",
+      "provider": "extract_cobol",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".cc",
+      "provider": "extract_cpp",
+      "grammar": "tree_sitter_cpp",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".cjs",
+      "provider": "extract_js",
+      "grammar": "tree_sitter_javascript",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".cl",
+      "provider": "extract_commonlisp",
+      "grammar": "tree_sitter_commonlisp",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".cls",
+      "provider": "extract_apex",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".cob",
+      "provider": "extract_cobol",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".cobol",
+      "provider": "extract_cobol",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".cpp",
+      "provider": "extract_cpp",
+      "grammar": "tree_sitter_cpp",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".cpy",
+      "provider": "extract_cobol",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".cs",
+      "provider": "extract_csharp",
+      "grammar": "tree_sitter_c_sharp",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".cshtml",
+      "provider": "extract_razor",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".csproj",
+      "provider": "extract_csproj",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".cts",
+      "provider": "extract_js",
+      "grammar": "tree_sitter_typescript",
+      "grammar_factory": "language_typescript",
+      "grammar_available": true
+    },
+    {
+      "extension": ".cu",
+      "provider": "extract_cpp",
+      "grammar": "tree_sitter_cpp",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".cuh",
+      "provider": "extract_cpp",
+      "grammar": "tree_sitter_cpp",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".cxx",
+      "provider": "extract_cpp",
+      "grammar": "tree_sitter_cpp",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".dart",
+      "provider": "extract_dart",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".dfm",
+      "provider": "extract_delphi_form",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".dm",
+      "provider": "extract_dm",
+      "grammar": "tree_sitter_dm",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".dme",
+      "provider": "extract_dm",
+      "grammar": "tree_sitter_dm",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".dmf",
+      "provider": "extract_dmf",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".dmi",
+      "provider": "extract_dmi",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".dmm",
+      "provider": "extract_dmm",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".dpk",
+      "provider": "extract_pascal",
+      "grammar": "tree_sitter_pascal",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".dpr",
+      "provider": "extract_pascal",
+      "grammar": "tree_sitter_pascal",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".erl",
+      "provider": "extract_erlang",
+      "grammar": "tree_sitter_language_pack",
+      "grammar_factory": "get_language:erlang",
+      "grammar_available": true
+    },
+    {
+      "extension": ".escript",
+      "provider": "extract_erlang",
+      "grammar": "tree_sitter_language_pack",
+      "grammar_factory": "get_language:erlang",
+      "grammar_available": true
+    },
+    {
+      "extension": ".ex",
+      "provider": "extract_elixir",
+      "grammar": "tree_sitter_elixir",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".exs",
+      "provider": "extract_elixir",
+      "grammar": "tree_sitter_elixir",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".f",
+      "provider": "extract_fortran",
+      "grammar": "tree_sitter_fortran",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".f03",
+      "provider": "extract_fortran",
+      "grammar": "tree_sitter_fortran",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".f08",
+      "provider": "extract_fortran",
+      "grammar": "tree_sitter_fortran",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".f90",
+      "provider": "extract_fortran",
+      "grammar": "tree_sitter_fortran",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".f95",
+      "provider": "extract_fortran",
+      "grammar": "tree_sitter_fortran",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".fsproj",
+      "provider": "extract_csproj",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".go",
+      "provider": "extract_go",
+      "grammar": "tree_sitter_go",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".gradle",
+      "provider": "extract_groovy",
+      "grammar": "tree_sitter_groovy",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".groovy",
+      "provider": "extract_groovy",
+      "grammar": "tree_sitter_groovy",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".h",
+      "provider": "extract_c",
+      "grammar": "tree_sitter_c",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".hcl",
+      "provider": "extract_terraform",
+      "grammar": "tree_sitter_hcl",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".hpp",
+      "provider": "extract_cpp",
+      "grammar": "tree_sitter_cpp",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".hrl",
+      "provider": "extract_erlang",
+      "grammar": "tree_sitter_language_pack",
+      "grammar_factory": "get_language:erlang",
+      "grammar_available": true
+    },
+    {
+      "extension": ".inc",
+      "provider": "extract_pascal",
+      "grammar": "tree_sitter_pascal",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".java",
+      "provider": "extract_java",
+      "grammar": "tree_sitter_java",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".jl",
+      "provider": "extract_julia",
+      "grammar": "tree_sitter_julia",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".js",
+      "provider": "extract_js",
+      "grammar": "tree_sitter_javascript",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".json",
+      "provider": "extract_json",
+      "grammar": "tree_sitter_json",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".jsx",
+      "provider": "extract_js",
+      "grammar": "tree_sitter_javascript",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".kt",
+      "provider": "extract_kotlin",
+      "grammar": "tree_sitter_kotlin",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".kts",
+      "provider": "extract_kotlin",
+      "grammar": "tree_sitter_kotlin",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".lfm",
+      "provider": "extract_lazarus_form",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".lisp",
+      "provider": "extract_commonlisp",
+      "grammar": "tree_sitter_commonlisp",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".lpk",
+      "provider": "extract_lazarus_package",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".lpr",
+      "provider": "extract_pascal",
+      "grammar": "tree_sitter_pascal",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".lsp",
+      "provider": "extract_commonlisp",
+      "grammar": "tree_sitter_commonlisp",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".lua",
+      "provider": "extract_lua",
+      "grammar": "tree_sitter_lua",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".luau",
+      "provider": "extract_lua",
+      "grammar": "tree_sitter_lua",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".m",
+      "provider": "extract_objc",
+      "grammar": "tree_sitter_objc",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".md",
+      "provider": "extract_markdown",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".mdx",
+      "provider": "extract_markdown",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".metal",
+      "provider": "extract_cpp",
+      "grammar": "tree_sitter_cpp",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".mjs",
+      "provider": "extract_js",
+      "grammar": "tree_sitter_javascript",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".ml",
+      "provider": "extract_ocaml",
+      "grammar": "tree_sitter_ocaml",
+      "grammar_factory": "language_ocaml",
+      "grammar_available": true
+    },
+    {
+      "extension": ".mli",
+      "provider": "extract_ocaml",
+      "grammar": "tree_sitter_ocaml",
+      "grammar_factory": "language_ocaml_interface",
+      "grammar_available": true
+    },
+    {
+      "extension": ".mm",
+      "provider": "extract_objc",
+      "grammar": "tree_sitter_objc",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".mts",
+      "provider": "extract_js",
+      "grammar": "tree_sitter_typescript",
+      "grammar_factory": "language_typescript",
+      "grammar_available": true
+    },
+    {
+      "extension": ".pas",
+      "provider": "extract_pascal",
+      "grammar": "tree_sitter_pascal",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".php",
+      "provider": "extract_php",
+      "grammar": "tree_sitter_php",
+      "grammar_factory": "language_php",
+      "grammar_available": true
+    },
+    {
+      "extension": ".pp",
+      "provider": "extract_pascal",
+      "grammar": "tree_sitter_pascal",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".ps1",
+      "provider": "extract_powershell",
+      "grammar": "tree_sitter_powershell",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".psd1",
+      "provider": "extract_powershell_manifest",
+      "grammar": "tree_sitter_powershell",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".psm1",
+      "provider": "extract_powershell",
+      "grammar": "tree_sitter_powershell",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".py",
+      "provider": "extract_python",
+      "grammar": "tree_sitter_python",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".qmd",
+      "provider": "extract_markdown",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".r",
+      "provider": "extract_r",
+      "grammar": "tree_sitter_language_pack",
+      "grammar_factory": "get_language:r",
+      "grammar_available": true
+    },
+    {
+      "extension": ".rake",
+      "provider": "extract_ruby",
+      "grammar": "tree_sitter_ruby",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".razor",
+      "provider": "extract_razor",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".rb",
+      "provider": "extract_ruby",
+      "grammar": "tree_sitter_ruby",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".resource",
+      "provider": "extract_robot",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".robot",
+      "provider": "extract_robot",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".rs",
+      "provider": "extract_rust",
+      "grammar": "tree_sitter_rust",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".scala",
+      "provider": "extract_scala",
+      "grammar": "tree_sitter_scala",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".sh",
+      "provider": "extract_bash",
+      "grammar": "tree_sitter_bash",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".skill",
+      "provider": "extract_markdown",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".sln",
+      "provider": "extract_sln",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".slnx",
+      "provider": "extract_slnx",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".sol",
+      "provider": "extract_solidity",
+      "grammar": "tree_sitter_solidity",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".sql",
+      "provider": "extract_sql",
+      "grammar": "tree_sitter_sql",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".sv",
+      "provider": "extract_verilog",
+      "grammar": "tree_sitter_verilog",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".svelte",
+      "provider": "extract_svelte",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".svh",
+      "provider": "extract_verilog",
+      "grammar": "tree_sitter_verilog",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".swift",
+      "provider": "extract_swift",
+      "grammar": "tree_sitter_swift",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".tf",
+      "provider": "extract_terraform",
+      "grammar": "tree_sitter_hcl",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".tfvars",
+      "provider": "extract_terraform",
+      "grammar": "tree_sitter_hcl",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".toc",
+      "provider": "extract_lua",
+      "grammar": "tree_sitter_lua",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".trigger",
+      "provider": "extract_apex",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".ts",
+      "provider": "extract_js",
+      "grammar": "tree_sitter_typescript",
+      "grammar_factory": "language_typescript",
+      "grammar_available": true
+    },
+    {
+      "extension": ".tsx",
+      "provider": "extract_js",
+      "grammar": "tree_sitter_typescript",
+      "grammar_factory": "language_tsx",
+      "grammar_available": true
+    },
+    {
+      "extension": ".v",
+      "provider": "extract_verilog",
+      "grammar": "tree_sitter_verilog",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".vb",
+      "provider": "extract_vbnet",
+      "grammar": "tree_sitter_vb_dotnet",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".vbproj",
+      "provider": "extract_csproj",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".vh",
+      "provider": "extract_verilog",
+      "grammar": "tree_sitter_verilog",
+      "grammar_factory": "language",
+      "grammar_available": true
+    },
+    {
+      "extension": ".vue",
+      "provider": "extract_vue",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".xaml",
+      "provider": "extract_xaml",
+      "grammar": null,
+      "grammar_factory": null,
+      "grammar_available": null
+    },
+    {
+      "extension": ".zig",
+      "provider": "extract_zig",
+      "grammar": "tree_sitter_zig",
+      "grammar_factory": "language",
+      "grammar_available": true
+    }
+  ],
+  "discovery": "Graphify _DISPATCH plus _get_extractor filename/shebang/source-aware routing; no Prism support allowlist"
+}

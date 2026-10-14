@@ -5,6 +5,7 @@ import type { Harnesses, ReviewAssistantSettings } from '../types'
 import {alignSplitRows, buildDiffBlocks, diffAnchor, parseDiffRows, type DiffLineReference, type DiffSide, type IndexedDiffRow, type SplitRow, type TextRange} from '../diff'
 export type {DiffLineReference} from '../diff'
 import { InlineDiffChat } from './InlineDiffChat'
+import {diffSourcePosition, sourceClick, type SymbolSelection} from '../exploration'
 import 'prismjs'
 
 type PrismRuntime = typeof import('prismjs')
@@ -107,15 +108,15 @@ function useReadyLanguage(language?: string) {
   return readyLanguage === language ? language : undefined
 }
 
-export function SyntaxCode({ code, path }: { code: string; path: string }) {
+export function SyntaxCode({ code, path, changes = [] }: { code: string; path: string; changes?: TextRange[] }) {
   const language = languageForPath(path)
   const readyLanguage = useReadyLanguage(language)
-  return <code className="syntax-code"><HighlightedCode code={code} language={readyLanguage} /></code>
+  return <code className="syntax-code"><HighlightedCode code={code} language={readyLanguage} changes={changes} /></code>
 }
 
 type DiffMode = 'unified' | 'split'
 interface InlineQuestionConfig {reportId: string; assistant: ReviewAssistantSettings; harnesses: Harnesses | null; onAssistantChange: (settings: ReviewAssistantSettings) => void}
-interface CodeDiffProps {expanded?: boolean; interactive?: boolean; patch: string; path: string; lineReferences?: (DiffLineReference | null)[]; inlineQuestion?: InlineQuestionConfig}
+interface CodeDiffProps {expanded?: boolean; interactive?: boolean; patch: string; path: string; oldPath?: string; lineReferences?: (DiffLineReference | null)[]; inlineQuestion?: InlineQuestionConfig; onSymbolSelect?: (selection: SymbolSelection) => void}
 interface InlineChatSlot {id: string; start: number; end: number; side: DiffSide; locked: boolean}
 
 function preference(key: string): string | null {
@@ -125,7 +126,7 @@ function savePreference(key: string, value: string) {
   try {localStorage.setItem(`prism:diff-${key}`, value)} catch { /* The reader still works when browser storage is unavailable. */ }
 }
 
-export function CodeDiff({patch, path, lineReferences, inlineQuestion, expanded = false, interactive = true}: CodeDiffProps) {
+export function CodeDiff({patch, path, oldPath, lineReferences, inlineQuestion, onSymbolSelect, expanded = false, interactive = true}: CodeDiffProps) {
   const language = languageForPath(path)
   const readyLanguage = useReadyLanguage(language)
   const allRows = useMemo(() => parseDiffRows(patch, lineReferences).filter(row => row.hunk >= 0), [patch, lineReferences])
@@ -210,7 +211,12 @@ export function CodeDiff({patch, path, lineReferences, inlineQuestion, expanded 
       {header ? <><span className="diff-hunk-label" aria-hidden="true">HUNK</span><code className="diff-hunk-code">{row.code}</code></> : <>
         <span className="diff-line-numbers" aria-hidden="true">{split ? <span>{line ?? ''}</span> : <><span>{row.oldLine ?? ''}</span><span>{row.newLine ?? ''}</span></>}</span>
         {row.prefix !== undefined && <span className="diff-prefix" aria-hidden="true">{row.prefix}</span>}
-        <span className="diff-source"><HighlightedCode code={row.code} language={readyLanguage} changes={words ? ranges : undefined}/></span>
+        <span className="diff-source" onClick={interactive && onSymbolSelect && hasAnchor ? event => {
+          const position=diffSourcePosition(row,side,path,oldPath)
+          if (position.line === undefined) return
+          const selection = sourceClick(event, position.path, position.side, position.line)
+          if (selection) onSymbolSelect(selection)
+        } : undefined}><HighlightedCode code={row.code} language={readyLanguage} changes={words ? ranges : undefined}/></span>
       </>}
       {inlineQuestion && row.kind !== 'meta' && hasAnchor && <button className="diff-ask-line" type="button" aria-label={`Ask about ${label}`} title="Ask about this diff line · Shift-click another line on this side to include a range" onClick={event => selectLine(row.index, side, event)}><MessageSquareText size={13}/></button>}
     </div>

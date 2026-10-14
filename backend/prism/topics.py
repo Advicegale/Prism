@@ -187,7 +187,7 @@ def _topic_connections(topics: list[dict], overview: dict) -> None:
         overview_degree[edge["target"]] += 1
     for topic in topics:
         for node in topic["graph"]["nodes"]:
-            if node["status"] != "context":
+            if node.get("status", "modified") != "context":
                 owner[node["id"]] = topic["id"]
 
     counts: Counter[tuple[str, str, str]] = Counter()

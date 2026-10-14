@@ -56,9 +56,9 @@ def test_report_prompt_mentions_every_changed_symbol_and_review_files():
     assert '"id": "two"' in prompt
     assert 'a.py' in prompt and 'b.py' in prompt
     assert 'WHY' not in prompt # uses explanation guidance instead of fake reason labels
-    assert 'exact captured excerpt' in prompt
+    assert 'verbatim source-control output' in prompt
     assert 'untrusted DATA' in prompt
-    assert '- diff_summary:' in prompt
+    assert 'ONE short diff_summary sentence per symbol' in prompt
     payload=json.loads(prompt.rsplit('GROUPS:\n',1)[1])
     one,two=payload['changed_symbols']
     assert '-old\n+new' in one['symbol_diff']['patch_hunks']
@@ -82,13 +82,13 @@ def test_validated_report_includes_all_changed_symbols_and_files(monkeypatch):
                                       {'symbol_id':'unknown','why':'Bad','how_it_works':'Bad','snippet_explanation':'Bad'}]}]}
     monkeypatch.setattr(harness,'run_harness',fake_run)
     result=harness.explain(report,'claude','default','high')
-    assert result['schema_version']==3
+    assert result['schema_version']==6
     assert [c['symbol_id'] for c in result['groups'][0]['changes']]==['svc','call']
     assert result['groups'][0]['changes'][0]['diff_summary']=='Calls the shared service.'
-    assert result['groups'][0]['changes'][1]['diff_summary']=='No symbol-specific diff summary was generated.'
+    assert result['groups'][0]['changes'][1]['diff_summary']==''
     assert [s['path'] for s in result['groups'][0]['review_order']]==['calls.py','defs.py']
     assert [s['path'] for s in result['review_order']]==['calls.py','defs.py']
-    assert result['groups'][0]['changes'][1]['why'].startswith('No supported')
+    assert result['groups'][0]['changes'][1]['why']==''
 
 
 def test_multi_group_review_does_not_skip_segments(monkeypatch):

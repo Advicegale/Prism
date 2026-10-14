@@ -28,7 +28,7 @@ def test_claude_disables_tools(monkeypatch):
     def fake_run(args,**kwargs):
         assert args[1]=='-p'
         assert '--tools' in args and args[args.index('--tools')+1]==''
-        assert '--disallowedTools' in args
+        assert '--permission-mode' in args and args[args.index('--permission-mode')+1]=='plan'
         assert kwargs['cwd']
         return SimpleNamespace(returncode=0,stdout=json.dumps({'structured_output':structured()}),stderr='')
     monkeypatch.setattr(harness.subprocess,'run',fake_run)

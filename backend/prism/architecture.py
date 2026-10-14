@@ -24,7 +24,7 @@ VERSION = 4
 # by architecture_review; no project/language-specific taxonomy is imposed here.
 
 
-def committed_sources(root: Path, sha: str) -> tuple[dict[str, str], list[str]]:
+def committed_sources(root: Path, sha: str, omissions: list[dict] | None = None) -> tuple[dict[str, str], list[str]]:
     """Read bounded non-symlink tracked blobs in two Git batch operations."""
     if not re.fullmatch(r'[0-9a-f]{40}', sha): raise ValueError('Invalid graph revision')
     env = {**os.environ, 'GIT_NO_LAZY_FETCH': '1', 'GIT_NO_REPLACE_OBJECTS': '1'}
@@ -42,9 +42,14 @@ def committed_sources(root: Path, sha: str) -> tuple[dict[str, str], list[str]]:
         if not eligible_path(path): continue
         size = int(size)
         if size > settings.MAX_FILE_BYTES:
+            if omissions is not None: omissions.append({'path':path,'reason':'Source exceeds PRISM_MAX_FILE_BYTES.'})
             notes.append('Some oversized files could not be inspected.'); continue
         if len(chosen) >= settings.MAX_FILES or total + size > settings.MAX_TOTAL_BYTES:
-            notes.append('Source inventory reached the configured analysis limit.'); break
+            notes.append('Source inventory reached the configured analysis limit.')
+            if omissions is not None:
+                omissions.append({'path':path,'reason':'Source inventory reached PRISM_MAX_FILES / PRISM_MAX_TOTAL_BYTES.'})
+                continue
+            break
         total += size; chosen.append((path, oid))
     if not chosen: return {}, notes
     data = git(['cat-file', '--batch'], ('\n'.join(oid for _, oid in chosen) + '\n').encode())
@@ -53,9 +58,15 @@ def committed_sources(root: Path, sha: str) -> tuple[dict[str, str], list[str]]:
         end = data.index(b'\n', offset); header = data[offset:end].split(); size = int(header[2])
         if header[0].decode() != oid or header[1] != b'blob': raise ValueError('Unexpected Git blob response')
         raw = data[end+1:end+1+size]; offset = end + 2 + size
-        if b'\0' in raw: continue
+        if b'\0' in raw:
+            if omissions is not None:
+                from graphify.extract import _DISPATCH
+                if Path(path).suffix.lower() in _DISPATCH:omissions.append({'path':path,'reason':'Source contains binary data.'})
+            continue
         try: sources[path] = raw.decode('utf-8')
-        except UnicodeError: notes.append('Some non-text files could not be inspected.')
+        except UnicodeError:
+            if omissions is not None: omissions.append({'path':path,'reason':'Source is not valid UTF-8.'})
+            notes.append('Some non-text files could not be inspected.')
     return sources, sorted(set(notes))
 
 

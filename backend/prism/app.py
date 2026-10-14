@@ -24,6 +24,7 @@ from .topics import build_topics
 from .repository_tools import head_worktree, RepositoryToolError
 from .architecture_review import discover_architecture
 from .architecture import VERSION as ARCHITECTURE_VERSION, report_architecture, build_architecture
+from .exploration import service as exploration
 
 app = FastAPI(title="Prism PR Review", version="0.2.0", docs_url="/api/docs", openapi_url="/api/openapi.json")
 executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="prism-job")
@@ -44,6 +45,19 @@ class ExplainRequest(BaseModel):
 class ViewedFileRequest(BaseModel):
     path: str = Field(min_length=1, max_length=1000)
     viewed: bool
+
+class ExplorationResolveRequest(BaseModel):
+    path: str = Field(min_length=1, max_length=1000)
+    side: Literal['old','new']
+    line: int = Field(ge=1)
+    column: int = Field(ge=0)
+
+class ExplorationExpandRequest(BaseModel):
+    side: Literal['old','new']
+    root_id: str = Field(min_length=1,max_length=64)
+    direction: Literal['consumers','origins'] = 'consumers'
+    changed_only: bool = True
+    query_id: str | None = Field(default=None,max_length=64)
 
 class QuestionTurn(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
@@ -341,6 +355,30 @@ def reports():
 
 @app.get("/api/reports/{report_id}")
 def report(report_id:str):return ensure_architecture(ensure_topics(ensure_evidence(read_report(report_id))))
+
+
+def _exploration_call(callback):
+    try: return callback()
+    except RepositoryToolError as exc: raise HTTPException(409,str(exc)) from exc
+    except ValueError as exc: raise HTTPException(422,str(exc)) from exc
+
+
+@app.post('/api/reports/{report_id}/exploration/resolve')
+def resolve_exploration(report_id: str, request: ExplorationResolveRequest):
+    data=read_report(report_id)
+    return _exploration_call(lambda: exploration.resolve_symbol(data,request.path,request.side,request.line,request.column))
+
+
+@app.post('/api/reports/{report_id}/exploration/expand')
+def expand_exploration(report_id: str, request: ExplorationExpandRequest):
+    data=read_report(report_id)
+    return _exploration_call(lambda: exploration.expand(data,request.side,request.root_id,request.direction,request.changed_only,request.query_id))
+
+
+@app.get('/api/reports/{report_id}/exploration/source')
+def exploration_source(report_id: str, path: str, side: Literal['old','new'], line: int, end_line: int | None = None):
+    data=read_report(report_id)
+    return _exploration_call(lambda: exploration.source(data,path,side,line,end_line))
 
 @app.get("/api/reports/{report_id}/viewed-files")
 def viewed_files(report_id:str):

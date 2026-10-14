@@ -1,36 +1,45 @@
 # Testing
 
-Automated Python suite:
+Use the installed environments:
 
 ```bash
 cd backend
 .venv/bin/python -m pytest -q
-```
-
-Tests cover PR URL validation, malicious URL rejection, Git diff hunk ranges with a real temporary Git repository, Graphify node association via fixture data, added/removed graph relations, deletion-only changes, change segmentation and FastAPI demo/health endpoints.
-
-Manual smoke checklist on Linux and macOS:
-
-1. Run `./setup.sh && ./start.sh`.
-2. Open `http://127.0.0.1:4780` and verify the labeled demo report and both change groups.
-3. Click a modified class, follow its relationships, inspect the sample diff and graph search/zoom controls.
-4. Analyze a small public GitHub PR and confirm snapshots under `~/.local/share/prism-pr-review`.
-5. Reopen it from Reports. Validate graph works when harness selector is `Graph only`.
-6. If Codex or Claude is installed/authenticated, select it and regenerate an AI narrative. Confirm group references match graph symbols.
-7. Try a private PR authenticated with `gh auth login` and verify clones work.
-
-CI or package-integrity tests can run without GitHub credentials using the fixture dataset.
-
-**Build environment limitation:** this delivery was generated in an environment without outbound npm/PyPI access. Backend Python tests were executed successfully, but the live Graphify installation, full GitHub retrieval against a real PR, actual Claude/Codex calls and production frontend bundle were **not** executed end-to-end here. The `setup.sh` workflow is intended to run and build those pieces on a networked Linux/macOS machine.
-
-Frontend diff reader regressions:
-
-```bash
-cd frontend
+cd ../frontend
 npm run test:diff
 npm run test:review
+npm run test:layout
 npm run test:export
+npm run test:exploration
 npm run build
 ```
 
-Diff checks cover aligned replacements and pure insertion/deletion gaps, exact base/head coordinates and range anchors, source ordering, no-newline markers, Unicode word changes, bounded large blocks, escaped source markup and static export. Manually check Split/Unified switching with an open inline conversation, same-side Shift-click ranges, progressive expansion, repeated next-change navigation, saved preferences across files, and 390px viewport scrolling.
+Python tests cover Git revisions/diff ranges, Graphify association, legacy report/topic compatibility, architecture, exact source, restricted repository tools, provider command/prompt validation and FastAPI endpoints. Exploration tests select source positions across the five original languages and 35 additional Graphify language/template formats. Registry tests also cover five further cross-file field/construction/wrapper families, C#/Kotlin/Swift/PHP static constructions, shared lexical shadowing, new provider registration, shebang routing and cache invalidation. They verify ordinary roots/shadowing, owned fields, external constructions, assignments/wrapping/imports, origins/sibling exclusions, usage-result stops, shared files, unchanged bridges, cycles, unknown fields and explicit unsupported states. They also cover namespace/default/reexports/manifest aliases, Unicode/CRLF, old/new renamed source, partial inventories, cache restoration, cursor validation and the indexing-response race. Passive reviewed source is never executed. Tests need no GitHub/provider credentials.
+
+Frontend regressions cover Split/Unified alignment and side-specific anchors, source ordering and word changes, topic/file coverage, architecture layout, escaped offline HTML, generic UTF-16 click offsets, selection preservation, renamed revision paths, viewport bounds and merged/cyclic file layout. Production build type-checks the React integration.
+
+## Desktop symbol exploration QA
+
+Use `./scripts/dev.sh`, or build the frontend and run `./start.sh`. Open a retained report from Recent reports; reanalysis is unnecessary.
+
+A reproducible source-backed local report uses two real Git commits and isolated cache data:
+
+```bash
+backend/.venv/bin/python scripts/exploration-fixture.py
+# Add --language go to check Go field/import bridges plus a native Dart root.
+# Copy data_dir from the JSON output. Stop any server on port 4780.
+PRISM_DATA_DIR=/tmp/<printed-directory> backend/.venv/bin/python -m uvicorn prism.app:app --app-dir backend --host 127.0.0.1 --port 4780
+```
+
+Use the direct command for isolated QA: start.sh loads .env, which can override shell PRISM_DATA_DIR/PORT values. Browser Origin checks allow the normal 4780/5173 ports. The fixture's GitHub viewed status is expected to be unavailable. No package installation, GitHub analysis or AI run is needed.
+
+1. Open Topics/config.ts and click the ordinary After attempts name. Verify the new SHA, real definition and Changed files only enabled. Initially only the root is visible.
+2. Show more. One screen.ts node should annotate client/retryPolicy with two indirect connections retaining client.ts/policy.ts. Unchanged bridges, logger.ts and responses.ts stay hidden/excluded.
+3. Inspect files, connections and individual anchors. Hidden source opens inside the same popover. Record its rectangle, root, main file and page/diff scroll before/after inspection; they remain unchanged. Map/source regions scroll internally.
+4. Click primary in a client.ts snippet. Its global root replaces the previous one in the same box; secondary is excluded. Origins/consumers and changed/all views retain their own expansions.
+5. X/Escape dismisses; Connections reopens retained state. Check focus restoration. Literal/comment clicks and drag-select/copy must not initiate investigations.
+6. Select Before retries versus After attempts, including Unified removals/additions. Verify old/new SHA and exact snippet names; context defaults to After.
+7. Open an inline chat through a gutter button without submitting. Switch Split/Unified and retain the conversation. Check range selection, Wrap/Highlight, Copy diff and reader navigation. Offline export has no live explorer.
+8. Switch reports/roots/directions during requests. Stale responses must not repaint a later view. Missing source, unsupported language, unresolved binding, partial analysis and usage endpoints have distinct explanations.
+
+October 13–14 validation (including the evergreen registry correction) used the native collaborative desktop preview with the isolated Git report and retained AHOY25 source. Backend/frontend regressions and the production build were executed. New provider analyses, reviewed repository code execution and mobile QA were not performed. See [coverage and measured performance](SYMBOL_EXPLORATION.md).
