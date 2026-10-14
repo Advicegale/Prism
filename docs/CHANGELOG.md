@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reading layout: the PR brief sits above a collapsed **Ask this PR** bar, Topics has a Focus mode and a collapsible topic list (collapsed, it becomes a compact picker with previous/next buttons and a dropdown), the diff picks split or unified from its pane width instead of the viewport, and Topics gained keyboard shortcuts (`j`/`k` files, `]` next change, `s` layout, `f` focus, `?` help).
+
 - Exploration indexes for the PR head and merge-base now start building in the background after analysis (before the AI step) and when a report is opened, so the first symbol click is normally immediate. Removed two repeated-parse hot spots in the symbol index build.
 
 - Made the symbol exploration popover a movable, resizable window. It opens on the half of the screen opposite the clicked token, toggles between half and full size, can be dragged and resized from its header/edges with the frame remembered, and has a draggable splitter between the map and source panes. Clicking the diff no longer dismisses it; X or Escape does.
