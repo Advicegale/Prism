@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Exploration indexes for the PR head and merge-base now start building in the background after analysis (before the AI step) and when a report is opened, so the first symbol click is normally immediate. Removed two repeated-parse hot spots in the symbol index build.
+
+- Made the symbol exploration popover a movable, resizable window. It opens on the half of the screen opposite the clicked token, toggles between half and full size, can be dragged and resized from its header/edges with the frame remembered, and has a draggable splitter between the map and source panes. Clicking the diff no longer dismisses it; X or Escape does.
+
+- Symbol exploration keeps the map's pan while loading, resizing or moving the splitter; the progress indicator floats over the map instead of resizing it. Its controls share one compact toolbar, the header is shorter, the map or source can be maximized, and the whole graph is centered when every file fits.
+
+- Symbol exploration marks changed and unchanged file cards at a glance (an amber edge and Changed badge, or a muted Unchanged label on a darker card) with a matching footer legend. Hovering a connection shows its evidence kinds and count as a tooltip; the selected connection stays highlighted and the inspector summarizes it. The header title and path can be selected and copied, dragging starts from the grip or blank header, and double-clicking the blank header toggles half and full size.
+
 - Enlarged symbol exploration to nearly fill the viewport, with readable file cards and source text. Laptop screens show a full-width tree above source; wide screens show both panes alongside each other. Initial focus and snippet follow the clicked occurrence, with a separate Definition action. Replaced direction switching with one causal tree and independent upstream/downstream expansion, preserving selected-field scope, hidden-path evidence and each filter’s expanded branches. Failed lookups clear stale results.
 
 - Fixed setup on older Bash versions, including macOS's system Bash, by replacing `mapfile` with a compatible read loop. Parser dependency discovery failures now stop setup before installation.
