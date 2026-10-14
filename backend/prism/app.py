@@ -280,6 +280,7 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
     path=report_path(report_id)
     if path.exists():
         result=ensure_architecture(ensure_topics(ensure_evidence(read_report(report_id))), after)
+        exploration.prefetch(result)
         if req.harness != "none":
             result["architecture"]=discover_architecture(result,after,req.harness,req.model,req.effort,progress)
             save_report(result)
@@ -305,6 +306,7 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
             "evidence":collect_evidence(groups,files,before,after),"ai":None,
             "topics":build_topics(groups,overview),"topics_version":5,"demo":False}
     ensure_architecture(report, after)
+    exploration.prefetch(report)
     if req.harness != "none":
         report["architecture"]=discover_architecture(report,after,req.harness,req.model,req.effort,progress)
         save_report(report)
@@ -355,7 +357,10 @@ def reports():
     return results
 
 @app.get("/api/reports/{report_id}")
-def report(report_id:str):return ensure_architecture(ensure_topics(ensure_evidence(read_report(report_id))))
+def report(report_id:str):
+    data=ensure_architecture(ensure_topics(ensure_evidence(read_report(report_id))))
+    if not data.get("demo"): exploration.prefetch(data)
+    return data
 
 
 def _exploration_call(callback):

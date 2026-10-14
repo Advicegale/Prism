@@ -2,7 +2,7 @@
 from pathlib import Path
 import pytest
 from prism.exploration.analyzer import analyze
-from prism.exploration.graphify_adapter import configurations, registry
+from prism.exploration.graphify_adapter import configurations, grammar_config, registry
 from prism.exploration.query import Index, Query
 from prism.exploration import service
 from test_exploration import select, complete, SHA
@@ -97,14 +97,14 @@ def test_nonbaseline_field_factory_wrapper_and_cross_file_bindings(family):
 def test_future_graphify_dispatch_and_shebang_enable_without_prism_allowlist(monkeypatch):
     from graphify import extract
     monkeypatch.setitem(extract._DISPATCH,'.future',extract.extract_dart)
-    configurations.cache_clear()
+    configurations.cache_clear(); grammar_config.cache_clear()
     try:
         sources={'sample.future':'int helper() { return 1; }\n','bin/tool':'#!/usr/bin/env bash\nhelper() { printf "hello"; }\n'}
         index=Index(analyze(sources,SHA))
         assert select(index,'sample.future','helper')['status']=='resolved'
         assert select(index,'bin/tool','helper')['status']=='resolved'
         assert index.facts.coverage['providers']['sample.future']=='extract_dart'
-    finally:configurations.cache_clear()
+    finally:configurations.cache_clear(); grammar_config.cache_clear()
 
 
 def test_new_custom_extractor_registration_has_no_prism_provider_name_gate(monkeypatch):

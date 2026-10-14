@@ -32,6 +32,7 @@ def provider_config(name,extension):
     return grammar_config(provider,extension) if provider else None
 
 
+@lru_cache(maxsize=None)
 def grammar_config(extractor, extension):
     from graphify import extract
     from graphify.extractors.models import LanguageConfig

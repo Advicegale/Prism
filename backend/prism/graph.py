@@ -50,7 +50,9 @@ def snapshot(root: Path, cache_root: Path, sha: str, progress=lambda x: None) ->
         progress("No symbol parser for these files; continuing with file-level review")
         return {"nodes":[], "edges":[], "files_indexed":0, "engine":"file-only", "version":package_version}
     progress(f"Graphify: extracting relationships from {len(files)} source files")
-    extraction = extract(files, root=root)
+    from .exploration.graphify_adapter import extraction_lock
+    with extraction_lock:  # Shared with exploration index builds; Graphify caches are process-global.
+        extraction = extract(files, root=root)
     if not isinstance(extraction, dict) or "nodes" not in extraction or "edges" not in extraction:
         raise RuntimeError("Graphify returned an unexpected extraction format")
     nodes = []

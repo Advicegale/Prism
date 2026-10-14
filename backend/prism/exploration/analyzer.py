@@ -470,6 +470,7 @@ class Analyzer:
     def __init__(self, sources, revision, omissions=None, progress=lambda _:None):
         self.facts = Facts(revision,sources); self.files = {}; self.mapping = aliases(sources)
         self.identities = defaultdict(list); self.modules = {}; self.progress = progress
+        self._manifests = None
         from .native import NativeFacts
         from .generic import GenericFileAdapter
         self.native=NativeFacts(self)
@@ -548,16 +549,23 @@ class Analyzer:
             scope=scope.parent
         return None
 
+    def package_manifests(self):
+        """Parse each tracked package.json once per Analyzer, in source order."""
+        if self._manifests is None:
+            self._manifests=[]
+            for manifest,text in self.facts.sources.items():
+                if PurePosixPath(manifest).name != 'package.json': continue
+                try: self._manifests.append((manifest,json_config(text)))
+                except (ValueError,TypeError): continue
+        return self._manifests
+
     def module_path(self, path, spec, family):
         if family == 'js':
             direct=resolve(path,spec,self.facts.sources,self.mapping)
             if direct: return direct
             # Tracked workspace package exports, only a unique source candidate.
             matches=[]
-            for manifest,text in self.facts.sources.items():
-                if PurePosixPath(manifest).name != 'package.json': continue
-                try: config=json_config(text)
-                except (ValueError,TypeError): continue
+            for manifest,config in self.package_manifests():
                 name=config.get('name','')
                 if not name or not (spec==name or spec.startswith(name+'/')): continue
                 suffix=spec[len(name):].lstrip('/'); exports=config.get('exports',{})

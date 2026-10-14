@@ -95,6 +95,16 @@ def index_job(report,side):
     return job
 
 
+def prefetch(report):
+    """Queue both revision indexes in the background; never wait or raise.
+
+    A missing worktree/revision only means there is nothing to prefetch.
+    """
+    for side in ('new','old'):
+        try: index_job(report,side)
+        except Exception: continue  # Best-effort: an optimization must never fail an analysis or a report load.
+
+
 def job_response(job):
     return {k:v for k,v in job.items() if k!='index'}
 
