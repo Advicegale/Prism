@@ -12,7 +12,9 @@
     "test:export": "node scripts/test-html-export.mjs",
     "test:diff": "node scripts/test-diff.mjs",
     "test:exploration": "node scripts/test-exploration.mjs",
-    "test:reading": "node scripts/test-reading.mjs"
+    "test:reading": "node scripts/test-reading.mjs",
+    "test:routes": "node scripts/test-routes.mjs",
+    "test:assistant": "node scripts/test-assistant.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

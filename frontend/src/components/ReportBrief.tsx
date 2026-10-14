@@ -6,18 +6,18 @@ import { MarkdownContent } from './MarkdownContent'
 interface Props {
   report: Report
   busy: boolean
-  harness: string
+  canGenerate: boolean
   onGenerate: () => void
 }
 
 // The brief sits above the Ask bar: a clamped overview that expands on demand, or a one-line prompt to generate notes.
-export function ReportBrief({ report, busy, harness, onGenerate }: Props) {
+export function ReportBrief({ report, busy, canGenerate, onGenerate }: Props) {
   const [expanded, setExpanded] = useState(false)
   const bodyId = useId()
   const ai = report.ai
   if (!ai) {
     if (report.demo) return null
-    return <div className="review-summary-empty"><p>File diffs are ready. Generate review notes to add change summaries and a suggested reading order.</p><button type="button" className="secondary-btn" disabled={busy || harness === 'none'} onClick={onGenerate}><Sparkles size={14}/> Generate review notes</button></div>
+    return <div className="review-summary-empty"><p>File diffs are ready. Generate review notes to add change summaries and a suggested reading order.</p><button type="button" className="secondary-btn" disabled={busy || !canGenerate} onClick={onGenerate}><Sparkles size={14}/> Generate review notes</button></div>
   }
   const changes = ai.key_changes || []
   const expandable = !!ai.overview || !!changes.length

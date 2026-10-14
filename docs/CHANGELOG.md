@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Topics file lists put test files in their own **Tests** group after the other files of each topic (suggested order kept inside each group); Previous/Next and `j`/`k` follow the displayed order. **Hide tests** in the explorer is always visible, disabled with a hint when the map has no tests, and shows the test count.
+
+- Explorer map labels test files (path-based, all languages): a **Test** badge and dashed card, a separate **Tests** group below the other cards of each column, and a **Hide tests** toggle (off by default, remembered) that also drops their connections and files reachable only through them.
+
+- Explorer expansion now always grows the file map: layers that would only add more occurrences inside files already shown are folded into the current view, so Upstream/Downstream are only offered when a further file or connection exists (otherwise they read complete immediately).
+
+- Explorer map navigation: drag the map background to pan, scroll the wheel to zoom about the cursor (40%–200%), use the floating −/+/Fit controls or the +, − and 0 keys when the map is focused. A new investigation resets to 100%.
+
+- Recent report rows (home and Recent reports) show an **AI notes** or **Graph only** status tag and the analysis date on the home list.
+- Report screens use hash routes (`#/reports/<id>/architecture|topics?file=…`, `#/reports`, `#/settings`): reloads, Back/Forward and new tabs reopen the same report, view and file; **Copy link** copies that Prism link, and the tab title names the screen.
+- One assistant setting: a top-bar **Assistant** menu (Codex or Claude Code, model, reasoning effort, re-detect) is used by review notes, Ask this PR, inline questions and the architecture rebuild, and the Analyze form has one **Generate AI review notes** checkbox (off sends no AI request). Saved choices from the older separate controls migrate automatically.
+
 - Reading layout: the PR brief sits above a collapsed **Ask this PR** bar, Topics has a Focus mode and a collapsible topic list (collapsed, it becomes a compact picker with previous/next buttons and a dropdown), the diff picks split or unified from its pane width instead of the viewport, and Topics gained keyboard shortcuts (`j`/`k` files, `]` next change, `s` layout, `f` focus, `?` help).
 
 - Exploration indexes for the PR head and merge-base now start building in the background after analysis (before the AI step) and when a report is opened, so the first symbol click is normally immediate. Removed two repeated-parse hot spots in the symbol index build.

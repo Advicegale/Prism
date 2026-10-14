@@ -1,15 +1,16 @@
 import {useEffect,useMemo,useRef,useState,useId} from 'react'
 import {ArrowRight,FileCode2,Maximize2,ZoomIn,ZoomOut,Sparkles,LoaderCircle} from 'lucide-react'
 import type {ArchitectureData,ArchitectureNode,ReviewAssistantSettings,Harnesses} from '../types'
+import {assistantSummary} from '../assistantSettings'
 import {routeDrawing,type LayoutResult} from '../layout/architectureLayout'
 import {architectureColor,buildArchitectureDiagram} from '../layout/architectureDiagram'
 import ArchitectureLayoutWorker from '../layout/architectureLayout.worker?worker&inline'
 
-type Props={data:ArchitectureData;hiddenPaths:Set<string>;onOpenFile:(path:string)=>void;assistant:ReviewAssistantSettings;harnesses:Harnesses|null;onAssistantChange:(value:ReviewAssistantSettings)=>void;onDiscover:()=>void;busy:boolean;progress:string;error:string}
+type Props={data:ArchitectureData;hiddenPaths:Set<string>;onOpenFile:(path:string)=>void;assistant:ReviewAssistantSettings;harnesses:Harnesses|null;onOpenAssistant:()=>void;onDiscover:()=>void;busy:boolean;progress:string;error:string}
 const color=architectureColor
 const edgeColor=(kind:string)=>kind==='model'?'#d5b16d':kind==='match'?'#b1a3cf':kind==='mixed'?'#b4aecb':'#8ba9c4'
 
-export function ArchitectureMap({data,hiddenPaths,onOpenFile,assistant,harnesses,onAssistantChange,onDiscover,busy,progress,error}:Props){
+export function ArchitectureMap({data,hiddenPaths,onOpenFile,assistant,harnesses,onOpenAssistant,onDiscover,busy,progress,error}:Props){
  const host=useRef<HTMLDivElement>(null),markerId=useId().replace(/:/g,'')
  const [selected,setSelected]=useState<string|null>(null),[selectedPair,setSelectedPair]=useState<string|null>(null)
  const [showContext,setShowContext]=useState(true),[search,setSearch]=useState(''),[scale,setScale]=useState(1)
@@ -44,7 +45,7 @@ export function ArchitectureMap({data,hiddenPaths,onOpenFile,assistant,harnesses
  return <section className="architecture-map" aria-label="File architecture map">
   <div className="architecture-discovery">
    <div><strong>{data.method==='semantic'?'Repository-specific organization':'Discover the architecture of this change'}</strong><p>{data.generation?`Saved map · ${data.generation.harness} · ${data.generation.model}`:'The assistant reads relevant source, chooses groups for this project, and cites its relationships.'}</p></div>
-   <div className="architecture-discovery-controls"><select aria-label="Architecture assistant" value={assistant.harness} onChange={e=>onAssistantChange({...assistant,harness:e.target.value as 'codex'|'claude'})}><option value="codex">Codex</option><option value="claude">Claude Code</option></select><input aria-label="Architecture model" list="architecture-models" value={assistant.model} onChange={e=>onAssistantChange({...assistant,model:e.target.value})}/><datalist id="architecture-models"><option value="default"/>{harnesses?.[assistant.harness]?.models.map(m=><option key={m.id} value={m.id}/>)}{harnesses?.[assistant.harness]?.aliases?.map(m=><option key={m} value={m}/>)}</datalist><select aria-label="Architecture reasoning effort" value={assistant.effort} onChange={e=>onAssistantChange({...assistant,effort:e.target.value})}>{['default','low','medium','high','xhigh','max'].map(e=><option key={e} value={e}>{e==='default'?'Default effort':e}</option>)}</select><button type="button" disabled={busy||!harnesses?.[assistant.harness]?.installed} onClick={onDiscover}>{busy?<LoaderCircle size={14} className="spinning"/>:<Sparkles size={14}/>} {busy?'Discovering…':data.method==='semantic'?'Rebuild map':'Discover architecture'}</button></div>
+   <div className="architecture-discovery-controls"><span className="assistant-line">Assistant: <strong>{assistantSummary(assistant)}</strong>{harnesses&&!harnesses[assistant.harness].installed?' · not installed':''}</span><button type="button" className="assistant-change-btn" aria-label="Change assistant" onClick={onOpenAssistant}>Change</button><button type="button" disabled={busy||!harnesses?.[assistant.harness]?.installed} onClick={onDiscover}>{busy?<LoaderCircle size={14} className="spinning"/>:<Sparkles size={14}/>} {busy?'Discovering…':data.method==='semantic'?'Rebuild map':'Discover architecture'}</button></div>
    <small>Source excerpts go to the selected CLI provider. Model interpretations stay distinct from extracted references.</small>
    {busy&&<p role="status">{progress}</p>}{error&&<p role="alert">{error}</p>}
   </div>

@@ -123,7 +123,7 @@ export function InlineDiffChat({ reportId, anchor, assistant, harnesses, onAssis
       </article>)}
     </div>}
 
-    {!installed && <p className="inline-diff-chat-unavailable">{harnesses ? `${providerLabel(assistant.harness)} is not installed. Choose an available assistant in Ask this PR.` : 'Checking available assistants…'}</p>}
+    {!installed && <p className="inline-diff-chat-unavailable">{harnesses ? `${providerLabel(assistant.harness)} is not installed. Choose an available assistant from the Assistant button in the top bar.` : 'Checking available assistants…'}</p>}
     <form className="inline-diff-chat-composer" onSubmit={event => { event.preventDefault(); void ask() }}>
       <textarea aria-label="Question about selected diff lines" rows={2} maxLength={2000} value={question} disabled={!installed || busy} onChange={event => setQuestion(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); void ask() } }} placeholder="What should I know about this change?"/>
       <div className="inline-diff-chat-footer">

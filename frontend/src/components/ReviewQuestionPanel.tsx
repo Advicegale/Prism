@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowUp, ChevronDown, CircleHelp, ExternalLink, LoaderCircle, MessageSquareText, Sparkles } from 'lucide-react'
+import { ArrowUp, CircleHelp, ExternalLink, LoaderCircle, MessageSquareText, Sparkles } from 'lucide-react'
 import type { Harnesses, Job, QuestionAnswer, Report, ReviewAssistantSettings } from '../types'
+import { assistantSummary } from '../assistantSettings'
 import { MarkdownContent } from './MarkdownContent'
 
 interface Props {
   report: Report
   harnesses: Harnesses | null
   assistant: ReviewAssistantSettings
-  onAssistantChange: (settings: ReviewAssistantSettings) => void
+  onOpenAssistant: () => void
   onCitationClick: (symbolId: string) => void
 }
 
@@ -30,7 +31,7 @@ async function call<T>(path: string, options?: RequestInit): Promise<T> {
 
 function label(harness: string) { return harness === 'claude' ? 'Claude Code' : 'Codex' }
 
-export function ReviewQuestionPanel({ report, harnesses, assistant, onAssistantChange, onCitationClick }: Props) {
+export function ReviewQuestionPanel({ report, harnesses, assistant, onOpenAssistant, onCitationClick }: Props) {
   const [turns, setTurns] = useState<Turn[]>([])
   const [question, setQuestion] = useState('')
   const [includeRepositoryContext, setIncludeRepositoryContext] = useState(false)
@@ -42,20 +43,7 @@ export function ReviewQuestionPanel({ report, harnesses, assistant, onAssistantC
   const textarea = useRef<HTMLTextAreaElement>(null)
   reportId.current = report.id
 
-  const providerInfo = harnesses?.[harness]
-  const installed = !!providerInfo?.installed
-  const otherHarness: 'codex' | 'claude' = harness === 'codex' ? 'claude' : 'codex'
-  const options = harness === 'codex'
-    ? (harnesses?.codex.models || []).map(item => ({ id: item.id, label: item.label || item.id }))
-    : (harnesses?.claude.aliases || ['default', 'sonnet', 'opus', 'haiku']).map(id => ({ id, label: id }))
-  const selectedModel = harnesses?.[harness]?.models.find(item => item.id === model)
-  const efforts = selectedModel?.efforts?.length ? selectedModel.efforts : (providerInfo?.efforts || ['low', 'medium', 'high'])
-
-  useEffect(() => {
-    localStorage.setItem('prism:question-harness', harness)
-    localStorage.setItem('prism:question-model', model)
-    localStorage.setItem('prism:question-effort', effort)
-  }, [harness, model, effort])
+  const installed = !!harnesses?.[harness]?.installed
 
   useEffect(() => {
     setTurns([])
@@ -65,13 +53,6 @@ export function ReviewQuestionPanel({ report, harnesses, assistant, onAssistantC
     setProgress('')
     setError('')
   }, [report.id])
-
-  useEffect(() => {
-    if (!harnesses) return
-    if (!harnesses[harness].installed && harnesses[otherHarness].installed) {
-      onAssistantChange({ harness: otherHarness, model: 'default', effort: 'default' })
-    }
-  }, [harnesses, harness, otherHarness, onAssistantChange])
 
   async function ask(value = question) {
     const text = value.trim()
@@ -133,18 +114,7 @@ export function ReviewQuestionPanel({ report, harnesses, assistant, onAssistantC
         <span className="review-question-icon"><MessageSquareText size={17}/></span>
         <div><h3>Ask this PR</h3><p>Get a focused answer from changed code, with optional repository browsing.</p></div>
       </div>
-      <div className="review-question-settings">
-        <label><span>Assistant</span><span className="review-question-select"><select aria-label="Assistant" value={harness} onChange={event => onAssistantChange({ harness: event.target.value as 'codex' | 'claude', model: 'default', effort: 'default' })}>
-          <option value="codex" disabled={!harnesses?.codex.installed}>Codex{harnesses && !harnesses.codex.installed ? ' · not installed' : ''}</option>
-          <option value="claude" disabled={!harnesses?.claude.installed}>Claude Code{harnesses && !harnesses.claude.installed ? ' · not installed' : ''}</option>
-        </select><ChevronDown size={13}/></span></label>
-        <label><span>Model</span><input aria-label="Model" list={`question-models-${report.id}`} value={model === 'default' ? '' : model} placeholder="CLI default" onChange={event => onAssistantChange({ ...assistant, model: event.target.value.trim() || 'default' })}/>
-          <datalist id={`question-models-${report.id}`}>{options.filter(item => item.id !== 'default').map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</datalist>
-        </label>
-        <label><span>Effort</span><span className="review-question-select"><select aria-label="Reasoning effort" value={effort} onChange={event => onAssistantChange({ ...assistant, effort: event.target.value })}>
-          <option value="default">Default</option>{efforts.map(item => <option key={item} value={item}>{item.charAt(0).toUpperCase() + item.slice(1)}</option>)}
-        </select><ChevronDown size={13}/></span></label>
-      </div>
+      <div className="assistant-line"><span>Assistant: <strong>{assistantSummary(assistant)}</strong>{harnesses && !installed ? ' · not installed' : ''}</span><button type="button" className="assistant-change-btn" aria-label="Change assistant" onClick={onOpenAssistant}>Change</button></div>
     </div>
 
     {!hasProviders && <div className="review-question-unavailable"><CircleHelp size={16}/><span>{harnesses ? 'Install and sign in to Codex CLI or Claude Code to ask questions here.' : 'Checking installed AI assistants…'}</span></div>}
