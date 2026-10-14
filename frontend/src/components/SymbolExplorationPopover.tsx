@@ -1,14 +1,30 @@
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react'
 import {createPortal} from 'react-dom'
-import {ArrowLeft, ArrowRight, FileCode2, GitBranch, LoaderCircle, X} from 'lucide-react'
-import {fileMapLayout, mergeExplorationViews, popoverBounds, sourceClick, FILE_CARD_HEIGHT, FILE_CARD_WIDTH, type ExplorationDirection, type ExplorationViews, type SymbolSelection} from '../exploration'
+import {ArrowLeft, ArrowRight, FileCode2, GitBranch, GripHorizontal, LoaderCircle, Maximize2, Minimize2, X} from 'lucide-react'
+import {clampFrame, clampSplit, describeConnection, fileMapLayout, mergeExplorationViews, moveFrame, nextMapScroll, popoverBounds, resizeFrame, sourceClick, FILE_CARD_HEIGHT, FILE_CARD_WIDTH, WIDE_FRAME_WIDTH, type ExplorationDirection, type ExplorationViews, type Frame, type PopoverMode, type ResizeEdges, type SymbolSelection} from '../exploration'
 import type {ExplorationConnection, ExplorationProjection, ExplorationResult, ExplorationSource, SourceAnchor} from '../types'
 import {SyntaxCode} from './CodeDiff'
 
 interface Props {reportId:string; selection:SymbolSelection|null; onSelect:(s:SymbolSelection)=>void}
 const basename=(path:string)=>path.split('/').pop()||path
+/** Header presses on these start text selection or a button, never a window move or size toggle. */
+const headerInteractive='button,#exploration-title,#exploration-description'
 const labels:Record<string,string>={usage:'Usage endpoint',unresolved:'Unresolved relationship',unsupported:'Unsupported construct',cycle:'Composition cycle',
   no_further_changed_files:'No further changed files',no_further_eligible_connections:'No further eligible connections',partial:'Analysis is incomplete'}
+
+interface WindowLayout {mode:PopoverMode; custom:Frame|null; wide:number; stacked:number}
+const LAYOUT_KEY='prism.exploration.layout'
+const defaultLayout:WindowLayout={mode:'half',custom:null,wide:0.6,stacked:0.5}
+const finite=(v:unknown):v is number=>typeof v==='number'&&Number.isFinite(v)
+function loadLayout():WindowLayout {
+  try{
+    const saved=JSON.parse(localStorage.getItem(LAYOUT_KEY)||'null'),c=saved?.custom
+    return {mode:saved?.mode==='full'?'full':'half',wide:finite(saved?.wide)?saved.wide:defaultLayout.wide,stacked:finite(saved?.stacked)?saved.stacked:defaultLayout.stacked,
+      custom:c&&[c.left,c.top,c.width,c.height].every(finite)?{left:c.left,top:c.top,width:c.width,height:c.height}:null}
+  }catch{return defaultLayout}
+}
+const resizeHandles:[string,ResizeEdges][]=[['n',{top:true}],['s',{bottom:true}],['w',{left:true}],['e',{right:true}],
+  ['nw',{top:true,left:true}],['ne',{top:true,right:true}],['sw',{bottom:true,left:true}],['se',{bottom:true,right:true}]]
 
 async function request<T>(url:string, signal:AbortSignal, body?:unknown):Promise<T> {
   const response=await fetch(url,{signal,...(body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})})
@@ -25,33 +41,47 @@ function pause(signal:AbortSignal) {
 }
 
 export function SymbolExplorationPopover({reportId,selection,onSelect}:Props) {
-  const [open,setOpen]=useState(false),[bounds,setBounds]=useState<ReturnType<typeof popoverBounds>|null>(null)
+  const [open,setOpen]=useState(false),[bounds,setBounds]=useState<Frame|null>(null),[layoutState,setLayoutState]=useState(loadLayout)
   const [result,setResult]=useState<ExplorationResult|null>(null),[projections,setProjections]=useState<ExplorationViews>({})
   const [changed,setChanged]=useState(true),[focusVersion,setFocusVersion]=useState(0)
   const [busy,setBusy]=useState(''),[error,setError]=useState(''),[anchor,setAnchor]=useState<SourceAnchor|null>(null)
   const [connection,setConnection]=useState<ExplorationConnection|null>(null),[source,setSource]=useState<ExplorationSource|null>(null),[sourceError,setSourceError]=useState('')
-  const [mapViewport,setMapViewport]=useState({width:0,height:0})
-  const box=useRef<HTMLDivElement>(null),map=useRef<HTMLDivElement>(null),sourceScroller=useRef<HTMLDivElement>(null),closeButton=useRef<HTMLButtonElement>(null),returnFocus=useRef<HTMLElement|null>(null)
+  const [mapViewport,setMapViewport]=useState({width:0,height:0}),[focus,setFocus]=useState<'both'|'map'|'source'>('both')
+  const box=useRef<HTMLDivElement>(null),body=useRef<HTMLDivElement>(null),map=useRef<HTMLDivElement>(null),sourceScroller=useRef<HTMLDivElement>(null),closeButton=useRef<HTMLButtonElement>(null),returnFocus=useRef<HTMLElement|null>(null)
   const pending=useRef<AbortController|null>(null),generation=useRef(0),views=useRef(new Map<string,ExplorationProjection>())
   const scroll=useRef<{version:number;x:number;y:number;left:number;top:number;width:number;height:number}|null>(null)
   const current=useRef({result,changed,projections});current.current={result,changed,projections}
+  const placement=useRef({open,layout:layoutState,anchorX:typeof window==='undefined'?0:window.innerWidth/2});placement.current.open=open;placement.current.layout=layoutState
+  const wide=!!bounds&&bounds.width>=WIDE_FRAME_WIDTH
   const tree=useMemo(()=>result?.root?mergeExplorationViews(projections,result.occurrence||result.root.definition):null,[projections,result])
   const layout=useMemo(()=>tree?fileMapLayout(tree,tree.focus.path,mapViewport):null,[tree,mapViewport])
 
   function dismiss() {setOpen(false);returnFocus.current?.focus({preventScroll:true})}
+  /** A dragged/resized frame wins; otherwise sit opposite the clicked token. */
+  function place(x:number,layout=placement.current.layout) {
+    const width=window.innerWidth,height=window.innerHeight
+    return layout.custom?clampFrame(layout.custom,width,height):popoverBounds(x,0,width,height,layout.mode)
+  }
+  function openAt(x:number) {
+    if(placement.current.open)return
+    placement.current.anchorX=x;setBounds(place(x))
+  }
+  useEffect(()=>{try{localStorage.setItem(LAYOUT_KEY,JSON.stringify(layoutState))}catch{/* storage may be unavailable */}},[layoutState])
   useEffect(()=>{
     if(!open)return
     closeButton.current?.focus({preventScroll:true})
-    const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.stopPropagation();dismiss()}}
-    const outside=(e:PointerEvent)=>{if(box.current&&!box.current.contains(e.target as Node)&&!(e.target as HTMLElement).closest('.exploration-reopen'))setOpen(false)}
-    document.addEventListener('keydown',key);document.addEventListener('pointerdown',outside)
-    const resize=()=>setBounds(popoverBounds(0,0,window.innerWidth,window.innerHeight))
-    window.addEventListener('resize',resize)
-    return()=>{document.removeEventListener('keydown',key);document.removeEventListener('pointerdown',outside);window.removeEventListener('resize',resize)}
+    // The diff stays usable while this is open, so Escape must not steal it from text entry.
+    const key=(e:KeyboardEvent)=>{
+      const target=e.target as HTMLElement|null
+      if(e.key==='Escape'&&!e.defaultPrevented&&!target?.closest('input,textarea,select,[contenteditable=""],[contenteditable="true"]')){e.stopPropagation();dismiss()}
+    }
+    const resize=()=>setBounds(place(placement.current.anchorX))
+    document.addEventListener('keydown',key);window.addEventListener('resize',resize)
+    return()=>{document.removeEventListener('keydown',key);window.removeEventListener('resize',resize)}
   },[open])
   useEffect(()=>{
     pending.current?.abort();generation.current++;views.current.clear();scroll.current=null
-    setOpen(false);setResult(null);setProjections({});setAnchor(null);setConnection(null);setSource(null);setBounds(null);setError('');setBusy('')
+    setOpen(false);setResult(null);setProjections({});setAnchor(null);setConnection(null);setSource(null);setBounds(null);setError('');setBusy('');setFocus('both')
     return()=>{pending.current?.abort()}
   },[reportId])
 
@@ -67,9 +97,9 @@ export function SymbolExplorationPopover({reportId,selection,onSelect}:Props) {
         if(gen!==generation.current)return
         if(data.status==='ignored'){setBusy('');return}
         if(first){
-          setBounds(b=>b||popoverBounds(selection!.x,selection!.y,window.innerWidth,window.innerHeight));setOpen(true)
+          openAt(selection!.x);setOpen(true)
           if(!selection!.returnFocus?.closest('.symbol-exploration'))returnFocus.current=selection!.returnFocus||returnFocus.current
-          setResult(data);setProjections({});setAnchor(null);setConnection(null);views.current.clear();setFocusVersion(gen);first=false
+          setResult(data);setProjections({});setAnchor(null);setConnection(null);views.current.clear();setFocusVersion(gen);setFocus('both');first=false
         }
         if(data.status==='indexing'){
           setBusy(data.message||'Indexing committed source');await pause(controller.signal);continue
@@ -93,7 +123,7 @@ export function SymbolExplorationPopover({reportId,selection,onSelect}:Props) {
     }
     void resolve().catch(e=>{if(!controller.signal.aborted&&gen===generation.current){
       setBusy('');setError(String(e.message));setResult(null);setProjections({});setAnchor(null);setSource(null)
-      setBounds(b=>b||popoverBounds(selection.x,selection.y,window.innerWidth,window.innerHeight));setOpen(true)
+      openAt(selection.x);setOpen(true)
     }})
     return()=>controller.abort()
   },[selection,reportId])
@@ -110,17 +140,17 @@ export function SymbolExplorationPopover({reportId,selection,onSelect}:Props) {
 
   useLayoutEffect(()=>{
     const element=map.current;if(!open||!element)return
-    const measure=()=>setMapViewport({width:element.clientWidth,height:element.clientHeight})
+    const measure=()=>{if(element.clientWidth&&element.clientHeight)setMapViewport({width:element.clientWidth,height:element.clientHeight})}  // a hidden (maximized-away) map keeps its last size, so pan survives
     measure();const observer=new ResizeObserver(measure);observer.observe(element)
     return()=>observer.disconnect()
   },[open,!!tree])
   useLayoutEffect(()=>{
-    const element=map.current,point=tree&&layout?.positions.get(tree.focus.path)
-    if(!open||!element||!point)return
-    const previous=scroll.current
-    const recenter=!previous||previous.version!==focusVersion||previous.width!==mapViewport.width||previous.height!==mapViewport.height
-    element.scrollLeft=recenter?point.x+FILE_CARD_WIDTH/2-element.clientWidth/2:previous.left+point.x-previous.x
-    element.scrollTop=recenter?point.y+FILE_CARD_HEIGHT/2-element.clientHeight/2:previous.top+point.y-previous.y
+    const element=map.current
+    if(!open||!element||!tree||!layout)return
+    const point=layout.positions.get(tree.focus.path)
+    if(!point)return
+    const next=nextMapScroll(scroll.current,focusVersion,layout.positions,tree.focus.path,mapViewport,{width:FILE_CARD_WIDTH,height:FILE_CARD_HEIGHT})
+    element.scrollLeft=next.left;element.scrollTop=next.top
     scroll.current={version:focusVersion,x:point.x,y:point.y,left:element.scrollLeft,top:element.scrollTop,width:mapViewport.width,height:mapViewport.height}
   },[open,tree,layout,focusVersion,mapViewport])
   useLayoutEffect(()=>{
@@ -160,7 +190,54 @@ export function SymbolExplorationPopover({reportId,selection,onSelect}:Props) {
       views.current.set(`${direction}:${filter}`,data);setProjections(current=>({...current,[direction]:data}))
     }catch(e){if(!controller.signal.aborted&&gen===generation.current)setError((e as Error).message)}finally{if(gen===generation.current)setBusy('')}
   }
-  function inspect(next:SourceAnchor,edge:ExplorationConnection|null=null){setAnchor(next);setConnection(edge)}
+  /** Pointer-captured drag: `compute` maps total pointer travel to the new value. */
+  function track(e:React.PointerEvent<HTMLElement>,apply:(dx:number,dy:number,done:boolean)=>void) {
+    if(e.button!==0)return
+    e.preventDefault()
+    const sx=e.clientX,sy=e.clientY,target=e.currentTarget,id=e.pointerId
+    target.setPointerCapture(id)
+    const move=(ev:PointerEvent)=>apply(ev.clientX-sx,ev.clientY-sy,false)
+    const end=(ev:PointerEvent)=>{
+      target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',end);target.removeEventListener('pointercancel',end)
+      apply(ev.clientX-sx,ev.clientY-sy,true)
+    }
+    target.addEventListener('pointermove',move);target.addEventListener('pointerup',end);target.addEventListener('pointercancel',end)
+  }
+  function changeFrame(compute:(dx:number,dy:number)=>Frame){
+    return(dx:number,dy:number,done:boolean)=>{const next=compute(dx,dy);setBounds(next);if(done)setLayoutState(l=>({...l,custom:next}))}
+  }
+  function startMove(e:React.PointerEvent<HTMLElement>) {
+    if(!bounds||(e.target as HTMLElement).closest(headerInteractive))return
+    const start=bounds
+    track(e,changeFrame((dx,dy)=>moveFrame(start,dx,dy,window.innerWidth,window.innerHeight)))
+  }
+  function startResize(e:React.PointerEvent<HTMLElement>,edges:ResizeEdges) {
+    if(!bounds)return
+    const start=bounds
+    track(e,changeFrame((dx,dy)=>resizeFrame(start,edges,dx,dy,window.innerWidth,window.innerHeight)))
+  }
+  function startSplit(e:React.PointerEvent<HTMLElement>) {
+    const element=body.current;if(!element)return
+    const rect=element.getBoundingClientRect(),key=wide?'wide':'stacked',size=wide?rect.width:rect.height,origin=wide?rect.left:rect.top
+    track(e,(dx,dy)=>{
+      const pointer=(wide?e.clientX+dx:e.clientY+dy)-origin
+      setLayoutState(l=>({...l,[key]:clampSplit(pointer/size,size)}))
+    })
+  }
+  function nudgeSplit(e:React.KeyboardEvent<HTMLElement>) {
+    const element=body.current,key=wide?'wide':'stacked',back=wide?'ArrowLeft':'ArrowUp',forward=wide?'ArrowRight':'ArrowDown'
+    if(!element||(e.key!==back&&e.key!==forward&&e.key!=='Home'))return
+    e.preventDefault()
+    const size=wide?element.clientWidth:element.clientHeight
+    setLayoutState(l=>({...l,[key]:e.key==='Home'?defaultLayout[key]:clampSplit(l[key]+(e.key===forward?0.04:-0.04),size)}))
+  }
+  function toggleSize() {
+    const mode:PopoverMode=layoutState.mode==='half'?'full':'half',next={...layoutState,mode,custom:null}
+    setLayoutState(next);setBounds(place(placement.current.anchorX,next))
+  }
+  function headerDoubleClick(e:React.MouseEvent<HTMLElement>) {if(!(e.target as HTMLElement).closest(headerInteractive))toggleSize()}
+  /** Inspecting source from a maximized map brings the snippet back so the choice is visible. */
+  function inspect(next:SourceAnchor,edge:ExplorationConnection|null=null){setAnchor(next);setConnection(edge);setFocus(f=>f==='map'?'both':f)}
   function clickedSource(){
     if(!result?.occurrence)return
     inspect(result.occurrence)
@@ -177,34 +254,43 @@ export function SymbolExplorationPopover({reportId,selection,onSelect}:Props) {
     return <span className={`exploration-source-line${active?' active':''}`} key={line}><span aria-hidden="true" className="exploration-line-number">{line}</span><span className="exploration-source-code" onClick={e=>{const s=sourceClick(e,source.path,source.side,line);if(s)onSelect(s)}}><SyntaxCode code={code||' '} path={source.path} changes={spans}/></span>{'\n'}</span>
   })}</pre>
 
+  // Maximizing a pane collapses the grid to one track; the hidden pane is removed by CSS on data-focus.
+  const split=wide?{gridTemplateColumns:`minmax(0,${layoutState.wide}fr) 10px minmax(0,${1-layoutState.wide}fr)`}:{gridTemplateRows:`minmax(0,${layoutState.stacked}fr) 10px minmax(0,${1-layoutState.stacked}fr)`}
+  const single=wide?{gridTemplateColumns:'minmax(0,1fr)'}:{gridTemplateRows:'minmax(0,1fr)'}
+
   return <>
     {result&&<button type="button" className="exploration-reopen" onClick={()=>setOpen(true)}><GitBranch size={16}/> Connections{result.root&&<span>{result.root.name}</span>}</button>}
-    {open&&bounds&&createPortal(<div className="symbol-exploration" ref={box} style={bounds} role="dialog" aria-modal="false" aria-labelledby="exploration-title" aria-describedby="exploration-description">
-      <header className="exploration-heading"><div><h3 id="exploration-title">{result?.root?.name||result?.name||'Symbol connections'}</h3><p id="exploration-description">{result?.root?.kind&&<span>{result.root.kind} </span>}{result?.side==='old'?'Before':'After'}{result?.revision&&<code>{result.revision.slice(0,8)}</code>}{result?.occurrence&&<span title={result.occurrence.path}>{result.occurrence.path}:{result.occurrence.line}</span>}</p></div><button type="button" className="exploration-close" aria-label="Close symbol exploration" ref={closeButton} onClick={dismiss}><X size={23}/></button></header>
-      {result?.root&&<div className="exploration-controls"><label><input type="checkbox" checked={changed} disabled={!!busy} onChange={e=>void changeFilter(e.target.checked)}/> Changed files only</label>{result.occurrence&&<button type="button" onClick={clickedSource}>Clicked source</button>}<button type="button" className="exploration-definition" onClick={()=>inspect(result.root!.definition)}>Definition</button></div>}
+    {open&&bounds&&createPortal(<div className={`symbol-exploration${wide?' wide':''}`} ref={box} style={bounds} role="dialog" aria-modal="false" aria-labelledby="exploration-title" aria-describedby="exploration-description">
+      <header className="exploration-heading" onPointerDown={startMove} onDoubleClick={headerDoubleClick}><GripHorizontal className="exploration-grip" size={18}/><div className="exploration-heading-text"><h3 id="exploration-title">{result?.root?.name||result?.name||'Symbol connections'}</h3><p id="exploration-description">{result?.root?.kind&&<span>{result.root.kind} </span>}{result?.side==='old'?'Before':'After'}{result?.revision&&<code>{result.revision.slice(0,8)}</code>}{result?.occurrence&&<span title={result.occurrence.path}>{result.occurrence.path}:{result.occurrence.line}</span>}</p></div><div className="exploration-window-actions"><button type="button" className="exploration-size" aria-label={layoutState.mode==='half'?'Enlarge to full window':'Shrink to half window'} title={layoutState.mode==='half'?'Full window':'Half window, opposite the clicked token'} onClick={toggleSize}>{layoutState.mode==='half'?<Maximize2 size={19}/>:<Minimize2 size={19}/>}</button><button type="button" className="exploration-close" aria-label="Close symbol exploration" ref={closeButton} onClick={dismiss}><X size={23}/></button></div></header>
+      {result?.root&&<div className="exploration-toolbar"><label title="Changed files only"><input type="checkbox" checked={changed} disabled={!!busy} onChange={e=>void changeFilter(e.target.checked)}/> Changed only</label>
+        <button type="button" aria-label={projections.origins?.has_more?'Expand upstream':'Upstream complete'} title={projections.origins?.has_more?'Expand upstream':'Upstream complete'} disabled={!!busy||!projections.origins?.has_more} onClick={()=>void expandDirection('origins')}><ArrowLeft size={16}/>{projections.origins?.has_more?'Upstream':'Upstream ✓'}</button>
+        <button type="button" aria-label={projections.consumers?.has_more?'Expand downstream':'Downstream complete'} title={projections.consumers?.has_more?'Expand downstream':'Downstream complete'} disabled={!!busy||!projections.consumers?.has_more} onClick={()=>void expandDirection('consumers')}>{projections.consumers?.has_more?'Downstream':'Downstream ✓'}<ArrowRight size={16}/></button>
+        <div className="exploration-toolbar-end">{result.occurrence&&<button type="button" onClick={clickedSource}>Clicked source</button>}<button type="button" className="exploration-definition" onClick={()=>inspect(result.root!.definition)}>Definition</button></div></div>}
       {!!busy&&<div className="exploration-progress" role="status"><LoaderCircle size={17} className="spinning"/>{busy}<button type="button" onClick={()=>{pending.current?.abort();generation.current++;setBusy('');setError('Analysis was cancelled. Select the symbol again to continue.')}}>Cancel</button></div>}
       {!!error&&<p className="exploration-error" role="alert">{error}</p>}
       {!tree&&!busy&&!error&&result?.status!=='resolved'&&<div className="exploration-empty"><strong>{result?.status==='unsupported'?'Unsupported language':result?.status==='partial'?'Analysis is incomplete':result?.status==='failed'?'Source indexing failed':'Symbol could not be resolved'}</strong><p>{result?.reason||result?.error||'The retained source does not provide an unambiguous definition.'}</p>{snippet}{sourceError&&<p>{sourceError}</p>}</div>}
       {tree&&layout&&<>
         {!tree.coverage.complete&&<details className="exploration-coverage"><summary>Some source could not be analyzed</summary><ul>{tree.coverage.omitted.map((o,i)=><li key={i}>{o.path&&<code>{o.path}: </code>}{o.reason}</li>)}</ul></details>}
-        <div className="exploration-body">
+        <div className="exploration-body" data-focus={focus} ref={body} style={focus==='both'?split:single}>
           <section className="exploration-tree-pane" aria-label="Upstream and downstream connections">
-            <div className="exploration-expansion-controls"><button type="button" disabled={!!busy||!projections.origins?.has_more} onClick={()=>void expandDirection('origins')}><ArrowLeft size={16}/>{projections.origins?.has_more?'Expand upstream':'Upstream complete'}</button><button type="button" disabled={!!busy||!projections.consumers?.has_more} onClick={()=>void expandDirection('consumers')}>{projections.consumers?.has_more?'Expand downstream':'Downstream complete'}<ArrowRight size={16}/></button></div>
             <div className="exploration-map" ref={map} role="region" tabIndex={0} aria-label="Composition and import file map" onScroll={()=>{if(scroll.current&&map.current){scroll.current.left=map.current.scrollLeft;scroll.current.top=map.current.scrollTop}}}><div className="exploration-map-canvas" style={{width:layout.width,height:layout.height}}>
               <svg width={layout.width} height={layout.height} aria-label="File connections"><defs><marker id="exploration-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#82b4dc"/></marker></defs>{tree.connections.map(edge=>{
                 const a=layout.positions.get(edge.source),b=layout.positions.get(edge.target);if(!a||!b)return null
                 const parallel=tree.connections.filter(e=>e.source===edge.source&&e.target===edge.target),lane=(parallel.findIndex(e=>e.id===edge.id)-(parallel.length-1)/2)*24
                 const x=a.x+FILE_CARD_WIDTH,y=a.y+FILE_CARD_HEIGHT/2+lane,endX=b.x,endY=b.y+FILE_CARD_HEIGHT/2+lane,mid=(x+endX)/2
                 const d=a.x===b.x?`M${x},${y} C${x+90},${y} ${endX-90},${endY} ${endX},${endY}`:`M${x},${y} C${mid},${y} ${mid},${endY} ${endX},${endY}`
-                return <g key={edge.id} className={edge.indirect?'exploration-indirect':''}><path d={d} className="exploration-edge" markerEnd="url(#exploration-arrow)"/><path d={d} className="exploration-edge-hit" role="button" tabIndex={0} aria-label={`Inspect connection from ${edge.source} to ${edge.target}${edge.indirect?` via ${edge.hidden_paths.length} unchanged files`:''}`} onClick={()=>inspect(edge.evidence.at(-1)!.anchor,edge)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();inspect(edge.evidence.at(-1)!.anchor,edge)}}}/>{edge.indirect&&<text x={mid} y={(y+endY)/2-9} textAnchor="middle">via {edge.hidden_paths.length} unchanged {edge.hidden_paths.length===1?'file':'files'}</text>}</g>
+                const described=describeConnection(edge)
+                return <g key={edge.id} className={edge.indirect?'exploration-indirect':''}><path d={d} className={`exploration-edge${connection?.id===edge.id?' selected':''}`} markerEnd="url(#exploration-arrow)"/><path d={d} className="exploration-edge-hit" role="button" tabIndex={0} aria-label={`Inspect connection from ${edge.source} to ${edge.target}: ${described.text}`} onClick={()=>inspect(edge.evidence.at(-1)!.anchor,edge)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();inspect(edge.evidence.at(-1)!.anchor,edge)}}}><title>{described.text}</title></path>{edge.indirect&&<text x={mid} y={(y+endY)/2-9} textAnchor="middle">via {edge.hidden_paths.length} unchanged {edge.hidden_paths.length===1?'file':'files'}</text>}</g>
               })}</svg>
-              {tree.nodes.map(node=>{const pos=layout.positions.get(node.path)!;const focused=node.path===tree.focus.path;return <div key={node.path} className={`exploration-file${node.path===anchor?.path?' selected':''}${focused?' focus':''}`} style={{left:pos.x,top:pos.y,width:FILE_CARD_WIDTH,height:FILE_CARD_HEIGHT}}>
-                <button type="button" className="exploration-file-name" onClick={()=>inspect(focused?tree.focus:node.symbols[0].anchor)} title={node.path}><FileCode2 size={17}/><strong>{basename(node.path)}</strong></button><small title={node.path}>{node.path.includes('/')?node.path.slice(0,node.path.lastIndexOf('/')):'Repository root'}</small><div className="exploration-file-context">{focused?<span>Clicked source</span>:<span>{node.changed?'Changed file':'Source file'}</span>}</div><div className="exploration-file-symbols">{node.symbols.filter((symbol,i,all)=>all.findIndex(s=>s.name===symbol.name)===i).map((symbol,i)=><button type="button" key={`${symbol.anchor.start_byte}-${i}`} onClick={()=>inspect(symbol.anchor)} title={`${symbol.name} · line ${symbol.anchor.line}`}>{symbol.name}</button>)}</div>
+              {tree.nodes.map(node=>{const pos=layout.positions.get(node.path)!;const focused=node.path===tree.focus.path;return <div key={node.path} className={`exploration-file${node.changed?' changed':' unchanged'}${node.path===anchor?.path?' selected':''}${focused?' focus':''}`} style={{left:pos.x,top:pos.y,width:FILE_CARD_WIDTH,height:FILE_CARD_HEIGHT}}>
+                <button type="button" className="exploration-file-name" onClick={()=>inspect(focused?tree.focus:node.symbols[0].anchor)} title={node.path}><FileCode2 size={17}/><strong>{basename(node.path)}</strong></button><small title={node.path}>{node.path.includes('/')?node.path.slice(0,node.path.lastIndexOf('/')):'Repository root'}</small><div className="exploration-file-context">{focused&&<span>Clicked source</span>}<span className={`exploration-status ${node.changed?'changed':'unchanged'}`}>{node.changed?'Changed':'Unchanged'}</span></div><div className="exploration-file-symbols">{node.symbols.filter((symbol,i,all)=>all.findIndex(s=>s.name===symbol.name)===i).map((symbol,i)=><button type="button" key={`${symbol.anchor.start_byte}-${i}`} onClick={()=>inspect(symbol.anchor)} title={`${symbol.name} · line ${symbol.anchor.line}`}>{symbol.name}</button>)}</div>
               </div>})}
             </div></div>
-            <div className="exploration-map-footer"><span>{tree.nodes.length} {tree.nodes.length===1?'file':'files'}{tree.status==='partial'?' · Analysis is incomplete':''}</span><span>Inputs → clicked source → consumers</span></div>
+            <div className="exploration-map-footer"><span>{tree.nodes.length} {tree.nodes.length===1?'file':'files'}{tree.status==='partial'?' · Analysis is incomplete':''}</span><span className="exploration-flow">Inputs → clicked source → consumers</span><span className="exploration-swatches"><i className="changed" aria-hidden="true"/>Changed<i className="unchanged" aria-hidden="true"/>Unchanged</span><button type="button" className="exploration-pane-toggle" aria-label={focus==='map'?'Show both panes':'Maximize map'} title={focus==='map'?'Show both panes':'Maximize map'} onClick={()=>setFocus(f=>f==='map'?'both':'map')}>{focus==='map'?<Minimize2 size={15}/>:<Maximize2 size={15}/>}</button></div>
           </section>
-          <section className="exploration-inspector" aria-label="Revision source snippets"><header><strong title={anchor?.path}>{anchor?.path||'Select a file or connection'}</strong>{anchor&&<span>Line {anchor.line} · {tree.side==='old'?'Before':'After'}</span>}</header>
+          <div className="exploration-splitter" role="separator" tabIndex={0} aria-orientation={wide?'vertical':'horizontal'} aria-label="Resize map and source panes" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round((wide?layoutState.wide:layoutState.stacked)*100)} onPointerDown={startSplit} onKeyDown={nudgeSplit} onDoubleClick={()=>setLayoutState(l=>({...l,[wide?'wide':'stacked']:defaultLayout[wide?'wide':'stacked']}))}/>
+          <section className="exploration-inspector" aria-label="Revision source snippets"><header><strong title={anchor?.path}>{anchor?.path||'Select a file or connection'}</strong>{anchor&&<span>Line {anchor.line} · {tree.side==='old'?'Before':'After'}</span>}<button type="button" className="exploration-pane-toggle" aria-label={focus==='source'?'Show both panes':'Maximize source'} title={focus==='source'?'Show both panes':'Maximize source'} onClick={()=>setFocus(f=>f==='source'?'both':'source')}>{focus==='source'?<Minimize2 size={15}/>:<Maximize2 size={15}/>}</button></header>
+            {connection&&<p className="exploration-connection-summary" title={`${connection.source} → ${connection.target}`}>{basename(connection.source)} → {basename(connection.target)} · {describeConnection(connection).kinds.join(' → ')}</p>}
             <div className="exploration-anchor-list">{connection?connection.evidence.map((e,i)=><button type="button" key={`${e.id}-${i}`} aria-pressed={anchor?.start_byte===e.anchor.start_byte&&anchor?.path===e.anchor.path} onClick={()=>inspect(e.anchor,connection)}>{e.kind} · {basename(e.anchor.path)}:{e.anchor.line}</button>):selectedNode?.symbols.filter((s,i,all)=>all.findIndex(other=>other.anchor.start_byte===s.anchor.start_byte&&other.anchor.end_byte===s.anchor.end_byte)===i).map((s,i)=><button type="button" key={`${s.anchor.start_byte}-${i}`} aria-pressed={s.anchor.start_byte===anchor?.start_byte} onClick={()=>inspect(s.anchor)}>{s.name}:{s.anchor.line}</button>)}</div>
             <div className="exploration-source-scroll" ref={sourceScroller}>
               {sourceError&&<p role="alert">{sourceError}</p>}
@@ -216,6 +302,7 @@ export function SymbolExplorationPopover({reportId,selection,onSelect}:Props) {
           </section>
         </div>
       </>}
+      {resizeHandles.map(([name,edges])=><div key={name} className={`exploration-resize ${name}`} aria-hidden="true" onPointerDown={e=>startResize(e,edges)}/>)}
     </div>,document.body)}
   </>
 }

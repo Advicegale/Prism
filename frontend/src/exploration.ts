@@ -32,11 +32,54 @@ export function sourceClick(event: MouseEvent<HTMLElement>, path: string, side: 
   return {path, side, line, column, x: event.clientX, y: event.clientY, returnFocus: source.closest<HTMLElement>('[tabindex]') || source}
 }
 
-export function popoverBounds(_x: number, _y: number, viewportWidth: number, viewportHeight: number) {
+export interface Frame {left: number; top: number; width: number; height: number}
+export type PopoverMode = 'half' | 'full'
+export interface ResizeEdges {left?: boolean; right?: boolean; top?: boolean; bottom?: boolean}
+export const MIN_FRAME_WIDTH = 440
+export const MIN_FRAME_HEIGHT = 380
+/** At this width the map and source sit side by side; narrower frames stack them. */
+export const WIDE_FRAME_WIDTH = 1100
+const MIN_PANE = 220
+const clamp = (value: number, low: number, high: number) => Math.min(Math.max(value, low), Math.max(low, high))
+
+/** Full is the original near-viewport workspace. Half takes the horizontal half
+ * opposite the clicked token so the token and its surrounding diff stay visible. */
+export function popoverBounds(x: number, _y: number, viewportWidth: number, viewportHeight: number, mode: PopoverMode = 'full'): Frame {
   const margin = viewportWidth < 700 ? 12 : 24
+  const height = Math.min(1100, Math.max(0, viewportHeight - margin * 2)), top = (viewportHeight - height) / 2
+  if (mode === 'half' && viewportWidth >= 900) {
+    const width = Math.floor((viewportWidth - margin * 3) / 2)
+    return {width, height, top, left: x < viewportWidth / 2 ? viewportWidth - margin - width : margin}
+  }
   const width = Math.min(1760, Math.max(0, viewportWidth - margin * 2))
-  const height = Math.min(1100, Math.max(0, viewportHeight - margin * 2))
-  return {width, height, left: (viewportWidth - width) / 2, top: (viewportHeight - height) / 2}
+  return {width, height, left: (viewportWidth - width) / 2, top}
+}
+
+export function clampFrame(frame: Frame, viewportWidth: number, viewportHeight: number): Frame {
+  const width = Math.min(Math.max(frame.width, Math.min(MIN_FRAME_WIDTH, viewportWidth)), viewportWidth)
+  const height = Math.min(Math.max(frame.height, Math.min(MIN_FRAME_HEIGHT, viewportHeight)), viewportHeight)
+  return {width, height, left: clamp(frame.left, 0, viewportWidth - width), top: clamp(frame.top, 0, viewportHeight - height)}
+}
+
+export function moveFrame(frame: Frame, dx: number, dy: number, viewportWidth: number, viewportHeight: number): Frame {
+  return clampFrame({...frame, left: frame.left + dx, top: frame.top + dy}, viewportWidth, viewportHeight)
+}
+
+export function resizeFrame(frame: Frame, edges: ResizeEdges, dx: number, dy: number, viewportWidth: number, viewportHeight: number): Frame {
+  const minWidth = Math.min(MIN_FRAME_WIDTH, viewportWidth), minHeight = Math.min(MIN_FRAME_HEIGHT, viewportHeight)
+  let {left, top, width, height} = frame
+  const right = left + width, bottom = top + height
+  if (edges.left) {left = clamp(left + dx, 0, right - minWidth); width = right - left}
+  else if (edges.right) width = clamp(width + dx, minWidth, viewportWidth - left)
+  if (edges.top) {top = clamp(top + dy, 0, bottom - minHeight); height = bottom - top}
+  else if (edges.bottom) height = clamp(height + dy, minHeight, viewportHeight - top)
+  return {left, top, width, height}
+}
+
+/** Keep both panes at least a readable size when the user drags the splitter. */
+export function clampSplit(ratio: number, size: number) {
+  const low = size > 0 ? Math.min(MIN_PANE / size, 0.5) : 0.5
+  return Number.isFinite(ratio) ? clamp(ratio, low, 1 - low) : 0.5
 }
 
 export type ExplorationDirection = 'consumers' | 'origins'
@@ -141,4 +184,42 @@ export function fileMapLayout(projection: Pick<ExplorationProjection, 'root' | '
     })
   }
   return {positions, width: marginX * 2 + FILE_CARD_WIDTH + (maxRank - minRank) * gapX, height: marginY * 2 + FILE_CARD_HEIGHT + (above + below) * gapY}
+}
+
+export type MapPositions = Map<string, {x: number; y: number}>
+export interface MapScrollMemory {version: number; x: number; y: number; left: number; top: number; width: number; height: number}
+
+/** When every card fits inside the viewport with `pad` to spare, center the whole
+ * graph (`fitted`); otherwise center the focused card. */
+export function initialMapScroll(positions: MapPositions, focusPath: string, viewport: {width: number; height: number}, card: {width: number; height: number}, pad = 24) {
+  const points = [...positions.values()]
+  if (points.length) {
+    const left = Math.min(...points.map(p => p.x)), right = Math.max(...points.map(p => p.x + card.width))
+    const top = Math.min(...points.map(p => p.y)), bottom = Math.max(...points.map(p => p.y + card.height))
+    if (right - left <= viewport.width - 2 * pad && bottom - top <= viewport.height - 2 * pad)
+      return {left: (left + right) / 2 - viewport.width / 2, top: (top + bottom) / 2 - viewport.height / 2, fitted: true}
+  }
+  const focus = positions.get(focusPath)
+  if (!focus) return {left: 0, top: 0, fitted: false}
+  return {left: focus.x + card.width / 2 - viewport.width / 2, top: focus.y + card.height / 2 - viewport.height / 2, fitted: false}
+}
+
+/** Recenter only when the investigation changes or the previous viewport was never measured.
+ * Any other layout change (resize, splitter, progress, expansion) keeps the focused card at
+ * the same on-screen offset, because the layout itself moves with the viewport size. */
+export function nextMapScroll(previous: MapScrollMemory | null, version: number, positions: MapPositions, focusPath: string, viewport: {width: number; height: number}, card: {width: number; height: number}) {
+  if (!previous || previous.version !== version || previous.width === 0 || previous.height === 0) {
+    const start = initialMapScroll(positions, focusPath, viewport, card)
+    return {left: start.left, top: start.top, recentered: true}
+  }
+  const point = positions.get(focusPath) || {x: previous.x, y: previous.y}
+  return {left: previous.left + point.x - previous.x, top: previous.top + point.y - previous.y, recentered: false}
+}
+
+/** One-line account of a connection: its distinct evidence kinds in order, how many
+ * connections back it, and the unchanged files an indirect edge passes through. */
+export function describeConnection(edge: Pick<ExplorationConnection, 'indirect' | 'hidden_paths' | 'evidence'>) {
+  const kinds = [...new Set(edge.evidence.map(e => e.kind))], count = edge.evidence.length, hidden = edge.hidden_paths.length
+  const via = edge.indirect ? `, via ${hidden} unchanged ${hidden === 1 ? 'file' : 'files'}` : ''
+  return {kinds, text: `${kinds.join(' → ')} · ${count} ${count === 1 ? 'connection' : 'connections'}${via}`}
 }
