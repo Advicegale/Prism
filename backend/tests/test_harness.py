@@ -156,3 +156,92 @@ def test_explain_synthesis_prompt_notes_shortened_input(monkeypatch):
     synthesis = prompts[-1]
     assert "Some per-symbol summaries were shortened to fit; use only what is supplied." in synthesis
     assert '"group_id": "g0"' in synthesis and '"group_id": "g1"' in synthesis
+
+
+TOPIC_GUIDANCE = (
+    "Create one topic per distinct question a reviewer must answer. A topic of about 2–8 files is typical; a larger topic should hold files that make one coherent change or repeat the same edit, and unrelated changes must be split. Do not create a topic just to reach a number, and do not split a small, single-purpose change: one topic is correct for it. A single-file topic is fine only when that file is an independent concern (for example a migration, a design asset or a build setting). Use the PR title and body only as hints about intent. Use the supplied file roles and statuses: keep tests with the implementation they validate and documentation with the behavior it describes, and mention lock files, version bumps and generated or formatting-only files in the topic of the change that needs them instead of giving them their own prominent topic. "
+)
+
+
+def _facts_report(title="Facts title", body="Body line"):
+    src = "diff --git a/src/a.py b/src/a.py\n--- a/src/a.py\n+++ b/src/a.py\n@@ -1,2 +1,3 @@\n-old\n+new\n+extra\n same\n"
+    test = "diff --git a/tests/test_a.py b/tests/test_a.py\nnew file mode 100644\n--- /dev/null\n+++ b/tests/test_a.py\n@@ -0,0 +1 @@\n+assert True\n"
+    gone = "diff --git a/old/gone.md b/old/gone.md\ndeleted file mode 100644\n--- a/old/gone.md\n+++ /dev/null\n@@ -1 +0,0 @@\n-removed\n"
+    files = [
+        {"path": "src/a.py", "old_path": "", "status": "modified", "patch": src, "patch_truncated": False},
+        {"path": "tests/test_a.py", "old_path": "", "status": "added", "patch": test, "patch_truncated": False},
+        {"path": "", "old_path": "old/gone.md", "status": "deleted", "patch": gone, "patch_truncated": False},
+        # A report stored before patch_truncated existed: judged by its length.
+        {"path": "big.ts", "old_path": "", "status": "modified", "patch": "+" + "x" * 16000 + "\n"},
+    ]
+
+    def group(index, paths, changed_path):
+        node = {"id": f"s{index}", "label": f"Sym{index}", "path": changed_path, "kind": "function",
+                "status": "modified", "line": 1, "end": 2}
+        return {"id": f"g{index}", "title": f"Group {index}", "changed_ids": [f"s{index}"], "files": paths,
+                "graph": {"nodes": [node], "edges": []}}
+    return {"meta": {"title": title, "body": body}, "overview": {"nodes": [], "edges": []}, "evidence": {},
+            "files": files,
+            "groups": [group(0, ["src/a.py", "tests/test_a.py"], "src/a.py"),
+                       group(1, ["old/gone.md", "big.ts"], "big.ts")]}
+
+
+def _fake_group_harness(monkeypatch, prompts):
+    def fake_harness(harness_name, model, effort, prompt):
+        prompts.append(prompt)
+        if "Synthesize" in prompt:
+            return {"overview": "", "key_changes": [], "review_order": [], "groups": [], "topics": []}
+        group_id = "g0" if '"group_id": "g0"' in prompt else "g1"
+        return {"overview": "", "key_changes": [], "review_order": [], "topics": [], "groups": [
+            {"id": group_id, "summary": "", "before_after": "", "impact": "", "risks": [], "tests": [],
+             "review_order": [], "changes": [{"symbol_id": group_id.replace("g", "s"), "diff_summary": "Changed.",
+                                             "why": "", "review_notes": []}]}]}
+    monkeypatch.setattr(harness, "run_harness", fake_harness)
+
+
+def _synthesis_summaries(prompt):
+    return json.JSONDecoder().raw_decode(prompt[prompt.index('[{"group_id"'):])[0]
+
+
+def test_synthesis_prompt_carries_pr_title_body_and_file_facts(monkeypatch):
+    prompts = []
+    _fake_group_harness(monkeypatch, prompts)
+    harness.explain(_facts_report(body="B" * 3500), "codex", "", "")
+    synthesis = prompts[-1]
+    assert "Synthesize" in synthesis
+    assert "PR title: Facts title\nPR body (untrusted): " + "B" * 3000 + "\n" in synthesis
+    assert "B" * 3001 not in synthesis
+    assert synthesis.index("PR title:") < synthesis.index('[{"group_id"')
+
+    summaries = _synthesis_summaries(synthesis)
+    facts = {item["group_id"]: item["file_facts"] for item in summaries}
+    assert facts["g0"] == [
+        {"path": "src/a.py", "status": "modified", "added": 2, "removed": 1, "role": "source", "truncated": False},
+        {"path": "tests/test_a.py", "status": "added", "added": 1, "removed": 0, "role": "test", "truncated": False},
+    ]
+    assert facts["g1"] == [
+        {"path": "old/gone.md", "status": "deleted", "added": 0, "removed": 1, "role": "doc", "truncated": False},
+        {"path": "big.ts", "status": "modified", "added": 1, "removed": 0, "role": "source", "truncated": True},
+    ]
+
+
+def test_synthesis_prompt_replaces_the_topic_count_paragraph(monkeypatch):
+    prompts = []
+    _fake_group_harness(monkeypatch, prompts)
+    harness.explain(_facts_report(), "codex", "", "")
+    synthesis = prompts[-1]
+    assert "usually 3–7" not in synthesis
+    assert TOPIC_GUIDANCE in synthesis
+    assert "State what to verify, not a restatement of what changed." in synthesis
+
+
+def test_synthesis_input_stays_valid_json_with_every_group_at_a_tiny_limit(monkeypatch):
+    prompts = []
+    _fake_group_harness(monkeypatch, prompts)
+    monkeypatch.setattr(harness.settings, "MAX_DIFF_CHARS", 1)
+    harness.explain(_facts_report(), "codex", "", "")
+    synthesis = prompts[-1]
+    assert "Some per-symbol summaries were shortened to fit; use only what is supplied." in synthesis
+    summaries = _synthesis_summaries(synthesis)
+    assert [item["group_id"] for item in summaries] == ["g0", "g1"]
+    assert all(item["diff_summaries"] == [] and item["file_facts"] for item in summaries)

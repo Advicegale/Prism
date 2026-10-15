@@ -33,6 +33,49 @@ _CONTEXT_RELATION_WEIGHTS = {
 }
 
 
+_TEST_DIRECTORIES = {"test", "tests", "__tests__", "__mocks__", "spec", "specs", "e2e", "testdata", "fixtures", "itest", "itests"}
+_LOCK_NAMES = {"package-lock.json", "yarn.lock", "pnpm-lock.yaml", "cargo.lock", "poetry.lock", "gemfile.lock", "composer.lock"}
+_DOC_SUFFIXES = {".md", ".mdx", ".rst", ".adoc"}
+_DOC_DIRECTORIES = {"docs", "documentation"}
+_MIGRATION_DIRECTORIES = {"migrations", "migration"}
+_CONFIG_SUFFIXES = {".toml", ".yaml", ".yml", ".ini", ".json"}
+
+
+def _is_test_path(raw_path: str) -> bool:
+    """Mirror of frontend/src/testPaths.ts isTestPath; path-only, so every language is classified alike."""
+    parts = raw_path.replace("\\", "/").split("/")
+    file = parts.pop() if parts else ""
+    if any(part.lower() in _TEST_DIRECTORIES for part in parts):
+        return True
+    if re.search(r"\.(test|spec|e2e)\.[^.]+$", file, re.IGNORECASE):
+        return True
+    if re.match(r"(test[_-]|conftest\.)", file, re.IGNORECASE) or re.match(r"Test[A-Z0-9_]", file):
+        return True
+    stem = re.sub(r"\.[^.]*$", "", file)
+    return bool(re.search(r"_(test|tests|spec|unittest)$", stem, re.IGNORECASE)
+                or re.search(r"[a-z0-9](Test|Tests|Spec|IT)$", stem))
+
+
+def file_role(raw_path: str) -> str:
+    """Path-only role for synthesis input: test, lock, doc, migration, config or source."""
+    parts = raw_path.replace("\\", "/").split("/")
+    name = parts[-1].lower()
+    directories = {part.lower() for part in parts[:-1]}
+    suffix = PurePosixPath(name).suffix
+    if _is_test_path(raw_path):
+        return "test"
+    if name in _LOCK_NAMES or name.endswith(".lock"):
+        return "lock"
+    if suffix in _DOC_SUFFIXES or directories & _DOC_DIRECTORIES:
+        return "doc"
+    if suffix == ".sql" or directories & _MIGRATION_DIRECTORIES:
+        return "migration"
+    if (suffix in _CONFIG_SUFFIXES and (len(parts) == 1 or "config" in directories)
+            or name.startswith(".env") or name.startswith("dockerfile") or re.fullmatch(r"compose\.y.*ml", name)):
+        return "config"
+    return "source"
+
+
 def _file_family(raw_path: str) -> str:
     path = PurePosixPath(raw_path.replace("\\", "/"))
     parts = [part.lower() for part in path.parts]

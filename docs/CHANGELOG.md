@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- AI topic planning sees the PR title and body (as untrusted hints) and each file's status, captured +/- counts, role (test, doc, config, lock, migration or source) and whether its diff was cut off, and is asked for one topic per reviewer question sized by change rather than a target topic count.
+
 - Diffs cut off at the stored 16,000-character cap are flagged: the file gets a `+` marker in the queue and diff heading and a notice above the diff, with a link to the full GitHub diff when the report has a github.com URL. Older reports are judged by patch length.
 
 - Q&A about a report reads the same AI topic plan that the Topics view shows, and HTML exports put each topic's **Tests** files after its source files with a **Tests** label.

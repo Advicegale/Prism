@@ -91,3 +91,40 @@ def test_build_topics_returns_the_same_topics_as_diagnostics():
 
 def test_no_groups_yields_no_topics():
     assert topics.build_topics_with_diagnostics([], {}) == ([], {"source": "paths", "issues": [], "appended_paths": 0})
+
+
+def test_file_role_recognises_the_same_test_paths_as_the_explorer():
+    positives = ['src/__tests__/a.ts', 'tests/test_x.py', 'pkg/test_x.py', 'pkg/conftest.py', 'web/app.test.tsx',
+                 'web/app.spec.js', 'web/app.e2e.ts', 'api/foo_test.go', 'api/foo_spec.rb', 'lib/foo_test.dart',
+                 'src/test/java/FooBar.java', 'src/main/FooTest.java', 'src/main/FooTests.cs', 'src/main/FooSpec.kt',
+                 'src/main/FooIT.java', 'src/main/TestFoo.java', 'svc/itest/Runner.java', 'svc/ITest/Runner.java',
+                 'crate/tests/it.rs', 'spec/models/user.rb', 'e2e/login.ts', 'testdata/sample.json', 'cmd/unit_test.cc']
+    negatives = ['src/latest.ts', 'src/contest.py', 'src/Test.java', 'src/attest.go', 'src/main.rs',
+                 'src/components/Submit.tsx', 'src/EDIT.ts', 'src/protest/a.ts', 'src/specification.ts',
+                 'lib/testing.ts', 'src/app.ts']
+    assert len(positives) == 23 and len(negatives) == 11
+    for path in positives:
+        assert topics.file_role(path) == "test", path
+    for path in negatives:
+        assert topics.file_role(path) != "test", path
+
+
+def test_file_role_for_locks_docs_migrations_and_config():
+    expected = {
+        "Cargo.lock": "lock", "package-lock.json": "lock", "web/yarn.lock": "lock", "api/poetry.lock": "lock",
+        "pnpm-lock.yaml": "lock", "vendor/custom.lock": "lock",
+        "README.md": "doc", "docs/guide.txt": "doc", "documentation/setup.rst": "doc", "src/page.mdx": "doc",
+        "db/migrations/0001_init.sql": "migration", "schema.sql": "migration", "db/migration/002.txt": "migration",
+        "package.json": "config", "tsconfig.json": "config", "config/app.json": "config", "config/settings.toml": "config", "conf/settings.toml": "source",
+        ".env.local": "config", "Dockerfile": "config", "compose.yaml": "config", "docker-compose.yml": "config",
+        "src/data.json": "source", "src/app.ts": "source", "lib/parser.rs": "source", "assets/logo.svg": "source",
+    }
+    for path, role in expected.items():
+        assert topics.file_role(path) == role, path
+
+
+def test_file_role_order_puts_tests_and_locks_first():
+    assert topics.file_role("docs/tests/readme.md") == "test"
+    assert topics.file_role("config/tests/app.json") == "test"
+    assert topics.file_role("yarn.lock") == "lock"
+    assert topics.file_role("db/migrations/config.json") == "migration"
