@@ -73,38 +73,57 @@ def _fallback_assignments(groups: list[dict]) -> list[dict]:
     ]
 
 
-def _validated_suggestions(suggestions: object, groups: list[dict]) -> list[dict] | None:
-    if not isinstance(suggestions, list) or not suggestions:
-        return None
+def _check_suggestions(suggestions: object, groups: list[dict]) -> tuple[list[dict] | None, list[str]]:
+    """Return (accepted topics or None, issue codes explaining any rejection or adjustment)."""
+    if suggestions is None:
+        return None, ["no_suggestions"]
+    if not isinstance(suggestions, list):
+        return None, ["not_a_list"]
+    if not suggestions:
+        return None, ["no_suggestions"]
     group_ids = {group["id"] for group in groups}
     max_topics = min(len(group_ids), max(5, ceil(len(group_ids) / 3)))
     if len(suggestions) > max_topics:
-        return None
+        return None, ["too_many_topics"]
 
     assigned: set[str] = set()
     result = []
+    issues: list[str] = []
     for topic in suggestions:
         if not isinstance(topic, dict):
-            return None
+            return None, ["topic_not_object"]
         title = topic.get("title")
         focus = topic.get("focus", "")
         members = topic.get("group_ids")
-        if not isinstance(title, str) or not title.strip() or len(title.strip()) > 80 or not isinstance(members, list) or not members:
-            return None
+        if not isinstance(title, str) or not title.strip() or len(title.strip()) > 80:
+            return None, ["bad_title"]
+        if not isinstance(members, list) or not members:
+            return None, ["bad_members"]
         # A bad optional explanation must not discard an otherwise valid partition.
+        focus_was_set = focus is not None and (not isinstance(focus, str) or focus.strip() != "")
         focus = focus.strip() if isinstance(focus, str) else ""
         if len(focus) > 180 or "\n" in focus or "\r" in focus:
             focus = ""
+        if focus_was_set and not focus:
+            issues.append("focus_cleared")
         normalized = []
         for group_id in members:
-            if not isinstance(group_id, str) or group_id not in group_ids or group_id in assigned:
-                return None
+            if not isinstance(group_id, str):
+                return None, ["bad_members"]
+            if group_id not in group_ids:
+                return None, ["unknown_group"]
+            if group_id in assigned:
+                return None, ["duplicate_group"]
             assigned.add(group_id)
             normalized.append(group_id)
         result.append({"title": title.strip(), "focus": focus, "group_ids": sorted(normalized), "source": "ai"})
     if assigned != group_ids:
-        return None
-    return result
+        return None, ["missing_groups"]
+    return result, list(dict.fromkeys(issues))
+
+
+def _validated_suggestions(suggestions: object, groups: list[dict]) -> list[dict] | None:
+    return _check_suggestions(suggestions, groups)[0]
 
 
 def _stable_id(group_ids: list[str]) -> str:
@@ -223,9 +242,16 @@ def _topic_connections(topics: list[dict], overview: dict) -> None:
 def build_topics(groups: list[dict], overview: dict, suggestions: object = None,
                  review_order: object = None) -> list[dict]:
     """Build a compact parent layer; only accepted suggestions can change membership."""
+    return build_topics_with_diagnostics(groups, overview, suggestions, review_order)[0]
+
+
+def build_topics_with_diagnostics(groups: list[dict], overview: dict, suggestions: object = None,
+                                  review_order: object = None) -> tuple[list[dict], dict]:
+    """Same topics as build_topics, plus why the AI plan was used or replaced by path grouping."""
     if not groups:
-        return []
-    assignments = _validated_suggestions(suggestions, groups) or _fallback_assignments(groups)
+        return [], {"source": "paths", "issues": [], "appended_paths": 0}
+    accepted, issues = _check_suggestions(suggestions, groups)
+    assignments = accepted or _fallback_assignments(groups)
     by_group_id = {group["id"]: group for group in groups}
     topics = [_make_topic(assignment, by_group_id, overview) for assignment in assignments]
     if isinstance(review_order, list):
@@ -235,4 +261,6 @@ def build_topics(groups: list[dict], overview: dict, suggestions: object = None,
         }
         topics.sort(key=lambda topic: min((ranks.get(path, float("inf")) for path in topic["files"]), default=float("inf")))
     _topic_connections(topics, overview)
-    return topics
+    # appended_paths stays 0: _validated_steps does not report how many omitted paths it added.
+    diagnostics = {"source": "ai" if accepted else "paths", "issues": issues, "appended_paths": 0}
+    return topics, diagnostics

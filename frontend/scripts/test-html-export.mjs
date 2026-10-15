@@ -29,5 +29,22 @@ try{
  assert.ok(html.includes('Content-Security-Policy'))
  const empty=await createHtmlReport({...report,files:[],topics:[],architecture:undefined},'now')
  assert.ok(empty.includes('No changed files'))
+ const longPatch='diff --git a/long.ts b/long.ts\n--- a/long.ts\n+++ b/long.ts\n@@ -0,0 +1,2000 @@\n'+Array.from({length:2000},(_,i)=>'+const value_'+i+' = '+i+';').join('\n')
+ const mixed={id:'mixed',title:'Mixed topic',focus:'',source:'paths',files:['tests/app.test.ts','long.ts','src/app.ts'],changed_count:0,graph:{nodes:[],edges:[],truncated:false},connections:[]}
+ const testsOnly={id:'tests-only',title:'Only tests',focus:'',source:'paths',files:['tests/other.test.ts'],changed_count:0,graph:{nodes:[],edges:[],truncated:false},connections:[]}
+ const tree={...report,ai:null,files:[{path:'tests/app.test.ts',old_path:'tests/app.test.ts',status:'modified',patch,new_ranges:[],old_ranges:[]},{path:'long.ts',old_path:'long.ts',status:'modified',patch:longPatch,new_ranges:[],old_ranges:[]},{path:'src/app.ts',old_path:'src/app.ts',status:'modified',patch,new_ranges:[],old_ranges:[]},{path:'tests/other.test.ts',old_path:'tests/other.test.ts',status:'modified',patch,new_ranges:[],old_ranges:[]}],topics:[mixed,testsOnly],architecture:undefined}
+ const withTests=await createHtmlReport(tree,'2026-10-13T00:00:00Z')
+ const label='<p class="muted">Tests</p>'
+ assert.equal(withTests.split(label).length-1,2,'mixed topic labels the tests in its file index and file list; the tests-only topic has no label')
+ const mixedStart=withTests.indexOf('id="topic-0"'),indexStart=withTests.indexOf('<nav class="file-index"',mixedStart)
+ const indexEnd=withTests.indexOf('</nav>',indexStart),indexHtml=withTests.slice(indexStart,indexEnd)
+ assert.ok(indexHtml.indexOf(label)>indexHtml.indexOf('app.ts</a>')&&indexHtml.indexOf(label)<indexHtml.indexOf('app.test.ts</a>'),'Tests label sits before the first test file in the index')
+ assert.ok(indexHtml.indexOf('long.ts</a>')<indexHtml.indexOf(label),'source and long files come before the tests')
+ const detailsStart=withTests.indexOf('<details id="file-',mixedStart)
+ assert.ok(withTests.indexOf(label,detailsStart)>detailsStart && withTests.indexOf(label,detailsStart)<withTests.indexOf('app.test.ts</span>',detailsStart),'Tests label precedes the first test file in the file list')
+ assert.equal(withTests.split('The stored diff is cut off at about 16,000 characters.').length-1,1,'only the truncated long.ts gets the notice')
+ assert.ok(withTests.includes('+/− counts cover only the captured part.'))
+ assert.ok(withTests.includes('long.ts'),'truncated file is still exported')
+ assert.ok(withTests.includes('value_1999'),'stored lines of the capped diff are still exported')
  console.log('HTML export checks passed: filename, complete file/patch coverage, rename/delete handling, escaped content, offline assets and no live assistant controls.')
 }finally{rmSync(temp,{recursive:true,force:true})}

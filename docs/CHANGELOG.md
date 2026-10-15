@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Diffs cut off at the stored 16,000-character cap are flagged: the file gets a `+` marker in the queue and diff heading and a notice above the diff, with a link to the full GitHub diff when the report has a github.com URL. Older reports are judged by patch length.
+
+- Q&A about a report reads the same AI topic plan that the Topics view shows, and HTML exports put each topic's **Tests** files after its source files with a **Tests** label.
+
+- AI synthesis input no longer cuts the JSON mid-record when a large PR exceeds the prompt budget: per-symbol detail is shortened or dropped from the last groups first, and every group stays in the prompt.
+
 - Topics file lists put test files in their own **Tests** group after the other files of each topic (suggested order kept inside each group); Previous/Next and `j`/`k` follow the displayed order. **Hide tests** in the explorer is always visible, disabled with a hint when the map has no tests, and shows the test count.
 
 - Explorer map labels test files (path-based, all languages): a **Test** badge and dashed card, a separate **Tests** group below the other cards of each column, and a **Hide tests** toggle (off by default, remembered) that also drops their connections and files reachable only through them.

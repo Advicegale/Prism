@@ -8,7 +8,7 @@ const root=dirname(dirname(fileURLToPath(import.meta.url))),temp=mkdtempSync(joi
 try{
  execFileSync(join(root,'node_modules/.bin/tsc'),[join(root,'src/reviewTopics.ts'),'--target','ES2022','--module','ES2022','--skipLibCheck','--outDir',temp],{stdio:'inherit'})
  renameSync(join(temp,'reviewTopics.js'),join(temp,'reviewTopics.mjs'))
- const {buildReviewScopes}=await import(pathToFileURL(join(temp,'reviewTopics.mjs')).href)
+ const {buildReviewScopes,fullDiffUrl,isPatchTruncated}=await import(pathToFileURL(join(temp,'reviewTopics.mjs')).href)
  const file=(path,old_path=path,status='modified')=>({path,old_path,status,patch:'--- a/file\n+++ b/file\n-old\n+new\n context'})
  const report={files:[file('new.java','old.java','renamed'),file('','removed.java','deleted'),file('README.md'),file('config.toml')],overview:{nodes:[{id:'symbol',path:'old.java'}]},groups:[],topics:[{id:'fallback',title:'Fallback',files:['README.md']}],ai:{topics:[{id:'feature',title:'Feature',focus:'Review behavior',source:'ai',files:['old.java','removed.java']}],review_order:[{path:'removed.java',reason:'Removal first'},{path:'old.java',reason:'Then callers'}],groups:[{changes:[{symbol_id:'symbol',diff_summary:'Updated behavior'}]}]}}
  const scopes=buildReviewScopes(report)
@@ -22,5 +22,13 @@ try{
  assert.equal(fallback[0].title,'Fallback')
  assert.equal(buildReviewScopes({...report,ai:undefined,topics:[]})[0].files.length,4)
  assert.deepEqual(buildReviewScopes({...report,files:[],ai:undefined,topics:[]}),[])
+ assert.equal(isPatchTruncated({patch:'short',patch_truncated:true}),true,'flag true wins over length')
+ assert.equal(isPatchTruncated({patch:'x'.repeat(16010),patch_truncated:false}),false,'flag false wins over length')
+ assert.equal(isPatchTruncated({patch:'short'}),false,'reports without the flag and a short patch are complete')
+ assert.equal(isPatchTruncated({patch:'x'.repeat(16010)}),true,'reports without the flag use the 16000-char cap')
+ assert.equal(fullDiffUrl('https://github.com/owner/repo/pull/7'),'https://github.com/owner/repo/pull/7/files')
+ assert.equal(fullDiffUrl('http://github.com/owner/repo/pull/7'),'','only https github.com links are offered')
+ assert.equal(fullDiffUrl('https://github.example/owner/repo/pull/7'),'')
+ assert.equal(fullDiffUrl(''),'')
  console.log('Topic review checks passed: complete file coverage, semantic/fallback scopes, renamed notes/order, deleted paths and diff counts.')
 }finally{rmSync(temp,{recursive:true,force:true})}

@@ -190,8 +190,17 @@ def ensure_evidence(report: dict) -> dict:
     return report
 
 
+def _store_ai(report: dict, ai: dict) -> None:
+    """Store an AI result; a non-empty AI topic plan also becomes the top-level topics."""
+    report["ai"] = ai
+    if isinstance(ai.get("topics"), list) and ai["topics"]:
+        report["topics"] = ai["topics"]
+        report["topics_version"] = 5
+
+
 def ensure_topics(report: dict) -> dict:
     """Build or refresh reviewer topics when their graph-selection rules change."""
+    # Only pre-v5 reports are rebuilt; a stored AI topic plan at v5 is never overwritten here.
     if report.get("topics_version", 0) < 5:
         ai = report.get("ai") or {}
         saved_topics = ai.get("topics") or report.get("topics") or []
@@ -285,7 +294,7 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
             result["architecture"]=discover_architecture(result,after,req.harness,req.model,req.effort,progress)
             save_report(result)
             progress("Updating AI explanation")
-            result["ai"]=explain(result,req.harness,req.model,req.effort,progress)
+            _store_ai(result,explain(result,req.harness,req.model,req.effort,progress))
             save_report(result)
         return report_id
     progress("Calculating PR diff")
@@ -310,7 +319,7 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
     if req.harness != "none":
         report["architecture"]=discover_architecture(report,after,req.harness,req.model,req.effort,progress)
         save_report(report)
-        report["ai"]=explain(report,req.harness,req.model,req.effort,progress)
+        _store_ai(report,explain(report,req.harness,req.model,req.effort,progress))
         save_report(report)
     return report_id
 
@@ -443,9 +452,7 @@ def explain_report(report_id:str, request:ExplainRequest):
     read_report(report_id)
     def work(progress):
         data=ensure_topics(ensure_evidence(read_report(report_id)))
-        data["ai"]=explain(data,request.harness,request.model,request.effort,progress)
-        data["topics"]=data["ai"]["topics"]
-        data["topics_version"]=5
+        _store_ai(data,explain(data,request.harness,request.model,request.effort,progress))
         save_report(data)
         return report_id
     return _job("explanation",work)

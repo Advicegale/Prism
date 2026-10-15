@@ -3,6 +3,10 @@ import type {AIChange,ChangeTopic,DiffFile,Report} from './types'
 export interface ReviewFile {path:string;file:DiffFile;notes:AIChange[];reason:string;added:number;removed:number}
 export interface ReviewScope {id:string;title:string;focus:string;source:string;files:ReviewFile[]}
 export function filePath(file:DiffFile){return file.path||file.old_path}
+/** Captured patches stop at 16000 chars; reports saved before the flag existed are judged by length. */
+export function isPatchTruncated(file:Pick<DiffFile,'patch'|'patch_truncated'>){return file.patch_truncated===true||(file.patch_truncated===undefined&&file.patch.length>=16000)}
+/** The full GitHub diff for a PR, or '' when the stored URL is not a github.com link. */
+export function fullDiffUrl(url:string){return /^https:\/\/github\.com\//.test(url)?`${url}/files`:''}
 export function buildReviewScopes(report:Report):ReviewScope[]{
  const canonical=new Map(report.files.flatMap(f=>[[f.path,filePath(f)],[f.old_path,filePath(f)]]))
  const notes=new Map<string,AIChange[]>(),nodePaths=new Map<string,string>()

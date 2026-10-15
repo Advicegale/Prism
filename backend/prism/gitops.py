@@ -121,7 +121,7 @@ def diff_files(repo: Path, base_sha: str, head_sha: str) -> list[dict]:
     hunk = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
     for line in content.splitlines():
         if line.startswith("diff --git "):
-            current = {"path": "", "old_path": "", "status":"modified", "new_ranges": [], "old_ranges": [], "patch": ""}
+            current = {"path": "", "old_path": "", "status":"modified", "new_ranges": [], "old_ranges": [], "patch": "", "patch_truncated": False}
             results.append(current)
         elif current is None:
             continue
@@ -149,6 +149,8 @@ def diff_files(repo: Path, base_sha: str, head_sha: str) -> list[dict]:
             # Include metadata and diff text, with per-file cap to bound stored reports.
             if len(current["patch"]) < 16000:
                 current["patch"] += line + "\n"
+            else:
+                current["patch_truncated"] = True
     return [r for r in results if r["path"] or r["old_path"]]
 
 

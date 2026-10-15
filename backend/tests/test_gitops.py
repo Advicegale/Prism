@@ -40,3 +40,27 @@ def test_diff_detects_additions_and_deletions(tmp_path):
     assert files[0]['new_ranges']
     assert files[0]['old_ranges']
     assert 'return 4' in files[0]['patch']
+
+
+def test_diff_flags_patches_cut_at_the_stored_cap(tmp_path):
+    git(tmp_path,'init')
+    git(tmp_path,'config','user.email','test@example.org')
+    git(tmp_path,'config','user.name','Test')
+    big=tmp_path/'big.txt'
+    small=tmp_path/'small.txt'
+    big.write_text('base\n')
+    small.write_text('base\n')
+    git(tmp_path,'add','.')
+    git(tmp_path,'commit','-m','base')
+    base=git(tmp_path,'rev-parse','HEAD')
+    big.write_text('base\n'+''.join(f'added line {i:05d} with padding text\n' for i in range(1200)))
+    small.write_text('base\nshort addition\n')
+    git(tmp_path,'add','.')
+    git(tmp_path,'commit','-m','update')
+    head=git(tmp_path,'rev-parse','HEAD')
+    files={f['path']:f for f in diff_files(tmp_path,base,head)}
+    assert files['big.txt']['patch_truncated'] is True
+    assert len(files['big.txt']['patch'])>=16000
+    assert 'added line 01199' not in files['big.txt']['patch']
+    assert files['small.txt']['patch_truncated'] is False
+    assert 'short addition' in files['small.txt']['patch']

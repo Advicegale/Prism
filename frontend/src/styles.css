@@ -952,6 +952,8 @@ body,.workspace{background:var(--page)}
 .review-file-diff .diff-code{margin:0;border-radius:0;border:0;max-height:520px;background:#101720}
 .review-file-diff .diff-line{font-size:11px}
 .review-file-no-diff,.review-file-list-empty,.review-file-empty{padding:22px;color:#9aafc4;font-size:13px;line-height:1.65}
+.review-partial-mark{color:#e0b36b;font-style:normal;font-weight:600;margin-left:3px}
+.review-file-truncated{margin:0;padding:9px 23px;border-bottom:1px solid #2b3a4a;color:#e0b36b;font:12px/1.5 system-ui,sans-serif}.review-file-truncated a{color:#97b2cc;margin-left:4px}
 .review-file-list-empty{padding:10px}.review-file-list-empty button{font:12px system-ui;color:#bdd9ef;background:#1c3145;border:1px solid #3d5a76;border-radius:4px;padding:7px;cursor:pointer}
 .review-file-empty h3{font-size:18px;color:#d0dfeb}.review-file-empty>svg{color:#799bb9}
 .review-file-navigation{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 20px;border-top:1px solid #344353;font:11px system-ui,sans-serif;color:#91a6bc}

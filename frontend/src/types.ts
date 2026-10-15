@@ -3,7 +3,7 @@ export interface GraphNode {id:string;label:string;qualified?:string;kind:string
 export interface GraphEdge {source:string;target:string;relation:string;confidence:string;status?:'added'|'removed'|'unchanged'}
 export interface GraphData {nodes:GraphNode[];edges:GraphEdge[];truncated:boolean}
 export interface ChangeGroup {id:string;title:string;changed_count:number;files:string[];changed_ids:string[];graph:GraphData}
-export interface DiffFile {path:string;old_path:string;status:string;patch:string;new_ranges:number[][];old_ranges:number[][]}
+export interface DiffFile {path:string;old_path:string;status:string;patch:string;new_ranges:number[][];old_ranges:number[][];patch_truncated?:boolean}
 export interface ReviewStep {path:string;reason:string}
 export interface AIChange {symbol_id:string;diff_summary?:string;why?:string;review_notes?:string[];how_it_works?:string;snippet_explanation?:string}
 export interface AIGroup {id:string;summary:string;before_after:string;impact:string;risks:string[];tests:string[];review_order?:ReviewStep[];changes?:AIChange[]}
