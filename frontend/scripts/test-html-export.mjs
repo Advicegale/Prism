@@ -46,5 +46,12 @@ try{
  assert.ok(withTests.includes('+/− counts cover only the captured part.'))
  assert.ok(withTests.includes('long.ts'),'truncated file is still exported')
  assert.ok(withTests.includes('value_1999'),'stored lines of the capped diff are still exported')
- console.log('HTML export checks passed: filename, complete file/patch coverage, rename/delete handling, escaped content, offline assets and no live assistant controls.')
+ const emptyGraph={nodes:[],edges:[],truncated:false}
+ const grouped={...tree,ai:{groups:[{id:'g-long',risks:['Long file risk']},{id:'g-pair',risks:['Pair risk']}]},groups:[{id:'g-long',files:['long.ts'],changed_ids:[],graph:emptyGraph},{id:'g-pair',files:['src/app.ts','tests/app.test.ts'],changed_ids:[],graph:emptyGraph}],topics:[{...mixed,group_ids:['g-pair','g-long']}]}
+ const groupedHtml=await createHtmlReport(grouped,'2026-10-13T00:00:00Z')
+ assert.equal(groupedHtml.split('Group checks (1)').length-1,1,'topic group checks come from multi-file groups only')
+ assert.ok(groupedHtml.includes('Pair risk'))
+ assert.equal(groupedHtml.split('Long file risk').length-1,1,'one-file group risk is shown on its file')
+ assert.equal(groupedHtml.split('from group analysis').length-1,1,'file-level checks are labelled as group analysis')
+ console.log('HTML export checks passed: filename, complete file/patch coverage, rename/delete handling, escaped content, offline assets, group checks and no live assistant controls.')
 }finally{rmSync(temp,{recursive:true,force:true})}

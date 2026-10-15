@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Topics show the **group checks** the analysis already wrote: a collapsed **Group checks** list above each topic's files for risks shared by its multi-file groups, and a file without saved review notes shows its one-file group's risks under **Worth checking** (labelled *from group analysis*).
+
+- Topics say how they were grouped: when the AI topic plan was not used, a line under the topic heading says "Grouped by file path" and why (for example, it omitted some changes or assigned a change twice).
+
+- Path-based topics for a pull request of six changed files or fewer are one topic, **Changes in this pull request**, instead of splitting a small change by folder.
+
+- Path-based topics recognise source files outside the fixed `server`/`backend`/`frontend` folders (such as `viewer/…`, `UdpHosts/…` or root-level `App.tsx`) as **Application code** instead of **Other changes**; lock files now group with **Configuration** and migrations with **Database changes**.
+
+- Path-based topics list their groups in the order Database changes, Backend code, Server code, Application code, Frontend code, Tests, Documentation, Configuration, then Other changes.
+
 - AI topic planning sees the PR title and body (as untrusted hints) and each file's status, captured +/- counts, role (test, doc, config, lock, migration or source) and whether its diff was cut off, and is asked for one topic per reviewer question sized by change rather than a target topic count.
 
 - Diffs cut off at the stored 16,000-character cap are flagged: the file gets a `+` marker in the queue and diff heading and a notice above the diff, with a link to the full GitHub diff when the report has a github.com URL. Older reports are judged by patch length.

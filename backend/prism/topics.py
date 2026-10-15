@@ -39,6 +39,12 @@ _DOC_SUFFIXES = {".md", ".mdx", ".rst", ".adoc"}
 _DOC_DIRECTORIES = {"docs", "documentation"}
 _MIGRATION_DIRECTORIES = {"migrations", "migration"}
 _CONFIG_SUFFIXES = {".toml", ".yaml", ".yml", ".ini", ".json"}
+_SOURCE_SUFFIXES = {
+    ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".java", ".kt", ".go", ".rs", ".rb", ".php", ".cs",
+    ".cpp", ".cc", ".c", ".h", ".hpp", ".swift", ".vue", ".svelte", ".css", ".scss", ".html",
+}
+# Up to this many changed files, path grouping is one topic: splitting a small change only adds navigation.
+_SMALL_PR_FILES = 6
 
 
 def _is_test_path(raw_path: str) -> bool:
@@ -81,14 +87,15 @@ def _file_family(raw_path: str) -> str:
     parts = [part.lower() for part in path.parts]
     name = path.name.lower()
     suffix = path.suffix.lower()
+    role = file_role(raw_path)
 
-    if any(part in {"test", "tests", "__tests__", "spec", "specs"} for part in parts) or re.search(r"(?:^|[._-])(test|spec)(?:[._-]|$)", name):
+    if role == "test":
         return "tests"
-    if "docs" in parts or "documentation" in parts or suffix in {".md", ".mdx", ".rst", ".adoc"}:
+    if role == "doc":
         return "documentation"
-    if any(part in {"migrations", "migration", "schema", "schemas", "database", "db"} for part in parts):
+    if role == "migration" or any(part in {"migrations", "migration", "schema", "schemas", "database", "db"} for part in parts):
         return "database"
-    if any(part in {"config", "configs", "configuration"} for part in parts) or name.startswith(".env") or suffix in {".toml", ".yaml", ".yml", ".ini"}:
+    if role in {"lock", "config"} or any(part in {"config", "configs", "configuration"} for part in parts) or name.startswith(".env") or suffix in {".toml", ".yaml", ".yml", ".ini"}:
         return "configuration"
 
     root = parts[0] if parts else ""
@@ -98,18 +105,22 @@ def _file_family(raw_path: str) -> str:
         return "backend"
     if root in {"frontend", "front-end", "client", "web"}:
         return "frontend"
-    if root in {"src", "app", "lib", "packages", "pkg"} or not root:
+    # Portable roots: any source or style file is application code, wherever it sits.
+    if root in {"src", "app", "lib", "packages", "pkg"} or not root or suffix in _SOURCE_SUFFIXES:
         return "application"
     return "other"
 
 
 def _fallback_assignments(groups: list[dict]) -> list[dict]:
+    files = {path for group in groups for path in group.get("files", [])}
+    if groups and len(files) <= _SMALL_PR_FILES:
+        return [{"title": "Changes in this pull request", "group_ids": sorted(group["id"] for group in groups), "source": "paths"}]
     buckets: dict[str, list[str]] = defaultdict(list)
     for group in groups:
         family_counts = Counter(_file_family(path) for path in group.get("files", []))
         family = min(family_counts, key=lambda key: (-family_counts[key], key)) if family_counts else "other"
         buckets[family].append(group["id"])
-    order = ["application", "frontend", "backend", "server", "database", "tests", "documentation", "configuration", "other"]
+    order = ["database", "backend", "server", "application", "frontend", "tests", "documentation", "configuration", "other"]
     return [
         {"title": _FAMILY_TITLES[family], "group_ids": sorted(buckets[family]), "source": "paths"}
         for family in order if buckets.get(family)

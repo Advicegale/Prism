@@ -9,7 +9,8 @@ export interface AIChange {symbol_id:string;diff_summary?:string;why?:string;rev
 export interface AIGroup {id:string;summary:string;before_after:string;impact:string;risks:string[];tests:string[];review_order?:ReviewStep[];changes?:AIChange[]}
 export interface TopicConnection {topic_id:string;count:number;kind:'direct'|'shared context'}
 export interface ChangeTopic {id:string;title:string;focus?:string;source:'ai'|'paths';group_ids:string[];changed_count:number;files:string[];graph:GraphData;connections:TopicConnection[]}
-export interface AIReport {harness:string;model:string;effort:string;overview:string;key_changes:string[];review_order?:ReviewStep[];schema_version?:number;groups:AIGroup[];topics?:ChangeTopic[]}
+export interface TopicDiagnostics {source:'ai'|'paths';issues:string[];appended_paths:number}
+export interface AIReport {harness:string;model:string;effort:string;overview:string;key_changes:string[];review_order?:ReviewStep[];schema_version?:number;groups:AIGroup[];topics?:ChangeTopic[];topic_diagnostics?:TopicDiagnostics}
 export interface Report {id:string;demo:boolean;created_at:string;meta:{owner:string;repo:string;number:number;title:string;body:string;url:string;author:string;head:string;merge_base?:string};stats:{changed_files:number;changed_symbols:number;groups:number;indexed_files:number;total_graph_nodes:number;total_graph_edges:number};files:DiffFile[];groups:ChangeGroup[];overview:GraphData;topics?:ChangeTopic[];architecture?:ArchitectureData;evidence?:Record<string,{path:string;start_line:number;end_line:number;language:string;side:string;code:string;truncated:boolean}>;ai:AIReport|null}
 
 export interface SourceAnchor {revision:string;path:string;start_byte:number;end_byte:number;line:number;column:number;end_line:number;end_column:number}

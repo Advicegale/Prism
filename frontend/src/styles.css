@@ -945,6 +945,9 @@ body,.workspace{background:var(--page)}
 .review-file-reason{padding:12px 23px;border-bottom:1px solid #2d3d4f;color:#a6bfd4;font-size:12px}
 .review-file-reason summary{display:flex;align-items:center;gap:7px;cursor:pointer}.review-file-reason summary::-webkit-details-marker{display:none}
 .review-file-reason .markdown-content{font-size:13px;line-height:1.65;color:#b8c8d8;margin-top:10px}
+.review-topic-provenance{margin:0 0 14px;font-size:12px;line-height:1.5;color:#9aafc4}
+.review-group-checks{margin:0 0 14px;font-size:12px;color:#a6bfd4}.review-group-checks summary{display:flex;align-items:center;gap:7px;cursor:pointer;color:#d5bd8c;font-weight:600}.review-group-checks summary::-webkit-details-marker{display:none}
+.review-group-checks ul{padding-left:17px;margin:9px 0 0}.review-group-checks .markdown-content{font-size:13px;line-height:1.65;color:#b8c8d8}
 .review-file-diff-heading{display:flex;align-items:center;gap:12px;padding:15px 23px;font:12px system-ui,sans-serif;border-bottom:1px solid #2b3a4a}
 .review-file-diff-heading>strong{font-weight:600;color:#c6d7e6}
 .review-diff-count{display:flex;gap:8px;font-size:11px}.review-diff-count b{font-weight:500;color:#8ac6aa}.review-diff-count em{font-style:normal;color:#dc9398}

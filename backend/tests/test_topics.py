@@ -128,3 +128,74 @@ def test_file_role_order_puts_tests_and_locks_first():
     assert topics.file_role("config/tests/app.json") == "test"
     assert topics.file_role("yarn.lock") == "lock"
     assert topics.file_role("db/migrations/config.json") == "migration"
+
+
+def file_groups(*specs):
+    return [{"id": group_id, "changed_ids": [], "files": files, "graph": {"nodes": [], "edges": []}}
+            for group_id, files in specs]
+
+
+def test_portable_roots_are_application_code_and_unknown_suffixes_stay_other():
+    for path in ["viewer/Panel.tsx", "UdpHosts/Client.cs", "App.tsx", "global.css", "jest.setup.ts", "web-ui/nav.vue"]:
+        assert topics._file_family(path) == "application", path
+    for path in ["assets/logo.png", "Makefile", "bin/tool"]:
+        assert topics._file_family(path) == "other", path
+
+
+def test_roles_decide_tests_documentation_database_and_configuration_before_roots():
+    expected = {
+        "backend/tests/test_api.py": "tests", "viewer/Panel.test.tsx": "tests", "docs/guide.md": "documentation",
+        "db/migrations/0001.sql": "database", "schema/init.txt": "database",
+        "yarn.lock": "configuration", "frontend/package-lock.json": "configuration", "web/Cargo.lock": "configuration",
+        "config/app.yaml": "configuration", "server/api.py": "server", "backend/api.py": "backend",
+    }
+    for path, family in expected.items():
+        assert topics._file_family(path) == family, path
+
+
+def test_small_pr_with_a_test_and_source_files_is_one_topic():
+    group_list = file_groups(("a", ["backend/api.py"]), ("b", ["frontend/App.tsx"]),
+                             ("c", ["tests/test_api.py"]), ("d", ["src/util.ts"]))
+    built, diagnostics = topics.build_topics_with_diagnostics(group_list, {})
+    assert [topic["title"] for topic in built] == ["Changes in this pull request"]
+    assert built[0]["group_ids"] == ["a", "b", "c", "d"]
+    assert built[0]["source"] == "paths" and diagnostics["source"] == "paths"
+
+
+def test_seven_file_pr_still_splits_by_family():
+    group_list = file_groups(("a", ["backend/a.py", "backend/b.py", "backend/c.py"]),
+                             ("b", ["frontend/a.tsx", "frontend/b.tsx"]),
+                             ("c", ["docs/x.md"]), ("d", ["tests/test_a.py"]))
+    built, _ = topics.build_topics_with_diagnostics(group_list, {})
+    assert [topic["title"] for topic in built] == ["Backend code", "Frontend code", "Tests", "Documentation"]
+
+
+def test_fallback_family_order_puts_schema_then_server_then_client():
+    group_list = file_groups(
+        ("other", ["assets/logo.png"]), ("config", ["config/app.yaml"]), ("docs", ["docs/a.md"]),
+        ("tests", ["tests/test_a.py"]), ("frontend", ["frontend/a.tsx"]), ("application", ["src/a.ts"]),
+        ("server", ["server/a.py"]), ("backend", ["backend/a.py"]), ("database", ["migrations/001.sql"]),
+    )
+    built, _ = topics.build_topics_with_diagnostics(group_list, {})
+    assert [topic["title"] for topic in built] == [
+        "Database changes", "Backend code", "Server code", "Application code",
+        "Frontend code", "Tests", "Documentation", "Configuration", "Other changes",
+    ]
+
+
+def test_lock_files_are_configuration_in_fallback_topics():
+    group_list = file_groups(("locks", ["yarn.lock", "web/Cargo.lock"]), ("a", ["backend/a.py"]),
+                             ("b", ["frontend/a.tsx"]), ("c", ["docs/a.md"]), ("d", ["src/a.ts"]),
+                             ("e", ["server/a.py"]))
+    built, _ = topics.build_topics_with_diagnostics(group_list, {})
+    configuration = [topic for topic in built if topic["title"] == "Configuration"]
+    assert [topic["group_ids"] for topic in configuration] == [["locks"]]
+
+
+def test_accepted_ai_partition_still_wins_over_small_pr_fallback():
+    group_list = file_groups(("a", ["backend/api.py"]), ("b", ["frontend/App.tsx"]),
+                             ("c", ["tests/test_api.py"]), ("d", ["src/util.ts"]))
+    built, diagnostics = topics.build_topics_with_diagnostics(
+        group_list, {}, [suggestion("Logic", ["a", "d"]), suggestion("UI", ["b", "c"])])
+    assert [topic["title"] for topic in built] == ["Logic", "UI"]
+    assert diagnostics == {"source": "ai", "issues": [], "appended_paths": 0}
