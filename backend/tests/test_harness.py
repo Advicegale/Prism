@@ -154,7 +154,7 @@ def test_explain_synthesis_prompt_notes_shortened_input(monkeypatch):
     monkeypatch.setattr(harness.settings, "MAX_DIFF_CHARS", 40)
     harness.explain(_explain_report(), "codex", "", "")
     synthesis = prompts[-1]
-    assert "Some per-symbol summaries were shortened to fit; use only what is supplied." in synthesis
+    assert "Some per-symbol summaries were shortened to fit; inspect relevant source with available repository tools before drawing unsupported conclusions." in synthesis
     assert '"group_id": "g0"' in synthesis and '"group_id": "g1"' in synthesis
 
 
@@ -241,7 +241,35 @@ def test_synthesis_input_stays_valid_json_with_every_group_at_a_tiny_limit(monke
     monkeypatch.setattr(harness.settings, "MAX_DIFF_CHARS", 1)
     harness.explain(_facts_report(), "codex", "", "")
     synthesis = prompts[-1]
-    assert "Some per-symbol summaries were shortened to fit; use only what is supplied." in synthesis
+    assert "Some per-symbol summaries were shortened to fit; inspect relevant source with available repository tools before drawing unsupported conclusions." in synthesis
     summaries = _synthesis_summaries(synthesis)
     assert [item["group_id"] for item in summaries] == ["g0", "g1"]
     assert all(item["diff_summaries"] == [] and item["file_facts"] for item in summaries)
+
+
+def test_review_tools_reach_every_group_and_synthesis_with_both_revisions(monkeypatch, tmp_path):
+    report = _explain_report()
+    report['meta'].update(head='a' * 40, merge_base='b' * 40)
+    calls = []
+    def fake_run(_h, _m, _e, prompt, **kwargs):
+        calls.append((prompt, kwargs))
+        if 'Synthesize' in prompt:
+            return {'groups': [], 'topics': []}
+        group_id = 'g0' if '"group_id": "g0"' in prompt else 'g1'
+        return {'groups': [_group_result(group_id)]}
+    monkeypatch.setattr(harness, 'run_harness', fake_run)
+    result = harness.explain(report, 'claude', 'default', 'high', repository_root=tmp_path)
+    assert len(calls) == 3
+    for prompt, kwargs in calls:
+        assert kwargs == {'repository_root': tmp_path, 'repository_head': 'a' * 40, 'repository_base': 'b' * 40}
+        assert 'including unchanged files outside this group' in prompt
+        assert 'revision=base' in prompt and 'revision=head' in prompt
+        assert 'Repository tools are unavailable' not in prompt
+    assert len(result['groups']) == 2
+
+
+def test_review_refuses_missing_revision_before_starting_provider(monkeypatch, tmp_path):
+    import pytest
+    monkeypatch.setattr(harness, 'run_harness', lambda *a, **kw: pytest.fail('provider must not start'))
+    with pytest.raises(RuntimeError, match='PR-head and merge-base'):
+        harness.explain(_explain_report(), 'codex', '', '', repository_root=tmp_path)

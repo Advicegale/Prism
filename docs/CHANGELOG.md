@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- AI group checks and topic synthesis can now inspect repository context beyond their supplied diff, including unchanged callers, dependencies, tests and docs at the exact PR head or merge-base. Enabled for fresh/cached analyses and Explain reruns; existing saved checks need regeneration.
+
 - Topics show the **group checks** the analysis already wrote: a collapsed **Group checks** list above each topic's files for risks shared by its multi-file groups, and a file without saved review notes shows its one-file group's risks under **Worth checking** (labelled *from group analysis*).
 
 - Topics say how they were grouped: when the AI topic plan was not used, a line under the topic heading says "Grouped by file path" and why (for example, it omitted some changes or assigned a change twice).

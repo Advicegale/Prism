@@ -50,6 +50,8 @@ def record_calls(monkeypatch):
         events.append(('architecture',None))
         return report.get('architecture')
     def explain(report,*args):
+        assert args[-1].is_dir()  # every AI analysis receives the prepared head checkout
+        assert report['meta']['head'] and report['meta']['merge_base']
         events.append(('explain',None))
         return {'topics':[]}
     monkeypatch.setattr(service,'prefetch',prefetch)
@@ -151,3 +153,26 @@ def test_snapshot_holds_graphify_extraction_lock_during_extract(tmp_path,monkeyp
     assert seen==[False]
     assert extraction_lock.acquire(blocking=False)
     extraction_lock.release()
+
+
+def test_explain_rerun_resolves_report_checkout(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, 'DATA_DIR', tmp_path)
+    rid = '4' * 24
+    write_report(tmp_path, rid, demo=False)
+    calls = []
+    def root(report):
+        calls.append(('root', report['id']))
+        return tmp_path
+    def explain(report, *args):
+        assert args[-1] == tmp_path
+        calls.append(('explain', report['id']))
+        return {'topics': []}
+    def job(kind, work):
+        work(lambda _: None)
+        return {'job_id': 'test'}
+    monkeypatch.setattr(api, 'head_worktree', root)
+    monkeypatch.setattr(api, 'explain', explain)
+    monkeypatch.setattr(api, '_job', job)
+    response = TestClient(api.app).post(f'/api/reports/{rid}/explain', json={'harness': 'codex'})
+    assert response.status_code == 202
+    assert calls == [('root', rid), ('explain', rid)]

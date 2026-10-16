@@ -17,6 +17,8 @@ npm run test:assistant
 npm run build
 ```
 
+Review-context regressions verify that fresh/cached analyses and Explain reruns pass the head checkout, and that every group check and synthesis receives both pinned revisions and repository-inspection guidance.
+
 Python tests cover Git revisions/diff ranges, Graphify association, legacy report/topic compatibility, architecture, exact source, restricted repository tools, provider command/prompt validation and FastAPI endpoints. Exploration tests select source positions across the five original languages and 35 additional Graphify language/template formats. Registry tests also cover five further cross-file field/construction/wrapper families, C#/Kotlin/Swift/PHP static constructions, shared lexical shadowing, new provider registration, shebang routing and cache invalidation. They verify ordinary roots/shadowing, owned fields, external constructions, assignments/wrapping/imports, origins/sibling exclusions, usage-result stops, shared files, unchanged bridges, cycles, unknown fields and explicit unsupported states. They also cover namespace/default/reexports/manifest aliases, Unicode/CRLF, old/new renamed source, partial inventories, cache restoration, cursor validation, paired independent cursors with clicked-alias hidden-path evidence/filter context/sibling exclusion, and the indexing-response race. Passive reviewed source is never executed. Tests need no GitHub/provider credentials.
 
 Route regressions (`test:routes`) cover every hash route kind, fallbacks for garbage, bad or uppercase ids, unknown views and trailing slashes, file names with spaces, unicode, `#`, `?`, `%` and `+` round-tripping through `formatRoute`/`parseRoute`, and tab titles.

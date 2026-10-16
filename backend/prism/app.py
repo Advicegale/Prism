@@ -294,7 +294,7 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
             result["architecture"]=discover_architecture(result,after,req.harness,req.model,req.effort,progress)
             save_report(result)
             progress("Updating AI explanation")
-            _store_ai(result,explain(result,req.harness,req.model,req.effort,progress))
+            _store_ai(result,explain(result,req.harness,req.model,req.effort,progress,after))
             save_report(result)
         return report_id
     progress("Calculating PR diff")
@@ -319,7 +319,7 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
     if req.harness != "none":
         report["architecture"]=discover_architecture(report,after,req.harness,req.model,req.effort,progress)
         save_report(report)
-        _store_ai(report,explain(report,req.harness,req.model,req.effort,progress))
+        _store_ai(report,explain(report,req.harness,req.model,req.effort,progress,after))
         save_report(report)
     return report_id
 
@@ -452,7 +452,7 @@ def explain_report(report_id:str, request:ExplainRequest):
     read_report(report_id)
     def work(progress):
         data=ensure_topics(ensure_evidence(read_report(report_id)))
-        _store_ai(data,explain(data,request.harness,request.model,request.effort,progress))
+        _store_ai(data,explain(data,request.harness,request.model,request.effort,progress,head_worktree(data)))
         save_report(data)
         return report_id
     return _job("explanation",work)
