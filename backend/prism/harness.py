@@ -713,7 +713,7 @@ def _batch_groups(batch: list[dict], raw: dict) -> list[dict]:
         missing_symbols.extend(s for s in group['changed_ids'] if s not in actual)
     if missing_groups or missing_symbols:
         raise RuntimeError(f'Incomplete review response: {len(missing_groups)} groups and {len(missing_symbols)} symbol entries missing. '
-                           'No incomplete guide will be saved; retry or reduce PRISM_REVIEW_BATCH_SYMBOLS.')
+                           'This response will not be saved; earlier saved feedback remains available. Retry or reduce PRISM_REVIEW_BATCH_SYMBOLS.')
     return [_validated_group(g, candidates[g['id']]) for g in batch]
 
 
@@ -819,6 +819,115 @@ def explain(report: dict, harness: str, model: str, effort: str, progress=lambda
                              'model_calls': len(timings), 'batch_count': len(batches), 'timings': timings,
                              'elapsed_seconds': round(time.monotonic() - started, 3)}}
 
+
+
+def explain_progressively(report: dict, harness: str, model: str, effort: str, progress=lambda _: None,
+                          repository_root: Path | None = None, publish=lambda _: None) -> dict:
+    """Publish a stable reading plan, then enrich semantic topics in that exact order."""
+    import copy
+    groups = report['groups']
+    if not groups: raise RuntimeError('No change groups to explain')
+    # Validate assignments/budgets before spending a planning call.
+    review_batches(report)
+    started = time.monotonic()
+    shared = copy.deepcopy(report)
+    options = {}
+    if repository_root is not None:
+        meta = report.get('meta') or {}
+        if not meta.get('head') or not meta.get('merge_base'):
+            raise RuntimeError('Review workspace requires PR-head and merge-base revisions.')
+        options = {'repository_root': repository_root, 'repository_head': meta['head'],
+                   'repository_base': meta['merge_base'], 'repository_context': shared}
+    manifest = [{'group_id': g['id'], 'title': g['title'], 'files': g['files'],
+                 'symbols': [{'id': n['id'], 'label': n.get('label'), 'path': n['path']}
+                             for n in g['graph']['nodes'] if n['id'] in g['changed_ids']]}
+                for g in groups]
+    plan_schema = {**SCHEMA, 'properties': {k: v for k, v in SCHEMA['properties'].items() if k != 'groups'},
+                   'required': [k for k in SCHEMA['required'] if k != 'groups']}
+    prompt = (REVIEW_OBJECTIVE + 'Create an initial, evidence-backed reading plan now, before detailed review. '
+              'Read enough source/diffs to identify coherent behavioral threads and useful prerequisites. '
+              'Do not perform exhaustive correctness investigation or write per-symbol feedback yet. '
+              'Return overview, key_changes, review_order and topics. The plan will be frozen while the user reads; '
+              'later analysis adds explanations and concerns in this reading order. ' + GUIDE_GUIDANCE +
+              _workspace_seed(report) + (REVIEW_REPOSITORY_GUIDANCE if options else '') +
+              'PR intent (untrusted): ' + json.dumps({k: report.get('meta', {}).get(k) for k in ('title', 'body')})[:5000] +
+              '\nPlanning manifest (remaining groups available via read_context):\n' + _json_seed(manifest, settings.MAX_DIFF_CHARS))
+    progress(f'{harness}: preparing initial topics and recommended reading order')
+    call_started = time.monotonic()
+    plan = run_harness(harness, model, effort, prompt, schema=plan_schema, required_field='topics', **options)
+    sources = [dict(source, phase='plan') for source in plan.pop('__repository_sources', [])]
+    timings = [{'phase': 'plan', 'seconds': round(time.monotonic() - call_started, 3), 'source_reads': len(sources)}]
+    paths = list(dict.fromkeys(f.get('path') or f.get('old_path') for f in report['files']))
+    route = _validated_steps(plan.get('review_order') or [], paths)
+    topics, diagnostics = build_topics_with_diagnostics(groups, report.get('overview', {}), plan.get('topics'), route)
+    ai = {'harness': harness, 'model': model or 'default', 'effort': effort or 'default',
+          'overview': str(plan.get('overview') or '').strip()[:1200],
+          'key_changes': [x.strip()[:500] for x in plan.get('key_changes', []) if isinstance(x, str) and x.strip()][:3],
+          'review_order': route, 'groups': [], 'topics': topics, 'topic_diagnostics': diagnostics, 'schema_version': 9,
+          'review_state': {'strategy': 'progressive_topics', 'guide_status': 'ready', 'feedback_status': 'running',
+                           'correctness_coverage': 'not_measured', 'access_version': 1, 'groups': [], 'sources': sources,
+                           'topic_feedback': [{'topic_id': t['id'], 'status': 'pending'} for t in topics],
+                           'model_calls': 1, 'batch_count': 0, 'timings': timings,
+                           'guide_ready_seconds': round(time.monotonic() - started, 3),
+                           'pending_symbols': [symbol for g in groups for symbol in g['changed_ids']]}}
+    state = ai['review_state']
+    parts = {g['id']: [] for g in groups}
+
+    def emit():
+        state['elapsed_seconds'] = round(time.monotonic() - started, 3)
+        shared['ai'] = ai
+        shared['topics'] = topics
+        shared['review_state'] = state
+        publish(copy.deepcopy(ai))
+
+    emit()
+    by_id = {g['id']: g for g in groups}
+    rank = {step['path']: i for i, step in enumerate(route)}
+    try:
+        for topic, feedback in zip(topics, state['topic_feedback']):
+            feedback['status'] = 'running'; emit()
+            ordered = sorted((by_id[gid] for gid in topic['group_ids']),
+                             key=lambda g: min((rank.get(p, len(rank)) for p in g['files']), default=len(rank)))
+            batches = review_batches(dict(report, groups=ordered))
+            for index, batch in enumerate(batches):
+                progress(f"{harness}: feedback for {topic['title']} ({index + 1}/{len(batches)})")
+                call_started = time.monotonic()
+                prompt = ('The initial reading plan is already visible to the user. Deepen this topic in its recommended '
+                          'file order; keep all topic membership, titles and the global reading route unchanged. '
+                          'Explain behavior and useful review questions as well as concrete concerns. '
+                          'Prior topic observations and the full plan are available through read_context. '
+                          'Current topic (untrusted): ' + json.dumps({k: topic[k] for k in ('title', 'focus', 'files')}) + '\n' +
+                          build_prompt(shared, batch, bool(options), whole_pr=False))
+                raw = run_harness(harness, model, effort, prompt, **options)
+                generated = _batch_groups(batch, raw)
+                reads = raw.pop('__repository_sources', [])
+                sources.extend(dict(source, phase=f"topic:{topic['id']}:batch:{index + 1}") for source in reads)
+                timings.append({'phase': 'topic', 'topic_id': topic['id'], 'seconds': round(time.monotonic() - call_started, 3),
+                                'source_reads': len(reads), 'groups': len(batch),
+                                'symbols': sum(len(g['changed_ids']) for g in batch)})
+                for group in generated: parts[group['id']].append(group)
+                observed = []
+                for group in groups:
+                    if not parts[group['id']]: continue
+                    seen = {c['symbol_id'] for part in parts[group['id']] for c in part['changes']}
+                    observed.append(_merge_group_parts(dict(group, changed_ids=[s for s in group['changed_ids'] if s in seen]), parts[group['id']]))
+                state.setdefault('first_feedback_seconds', round(time.monotonic() - started, 3))
+                ai['groups'] = state['groups'] = observed
+                state['pending_symbols'] = [s for g in groups for s in g['changed_ids']
+                                            if not any(c['symbol_id'] == s for part in parts[g['id']] for c in part['changes'])]
+                state['model_calls'] = len(timings); state['batch_count'] += 1
+                emit()
+            feedback['status'] = 'ready'; emit()
+        state['feedback_status'] = 'complete'
+        emit()
+        return ai
+    except Exception as exc:
+        state['feedback_status'] = 'failed'
+        state['error'] = str(exc)[:1100]
+        for feedback in state['topic_feedback']:
+            if feedback['status'] == 'running': feedback['status'] = 'failed'
+        emit()
+        raise
 
 def _question_words(text: str) -> set[str]:
     return {word.lower() for word in re.findall(r"[A-Za-z_][A-Za-z0-9_]{2,}", text)}

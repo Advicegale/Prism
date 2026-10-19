@@ -16,11 +16,15 @@ Full patches are stored for fresh analyses. Opening a legacy report recovers com
 
 ## Model-call strategy and timing
 
-A normal Analyze operation uses **two provider sessions**: one architecture discovery and one whole-PR guide. Explain/regenerate notes alone uses **one guide session**. That guide response includes all group/symbol notes, the overview, cross-group topics and global file order; structural groups are output anchors rather than separate model calls. Provider tool turns still happen inside each session and are not counted as one API request.
+Analyze saves and opens the complete file/diff report as soon as structural preparation finishes, before any model session. A lightweight initial planning session adds coherent topics and the recommended topic/file route. The UI opens Topics immediately and polls saved report revisions while work continues. Explain/regenerate uses the same progressive guide path.
 
-Large structured outputs are bounded by `PRISM_REVIEW_BATCH_SYMBOLS` (default 100), and mandatory group/symbol metadata by `PRISM_MAX_DIFF_CHARS` (default 70000). Optional excerpts are fitted structurally before another call is needed; complete source stays available through the tools. Oversized groups can span multiple batches without losing symbols. Multi-batch guides use one final synthesis call after the batches. If even a single mandatory assignment cannot fit, the operation fails explicitly rather than omitting it.
+Detailed feedback follows that validated topic order, one semantic topic at a time. Structural groups sharing a topic are packed together; large assignments still use `PRISM_REVIEW_BATCH_SYMBOLS` (default 100) and `PRISM_MAX_DIFF_CHARS` (default 70000). Each validated batch is saved immediately. Topic feedback has pending/running/ready/failed states. All subsequent calls can read the plan, completed observations, remaining symbols, full source and PR context. Membership, topic titles and global reading order stay fixed after the plan is published; deeper feedback cannot move files around while the user reads. Architecture discovery runs after the guide and feedback during Analyze.
 
-AI schema v8 records `ai.review_state.strategy`, `model_calls`, `batch_count`, `timings` (elapsed seconds, assigned groups/symbols and source reads per phase) and `elapsed_seconds`. These measure the **guide phase**, excluding architecture/Git/Graphify preparation. Actual model-internal request counts and token use are not measured. Missing or duplicate group/symbol output fails before overwriting the previous saved guide; there is no hidden per-group retry loop. Successfully completed partial batch observations and pending symbol IDs are passed to subsequent batches; the saved guide is written only after the whole operation succeeds.
+The tradeoff versus the preceding combined-call implementation is deliberate: a typical guide uses **one planning session + one feedback session per semantic topic**, with extra batches only for size limits. Full Analyze adds one architecture session. There is no final synthesis that delays publication or reorders the plan. These are CLI sessions, not model-internal API/tool turns. The previous one-shot helper remains available for offline probes; the app uses progressive generation.
+
+AI schema v9 records `review_state.strategy=progressive_topics`, `guide_status`, `feedback_status`, `topic_feedback`, pending symbols, source provenance, guide-phase call counts/timings, `guide_ready_seconds`, `first_feedback_seconds` and elapsed time. Correctness coverage remains `not_measured`; ready feedback does not claim exhaustive defect coverage. A failed/incomplete response is rejected, while the published plan and earlier completed feedback remain saved. Regeneration archives the prior guide under `previous_ai` when the replacement plan is first published.
+
+Live updates preserve the selected file, diff component state and visible diff-line position. They neither navigate on completion nor reset the reader through the report loader. Reloading reconnects to a running job; after a server restart, interrupted analysis is explicitly marked and saved feedback remains readable. Regenerate restarts analysis rather than resuming an unfinished provider conversation. General and inline Q&A use a separate bounded executor so questions can run while background feedback continues. Partial offline exports are labeled as containing only saved feedback.
 
 ## Authentication and execution
 
@@ -28,7 +32,7 @@ GitHub reads use GH_TOKEN/GITHUB_TOKEN or existing gh authentication inside the 
 
 ## Limits and next milestones
 
-The combined-call guide still has these limits:
+The progressive guide still has these limits:
 
 - Topics still partition structural group IDs, so an oversized structural group cannot yet be split into independently named file-based topics. A first-class guide schema with richer topic/file relationships is follow-up work.
 - Shared batch observations and the architecture are available across stages, but the model is responsible for deciding what additional source to inspect. Availability is not a claim of inspection or comprehension.
@@ -53,10 +57,16 @@ PYTHONPATH=backend backend/.venv/bin/python scripts/probe-review-workspace.py
 
 The probe creates passive temporary Git commits and hides random markers in unchanged code, deleted base code, a PR body after character 13,000 and a diff after character 16,000. It reports marker recovery and source-read counts without printing marker values. It executes no reviewed source. This is a manual integration check, not part of pytest.
 
-## Recorded verification — 2026-10-19
+## Previous combined-call verification — 2026-10-19
 
 All 247 backend tests pass; relevant frontend review and HTML-export checks pass. Static replay over 11 identical retained report snapshots uses one guide call for every case. Compared with the previous per-group version, repeated initial guide-prompt text fell by a median 86.1% (characters, not tokens or total tool traffic). AHOY #25's existing 36 groups change from 38 full-analysis sessions to 2; AHOY #40's 23 groups change from 25 to 2.
 
 One matched live guide-phase comparison on WFArsenal #41, at the same head and Codex default/low settings, measured 152.50 seconds across 8 previous-version sessions versus 44.35 seconds in 1 combined session (70.9% less time). Source reads fell from 22 to 5. Both outputs retained all 7 group entries, 10 changed-symbol entries and the 7-file route, with valid semantic topics. Architecture preparation was excluded. This is a single sample, not a universal latency or quality guarantee; topic choices differed and still need the user's assessment.
 
 Claude default/low also returned a complete one-call guide for WFArsenal #37 (4 groups/4 symbols, 2 topics, 19.68 seconds) and AHOY #25 (36 groups/39 symbols, 3 topics, 74.11 seconds). These live checks wrote separate artifacts without regenerating or modifying saved report guides.
+
+## Progressive verification — 2026-10-19
+
+256 backend tests pass, including early report/job availability, semantic-topic scheduling in validated route order, stable plans across updates, partial batch checkpoints, retained data on failure, independent Q&A scheduling and interrupted-job handling. Browser checks using a controlled two-topic fixture verified early opening, route/file selection retention, reload reconnection, and less than one pixel of tracked diff-line movement during plan/feedback publication and job completion.
+
+Live WFArsenal #41 on the same pinned head, default model/low effort: Codex published the plan in 22.64s, first-topic feedback in 53.47s and complete feedback in 105.05s; Claude published the plan in 19.85s, first-topic feedback in 36.06s and complete feedback in 59.39s. Both used 3 guide sessions for 2 semantic topics and retained all 7 groups/10 symbols/7 route files. These are single samples, exclude structural/architecture preparation, and demonstrate earlier usefulness rather than lower total model time. The preceding single-session Codex guide sample took 44.35s before publishing anything.

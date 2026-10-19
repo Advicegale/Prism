@@ -19,7 +19,7 @@ from . import settings
 from .gitops import (RepoError, parse_pr_url, pr_metadata, prepare_worktrees, diff_files,
                      github_viewed_file_states, set_github_file_viewed)
 from .graph import snapshot, identify_changes, segment
-from .harness import available_harnesses, explain, answer_question
+from .harness import available_harnesses, explain_progressively as explain, answer_question
 from .evidence import collect_evidence
 from .topics import build_topics
 from .repository_tools import head_worktree, RepositoryToolError
@@ -29,6 +29,7 @@ from .exploration import service as exploration
 
 app = FastAPI(title="Prism PR Review", version="0.2.0", docs_url="/api/docs", openapi_url="/api/openapi.json")
 executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="prism-job")
+question_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="prism-question")
 lock = threading.Lock()
 report_lock = threading.RLock()
 jobs: dict[str,dict] = {}
@@ -272,6 +273,7 @@ def save_report(report: dict):
     with report_lock:
         path=report_path(report["id"])
         tmp=path.with_suffix(".tmp")
+        report["revision"] = uuid.uuid4().hex
         tmp.write_text(json.dumps(report,ensure_ascii=True))
         tmp.replace(path)
 
@@ -284,18 +286,56 @@ def _job(kind: str, callback):
         with lock:
             jobs[job_id]["state"]="running"
             jobs[job_id]["message"]=message
+    def report_ready(report_id):
+        with report_lock:
+            current = read_report(report_id)
+            current['analysis'] = {'state': 'running', 'job_id': job_id}
+            save_report(current)
+        with lock: jobs[job_id]['report_id'] = report_id
+    update.report_ready = report_ready
+    def finish_report(state, error=None):
+        with lock: report_id = jobs[job_id]['report_id']
+        if report_id:
+            with report_lock:
+                current = read_report(report_id)
+                current['analysis'] = {'state': state, 'job_id': job_id, 'error': error}
+                save_report(current)
     def work():
         try:
             update("Starting")
             result=callback(update)
+            finish_report("completed")
             with lock:
                 jobs[job_id].update(state="completed",message="Ready",
                                     report_id=result if isinstance(result,str) else None,
                                     result=None if isinstance(result,str) else result)
         except Exception as e:
-            with lock:jobs[job_id].update(state="failed",message="Analysis failed",error=str(e)[:1100])
-    executor.submit(work)
+            try: finish_report("failed", str(e)[:1100])
+            finally:
+                with lock:jobs[job_id].update(state="failed",message="Analysis failed",error=str(e)[:1100])
+    (question_executor if kind == "question" else executor).submit(work)
     return {"job_id":job_id}
+
+
+def _publish_ready(report_id, progress):
+    ready = getattr(progress, 'report_ready', None)
+    if ready: ready(report_id)
+
+
+def _generate_guide(report, request, progress, root):
+    first_publication = True
+    def publish(ai):
+        nonlocal first_publication
+        with report_lock:
+            current = read_report(report['id'])
+            if first_publication and current.get('ai'):
+                current.setdefault('previous_ai', []).append({'reason': 'Progressive guide regeneration',
+                                                              'ai': current['ai'], 'topics': current.get('topics')})
+            first_publication = False
+            _store_ai(current, ai)
+            save_report(current)
+    ai = explain(report, request.harness, request.model, request.effort, progress, root, publish=publish)
+    publish(ai)
 
 
 def run_analysis(req: AnalyzeRequest, progress) -> str:
@@ -325,12 +365,15 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
         result=ensure_architecture(ensure_topics(ensure_evidence(result)), after)
         save_report(result)
         exploration.prefetch(result)
+        _publish_ready(report_id, progress)
         if req.harness != "none":
-            result["architecture"]=discover_architecture(result,after,req.harness,req.model,req.effort,progress)
-            save_report(result)
-            progress("Updating AI explanation")
-            _store_ai(result,explain(result,req.harness,req.model,req.effort,progress,after))
-            save_report(result)
+            _generate_guide(result, req, progress, after)
+            current = read_report(report_id)
+            architecture = discover_architecture(current,after,req.harness,req.model,req.effort,progress)
+            with report_lock:
+                current = read_report(report_id)
+                current['architecture'] = architecture
+                save_report(current)
         return report_id
     progress("Calculating PR diff")
     files=diff_files(git_repo,merge_base,meta["head"])
@@ -351,11 +394,16 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
             "topics":build_topics(groups,overview),"topics_version":5,"demo":False,"diff_version":1,"symbol_mapping_version":2}
     ensure_architecture(report, after)
     exploration.prefetch(report)
+    save_report(report)
+    _publish_ready(report_id, progress)
     if req.harness != "none":
-        report["architecture"]=discover_architecture(report,after,req.harness,req.model,req.effort,progress)
-        save_report(report)
-        _store_ai(report,explain(report,req.harness,req.model,req.effort,progress,after))
-        save_report(report)
+        _generate_guide(report, req, progress, after)
+        current = read_report(report_id)
+        architecture = discover_architecture(current,after,req.harness,req.model,req.effort,progress)
+        with report_lock:
+            current = read_report(report_id)
+            current['architecture'] = architecture
+            save_report(current)
     return report_id
 
 
@@ -407,6 +455,22 @@ def report(report_id:str):
     except (RepositoryToolError, RepoError) as exc:
         # Saved reports remain readable offline, with an explicit access gap.
         data['workspace_warning'] = str(exc)
+    if data.get('analysis', {}).get('state') == 'running':
+        with lock: active = data['analysis'].get('job_id') in jobs
+        if not active:
+            with report_lock:
+                # Merge with the latest report if a replacement job began during GET.
+                current = read_report(report_id)
+                if current.get('analysis') == data['analysis']:
+                    message = 'Analysis interrupted when Prism stopped. Saved guide and feedback are available; regenerate to continue.'
+                    current['analysis'] = dict(current['analysis'], state='failed', error=message)
+                    state = (current.get('ai') or {}).get('review_state') or {}
+                    if state.get('feedback_status') == 'running':
+                        state.update(feedback_status='failed', error=message)
+                        for feedback in state.get('topic_feedback', []):
+                            if feedback['status'] == 'running': feedback['status'] = 'failed'
+                    save_report(current)
+                data = current
     if not data.get("demo"): exploration.prefetch(data)
     return data
 
@@ -481,6 +545,7 @@ def organize_architecture(report_id: str, request: ExplainRequest):
     report = ensure_architecture(ensure_topics(ensure_evidence(read_report(report_id))))
     root = head_worktree(report)
     def work(progress):
+        _publish_ready(report_id, progress)
         architecture = discover_architecture(report, root, request.harness, request.model, request.effort, progress)
         # Preserve other report updates that may have happened while the model ran.
         current = read_report(report_id)
@@ -497,8 +562,8 @@ def explain_report(report_id:str, request:ExplainRequest):
         data=ensure_topics(ensure_evidence(read_report(report_id)))
         root=head_worktree(data)
         data=ensure_complete_diff(data, root)
-        _store_ai(data,explain(data,request.harness,request.model,request.effort,progress,root))
-        save_report(data)
+        _publish_ready(report_id, progress)
+        _generate_guide(data, request, progress, root)
         return report_id
     return _job("explanation",work)
 

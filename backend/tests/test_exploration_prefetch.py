@@ -49,9 +49,10 @@ def record_calls(monkeypatch):
     def architecture(report,*args):
         events.append(('architecture',None))
         return report.get('architecture')
-    def explain(report,*args):
+    def explain(report,*args,**kwargs):
         assert args[-1].is_dir()  # every AI analysis receives the prepared head checkout
         assert report['meta']['head'] and report['meta']['merge_base']
+        assert api.read_report(report['id'])['files'] == report['files']
         events.append(('explain',None))
         return {'topics':[]}
     monkeypatch.setattr(service,'prefetch',prefetch)
@@ -92,7 +93,7 @@ def test_prefetch_without_retained_worktree_is_a_quiet_noop(tmp_path,monkeypatch
 def test_run_analysis_prefetches_once_before_ai_for_new_report(pr_repo,monkeypatch):
     events=record_calls(monkeypatch)
     rid=api.run_analysis(api.AnalyzeRequest(url=URL,harness='claude'),lambda _:None)
-    assert [name for name,_ in events]==['prefetch','architecture','explain']
+    assert [name for name,_ in events]==['prefetch','explain','architecture']
     assert events[0]==('prefetch',rid)
 
 
@@ -102,7 +103,7 @@ def test_run_analysis_prefetches_once_before_ai_for_existing_report(pr_repo,monk
     assert [name for name,_ in events]==['prefetch']
     events.clear()
     assert api.run_analysis(api.AnalyzeRequest(url=URL,harness='claude'),lambda _:None)==rid
-    assert [name for name,_ in events]==['prefetch','architecture','explain']
+    assert [name for name,_ in events]==['prefetch','explain','architecture']
     assert events[0]==('prefetch',rid)
 
 
@@ -164,7 +165,7 @@ def test_explain_rerun_resolves_report_checkout(tmp_path, monkeypatch):
     def root(report):
         calls.append(('root', report['id']))
         return tmp_path
-    def explain(report, *args):
+    def explain(report, *args, **kwargs):
         assert args[-1] == tmp_path
         calls.append(('explain', report['id']))
         return {'topics': []}
@@ -191,3 +192,16 @@ def test_reanalysis_archives_guide_before_mapping_upgrade(pr_repo):
     assert migrated['symbol_mapping_version'] == 2
     assert migrated['ai'] is None
     assert migrated['previous_ai'][-1]['ai']['overview'] == 'saved paid guide'
+
+
+def test_fresh_report_published_before_any_model(pr_repo, monkeypatch):
+    events = record_calls(monkeypatch)
+    def progress(message): pass
+    def ready(report_id):
+        assert api.read_report(report_id)['files']
+        assert all(name not in ('explain', 'architecture') for name, _ in events)
+        events.append(('ready', report_id))
+    progress.report_ready = ready
+    report_id = api.run_analysis(api.AnalyzeRequest(url=URL, harness='codex'), progress)
+    assert [name for name, _ in events] == ['prefetch', 'ready', 'explain', 'architecture']
+    assert events[1][1] == report_id

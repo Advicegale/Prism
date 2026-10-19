@@ -61,6 +61,7 @@ function App(){
  const [copied,setCopied]=useState(false)
  const [focusMode,setFocusMode]=useState(false)
  const poll=useRef<ReturnType<typeof setInterval>|null>(null)
+ const watchedJob=useRef<string|null>(null)
  const reportIdRef=useRef<string|null>(null)
  reportIdRef.current=report?.id||null
  const routeReportId=route.name==='report'?route.id:null
@@ -129,6 +130,7 @@ function App(){
    const next=await call<Report>('/reports/'+id)
    if(token!==loadToken.current)return
    setReport(next);setShowAnalyzeForm(false)
+   if(next.analysis?.state==='running'&&watchedJob.current!==next.analysis.job_id)void watchJob(next.analysis.job_id)
    const current=parseRoute(window.location.hash),file=current.name==='report'&&current.id===id?current.file:undefined
    setReviewFocus(focus=>file?{path:file,request:(focus?.request||0)+1}:null)
    if(file&&current.name==='report'&&current.view==='architecture')replaceRoute({...current,view:'topics'})
@@ -139,23 +141,45 @@ function App(){
    if(current.name==='report'&&current.id===id)replaceRoute({name:'home'})
   }finally{if(token===loadToken.current){loadingIdRef.current=null;setLoading(false)}}
  }
- async function watchJob(id:string){
+ async function watchJob(id:string,openWhenReady=false){
   if(poll.current)clearInterval(poll.current)
+  watchedJob.current=id
+  let inFlight=false,opened=false
   const update=async()=>{
-   try{const current=await call<Job>('/jobs/'+id);setJob(current)
-     if(current.state==='completed'||current.state==='failed'){
-      if(poll.current)clearInterval(poll.current);poll.current=null
-      if(current.state==='completed'&&current.report_id){navigate({name:'report',id:current.report_id,view:'architecture'});await loadReport(current.report_id);await refreshHistory()}
-      else if(current.state==='failed')setError(current.error||'Analysis failed')
+   if(inFlight||watchedJob.current!==id)return
+   inFlight=true
+   try{
+    const current=await call<Job>('/jobs/'+id)
+    if(watchedJob.current!==id)return
+    setJob(current)
+    if(current.report_id){
+     if(openWhenReady&&!opened){
+      opened=true;setShowAnalyzeForm(false)
+      navigate({name:'report',id:current.report_id,view:'topics'})
      }
-   }catch(e){if(poll.current)clearInterval(poll.current);poll.current=null;setError(String(e))}
+     const route=routeRef.current
+     if(route.name==='report'&&route.id===current.report_id){
+      const next=await call<Report>('/reports/'+current.report_id)
+      if(watchedJob.current!==id)return
+      const latest=routeRef.current
+      if(latest.name==='report'&&latest.id===next.id)setReport(previous=>previous?.id===next.id&&previous.revision&&previous.revision===next.revision?previous:next)
+     }
+    }
+    if(current.state==='completed'||current.state==='failed'){
+     if(poll.current)clearInterval(poll.current);poll.current=null;watchedJob.current=null
+     if(current.state==='failed')setError(current.error||'Analysis failed')
+     await refreshHistory()
+    }
+   }catch(e){if(watchedJob.current===id){if(poll.current)clearInterval(poll.current);poll.current=null;watchedJob.current=null;setError(String(e))}}
+   finally{inFlight=false}
   }
   poll.current=setInterval(update,1400)
   await update()
  }
+
  async function begin(){
   setError('');setJob(null)
-  try{const result=await call<{job_id:string}>('/analyze',{method:'POST',body:JSON.stringify({url:prUrl,harness:analyzeWithAi?assistant.harness:'none',model:assistant.model,effort:assistant.effort})});await watchJob(result.job_id)}
+  try{const result=await call<{job_id:string}>('/analyze',{method:'POST',body:JSON.stringify({url:prUrl,harness:analyzeWithAi?assistant.harness:'none',model:assistant.model,effort:assistant.effort})});await watchJob(result.job_id,true)}
   catch(e){setError(e instanceof Error?e.message:String(e))}
  }
  async function explain(){
@@ -236,12 +260,14 @@ function App(){
       <div className="report-header"><div><div className="section-topline"><span className="eyebrow">{report.demo?'Example report':`${report.meta.owner}/${report.meta.repo} · PR #${report.meta.number}`}</span>{report.demo?<span className="demo-tag">Sample data</span>:<span className="real-tag"><CheckCircle2 size={12}/> Ready to review</span>}</div><h2>{report.meta.title}</h2><div className="report-meta"><span><Clock3 size={14}/> Analyzed {prettyDate(report.created_at)}</span></div></div><div className="report-buttons">{!report.demo&&<button className="small-btn" onClick={copyLink} title="Copy a link to this view">{copied?<Check size={15}/>:<Copy size={15}/>}<span>{copied?'Copied':'Copy link'}</span></button>}<button className="small-btn" onClick={downloadHtml} disabled={htmlExportBusy}>{htmlExportBusy?<LoaderCircle className="spinning" size={15}/>:<Download size={15}/>} {htmlExportBusy?'Exporting…':'Export HTML'}</button><button className="small-btn" onClick={download}><Download size={15}/> Export JSON</button>{!report.demo&&<a className="small-btn" href={report.meta.url} target="_blank" rel="noreferrer"><ExternalLink size={15}/> GitHub</a>}</div></div>
       {htmlExportError&&<p className="error-banner" role="alert">{htmlExportError}</p>}
       <div className="report-facts" aria-label="Pull request change totals"><span><strong>{report.stats.changed_files}</strong> changed files</span><span><strong>{topics.length}</strong> review {topics.length===1?'topic':'topics'}</span>{!report.demo&&<div className="report-review-controls"><span className={'github-viewed-summary'+(viewedFiles?.available?'':' unavailable')} title={viewedFiles?.reason||''}>{viewedFilesLoading?'Checking GitHub…':viewedFiles?.available?`${viewedCount} of ${reportPaths.length} viewed in GitHub`:'GitHub viewed status unavailable'}</span><button className="github-viewed-refresh" type="button" aria-label="Refresh viewed file status from GitHub" title="Refresh status from GitHub" disabled={viewedFilesLoading} onClick={refreshViewedStatus}><RefreshCcw size={13}/></button><label className={'review-viewed-toggle'+(hideViewedFiles?' active':'')} title={viewedFiles?.available?'Hide files already marked viewed in GitHub':viewedFiles?.reason||'Install GitHub CLI and sign in with gh auth login'}><input type="checkbox" aria-label="Hide files viewed in GitHub" checked={hideViewedFiles} onChange={event=>setHideViewedFiles(event.target.checked)} disabled={!viewedFiles?.available}/><EyeOff size={14}/><span>Hide viewed</span><b>{viewedCount}</b></label></div>}</div>
+      {report.analysis?.state==='running'&&<div className="job-progress" role="status"><LoaderCircle className="spinning" size={16}/><span>{job?.message||'Analysis continues in the background'}. You can review now; feedback follows the suggested topic order.</span></div>}
+      {report.analysis?.state==='failed'&&<p className="error-banner" role="alert">{report.analysis.error||'Analysis stopped.'} Saved feedback is available. <button type="button" className="small-btn" disabled={!!busy||!assistantReady} onClick={explain}>Regenerate review notes</button></p>}
       <ReportBrief key={'brief-'+report.id} report={report} busy={!!busy} canGenerate={assistantReady} onGenerate={explain}/>
       {!report.demo&&<AskShell key={'ask-'+report.id}><ReviewQuestionPanel report={report} harnesses={models} assistant={assistant} onOpenAssistant={()=>setAssistantOpen(true)} onCitationClick={navigateToCitation}/></AskShell>}
       <div className="section-heading"><div><h3>Review workspace</h3><p>Orient in the architecture. Review changes by topic.</p></div><div className="graph-meta"><span className="status-pulse"/> Source-backed relationships</div></div>
       {report.architecture&&<div className="architecture-view-switch" aria-label="Change map view"><button className={mapView==='architecture'?'active':''} onClick={()=>navigate({name:'report',id:report.id,view:'architecture'})}><Layers3 size={15}/> Architecture</button><button className={mapView==='topics'?'active':''} onClick={()=>navigate({name:'report',id:report.id,view:'topics'})}><FileCode2 size={15}/> Topics</button><span>Understand the connections, then review the files</span></div>}
       {report.architecture&&<div className="architecture-view-panel" hidden={mapView!=='architecture'}><ArchitectureMap data={report.architecture} hiddenPaths={architectureHiddenPaths} onOpenFile={inspectArchitectureFile} assistant={assistant} harnesses={models} onOpenAssistant={()=>setAssistantOpen(true)} onDiscover={discoverArchitecture} busy={!!busy} progress={job?.message||''} error={error}/></div>}
-      <div className="topics-view-panel" hidden={!!report.architecture&&mapView!=='topics'}><TopicReview report={report} assistant={assistant} harnesses={models} onAssistantChange={setAssistant} viewedAvailable={!!viewedFiles?.available} viewedStates={viewedFiles?.states||{}} viewedBusy={viewedFileBusy} viewedError={viewedFilesError} onToggleViewed={toggleViewedFile} hideViewed={hideViewedFiles} onShowViewed={()=>setHideViewedFiles(false)} focusPath={reviewFocus?.path||null} focusRequest={reviewFocus?.request||0} active={mapView==='topics'||!report.architecture} focusMode={focusMode} onToggleFocus={()=>setFocusMode(value=>!value)} onFileChange={changeFile}/></div>
+      <div className="topics-view-panel" hidden={!!report.architecture&&mapView!=='topics'}><TopicReview key={report.id} report={report} assistant={assistant} harnesses={models} onAssistantChange={setAssistant} viewedAvailable={!!viewedFiles?.available} viewedStates={viewedFiles?.states||{}} viewedBusy={viewedFileBusy} viewedError={viewedFilesError} onToggleViewed={toggleViewedFile} hideViewed={hideViewedFiles} onShowViewed={()=>setHideViewedFiles(false)} focusPath={reviewFocus?.path||null} focusRequest={reviewFocus?.request||0} active={mapView==='topics'||!report.architecture} focusMode={focusMode} onToggleFocus={()=>setFocusMode(value=>!value)} onFileChange={changeFile}/></div>
 
      </section>}
     </>}

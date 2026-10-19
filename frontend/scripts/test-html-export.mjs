@@ -53,5 +53,9 @@ try{
  assert.ok(groupedHtml.includes('Pair risk'))
  assert.equal(groupedHtml.split('Long file risk').length-1,1,'one-file group risk is shown on its file')
  assert.equal(groupedHtml.split('from group analysis').length-1,1,'file-level checks are labelled as group analysis')
+ const partial=await createHtmlReport({...report,ai:{...report.ai,review_state:{feedback_status:'running'}}},'now')
+ assert.ok(partial.includes('still being generated')&&partial.includes('only the feedback saved so far'),'partial export is labeled')
+ const stopped=await createHtmlReport({...report,ai:{...report.ai,review_state:{feedback_status:'failed'}}},'now')
+ assert.ok(stopped.includes('incomplete because analysis stopped'),'failed partial export is labeled')
  console.log('HTML export checks passed: filename, complete file/patch coverage, rename/delete handling, escaped content, offline assets, group checks and no live assistant controls.')
 }finally{rmSync(temp,{recursive:true,force:true})}

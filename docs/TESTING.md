@@ -75,3 +75,5 @@ A manual live CLI probe is available in `scripts/probe-review-workspace.py`; it 
 ## Whole-PR call orchestration
 
 `test_review_batching.py` verifies 36 structural groups use one guide invocation while preserving global file order, semantic topics and every change entry; oversized groups/metadata are split without lost IDs or observations, and only multi-batch guides receive a final synthesis call. Missing/duplicate group or symbol responses fail without extra model calls or mutation of the previous guide. Prompt tests exercise file facts, full-workspace access and short valid JSON seeds in both combined and batched modes. `review_state` records guide-call counts and timings separately from architecture preparation.
+
+`test_progressive_review.py` verifies plan publication before detail calls, topic scheduling by validated reading order, immutable plan/topic membership, partial large-topic checkpoints, retained feedback on failures, early running-job report IDs, independent question scheduling, latest-field merging and restart interruption. Browser QA uses a separate temporary data directory and a controlled provider fixture so no retained reports are changed.

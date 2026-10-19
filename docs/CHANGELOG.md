@@ -2,7 +2,11 @@
 
 ## Unreleased
 
-- Replaced one model call per structural group with a whole-PR guide call returning topics, reading order, overview and all symbol/group notes together. Ordinary full analysis now uses architecture + guide (two provider sessions); Explain uses one. Large assignments use bounded batches and one final synthesis, preserving all observations and source access.
+- Open reports before model work, publish initial topics/reading order early, then populate feedback in that same topic order. Freeze the guide during enrichment, checkpoint each validated batch, retain partial results on failure, and archive the prior guide on regeneration. Architecture discovery follows feedback.
+- Poll live report revisions without completion navigation or reader resets. Preserve selected files and visible diff lines, reconnect running jobs after reload, and mark interrupted jobs explicitly. Questions run separately from background analysis; partial HTML exports are labeled. AI schema v9 records topic progress and time to guide/first feedback.
+- Progressive generation trades the previous single guide session for one lightweight plan + one feedback session per semantic topic (bounded batches for large topics), making useful guidance available earlier.
+
+- Replaced one model call per structural group with a whole-PR guide call returning topics, reading order, overview and all symbol/group notes together. That intermediate version used architecture + guide (two provider sessions), and Explain used one; progressive generation above supersedes that app workflow. Large assignments use bounded batches and one final synthesis, preserving all observations and source access.
 - Added guide-phase call counts/timings in AI schema v8 and `PRISM_REVIEW_BATCH_SYMBOLS` (100 by default). Incomplete or duplicate group/symbol responses fail explicitly before replacing a saved guide, instead of filling omitted work with empty notes. No per-group repair loop.
 
 - Made repository access intrinsic to every AI interaction; removed the browsing toggle. PR and inline Q&A can inspect head/merge-base source, full diffs, history and unchanged dependencies.
