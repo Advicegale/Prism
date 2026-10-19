@@ -140,3 +140,5 @@ This is a **functional first implementation**, not a fully field-tested producti
 - Local analyzer packages are installed on first setup; this source ZIP does **not** embed wheel archives, npm dependencies, or a precompiled production UI. Running setup requires package registry access.
 
 For deeper design notes, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+Review preparation is diff-first: only changed paths are parsed for declaration/file anchors, and the initial map lists changed files. Full Graphify exploration indexes build only when you explore a symbol, for the requested Before/After revision. Existing maps/guides stay readable, and AI retains complete repository access. The first cold exploration may take longer; full incremental indexing remains future work.

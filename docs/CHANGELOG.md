@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Removed whole-repository Graphify extraction from fresh review preparation and old symbol-mapping upgrades. Parse changed paths only, retaining declaration/file anchors for all changed files. Initial maps are labeled Changed-file map; full architecture discovery follows the early guide.
+- Removed automatic head/base exploration prefetch on analysis and report loading. Symbol exploration builds only its requested revision on demand. Saved guides/maps are preserved without implicit full-source fact hydration; models retain unrestricted read-only repository access.
+
 - Open reports before model work, publish initial topics/reading order early, then populate feedback in that same topic order. Freeze the guide during enrichment, checkpoint each validated batch, retain partial results on failure, and archive the prior guide on regeneration. Architecture discovery follows feedback.
 - Poll live report revisions without completion navigation or reader resets. Preserve selected files and visible diff lines, reconnect running jobs after reload, and mark interrupted jobs explicitly. Questions run separately from background analysis; partial HTML exports are labeled. AI schema v9 records topic progress and time to guide/first feedback.
 - Progressive generation trades the previous single guide session for one lightweight plan + one feedback session per semantic topic (bounded batches for large topics), making useful guidance available earlier.

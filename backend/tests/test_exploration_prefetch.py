@@ -1,4 +1,4 @@
-"""Background exploration prefetch: queues only, never raises, runs before AI steps."""
+"""Exploration warm-up is explicit; opening and preparing reviews never queues it."""
 import json
 import subprocess
 import threading
@@ -34,7 +34,6 @@ def pr_repo(tmp_path,monkeypatch):
     monkeypatch.setattr(api,'prepare_worktrees',lambda m:(repo,repo,repo,base))
     monkeypatch.setattr(settings,'DATA_DIR',tmp_path/'data')
     n={'id':'service','label':'Service','path':'sample.py','line':1,'kind':'class','status':'context'}
-    monkeypatch.setattr(api,'snapshot',lambda *args:{'nodes':[n],'edges':[],'files_indexed':1})
     def changed(root,path,ranges):
         return [{'name':'Service','qualified':'Service','path':path,'start':1,'end':3,'kind':'class','parent':None}]
     monkeypatch.setattr(graph,'changed_symbols',changed)
@@ -90,21 +89,19 @@ def test_prefetch_without_retained_worktree_is_a_quiet_noop(tmp_path,monkeypatch
     assert service.prefetch(report) is None
 
 
-def test_run_analysis_prefetches_once_before_ai_for_new_report(pr_repo,monkeypatch):
+def test_run_analysis_does_not_prefetch_for_new_report(pr_repo,monkeypatch):
     events=record_calls(monkeypatch)
     rid=api.run_analysis(api.AnalyzeRequest(url=URL,harness='claude'),lambda _:None)
-    assert [name for name,_ in events]==['prefetch','explain','architecture']
-    assert events[0]==('prefetch',rid)
+    assert [name for name,_ in events]==['explain','architecture']
 
 
-def test_run_analysis_prefetches_once_before_ai_for_existing_report(pr_repo,monkeypatch):
+def test_run_analysis_does_not_prefetch_for_existing_report(pr_repo,monkeypatch):
     events=record_calls(monkeypatch)
     rid=api.run_analysis(api.AnalyzeRequest(url=URL),lambda _:None)
-    assert [name for name,_ in events]==['prefetch']
+    assert events==[]
     events.clear()
     assert api.run_analysis(api.AnalyzeRequest(url=URL,harness='claude'),lambda _:None)==rid
-    assert [name for name,_ in events]==['prefetch','explain','architecture']
-    assert events[0]==('prefetch',rid)
+    assert [name for name,_ in events]==['explain','architecture']
 
 
 def write_report(tmp_path,report_id,demo):
@@ -116,7 +113,7 @@ def write_report(tmp_path,report_id,demo):
     (reports/f'{report_id}.json').write_text(json.dumps({**base,'id':report_id}))
 
 
-def test_get_report_prefetches_normal_report_and_not_demo(tmp_path,monkeypatch):
+def test_get_report_never_prefetches_normal_report_or_demo(tmp_path,monkeypatch):
     monkeypatch.setattr(settings,'DATA_DIR',tmp_path)
     calls=[]
     monkeypatch.setattr(service,'prefetch',lambda report:calls.append(report['id']))
@@ -124,9 +121,9 @@ def test_get_report_prefetches_normal_report_and_not_demo(tmp_path,monkeypatch):
     write_report(tmp_path,normal,demo=False);write_report(tmp_path,demo,demo=True)
     client=TestClient(api.app)
     assert client.get(f'/api/reports/{normal}').status_code==200
-    assert calls==[normal]
+    assert calls==[]
     assert client.get(f'/api/reports/{demo}').status_code==200
-    assert calls==[normal]
+    assert calls==[]
 
 
 def test_get_report_survives_real_prefetch_without_worktree(tmp_path,monkeypatch):
@@ -203,5 +200,5 @@ def test_fresh_report_published_before_any_model(pr_repo, monkeypatch):
         events.append(('ready', report_id))
     progress.report_ready = ready
     report_id = api.run_analysis(api.AnalyzeRequest(url=URL, harness='codex'), progress)
-    assert [name for name, _ in events] == ['prefetch', 'ready', 'explain', 'architecture']
-    assert events[1][1] == report_id
+    assert [name for name, _ in events] == ['ready', 'explain', 'architecture']
+    assert events[0][1] == report_id

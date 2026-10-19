@@ -96,7 +96,9 @@ def index_job(report,side):
 
 
 def prefetch(report):
-    """Queue both revision indexes in the background; never wait or raise.
+    """Explicit opt-in warm-up only; analysis and report GET never call this.
+
+    Queue both revision indexes in the background; never wait or raise.
 
     A missing worktree/revision only means there is nothing to prefetch.
     """

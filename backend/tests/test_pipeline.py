@@ -20,7 +20,6 @@ def test_pipeline_caches_report_and_segments(monkeypatch,tmp_path):
     monkeypatch.setattr(api,'prepare_worktrees',lambda m:(repo,repo,repo,base))
     monkeypatch.setattr(api.settings,'DATA_DIR',tmp_path/'data')
     n={'id':'service','label':'Service','path':'sample.py','line':1,'kind':'class','status':'context'}
-    monkeypatch.setattr(api,'snapshot',lambda *args:{'nodes':[n],'edges':[],'files_indexed':1})
     def changed(root,path,ranges):
         return [{'name':'Service','qualified':'Service','path':path,'start':1,'end':3,'kind':'class','parent':None}]
     monkeypatch.setattr(graph,'changed_symbols',changed)

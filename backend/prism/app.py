@@ -18,13 +18,13 @@ from pydantic import BaseModel, Field
 from . import settings
 from .gitops import (RepoError, parse_pr_url, pr_metadata, prepare_worktrees, diff_files,
                      github_viewed_file_states, set_github_file_viewed)
-from .graph import snapshot, identify_changes, segment
+from .graph import identify_changes, segment
 from .harness import available_harnesses, explain_progressively as explain, answer_question
 from .evidence import collect_evidence
 from .topics import build_topics
 from .repository_tools import head_worktree, RepositoryToolError
 from .architecture_review import discover_architecture
-from .architecture import VERSION as ARCHITECTURE_VERSION, report_architecture, build_architecture
+from .architecture import VERSION as ARCHITECTURE_VERSION, build_architecture
 from .exploration import service as exploration
 
 app = FastAPI(title="Prism PR Review", version="0.2.0", docs_url="/api/docs", openapi_url="/api/openapi.json")
@@ -240,33 +240,28 @@ def ensure_topics(report: dict) -> dict:
 
 
 def ensure_architecture(report: dict, root: Path | None = None) -> dict:
-    if report.get("architecture", {}).get("version") == ARCHITECTURE_VERSION:
-        architecture=report["architecture"]
-        for edge in architecture.get("edges", []):
-            if edge.get("confidence") != "LLM_INFERRED": edge.pop("label", None)
-        if architecture.get("method")=="semantic" and architecture.get("facts_version")!=ARCHITECTURE_VERSION:
-            try:
-                observed=report_architecture(report,root or head_worktree(report),include_all_edges=True)
-                ids={n["id"] for n in architecture["nodes"]}
-                keys={(e["source"],e["target"],e["relation"]) for e in architecture["edges"]}
-                for edge in observed.get("all_edges",[]):
-                    key=(edge["source"],edge["target"],edge["relation"])
-                    if edge["source"] in ids and edge["target"] in ids and key not in keys:
-                        keys.add(key);architecture["edges"].append(edge)
-                architecture["facts_version"]=ARCHITECTURE_VERSION
-                save_report(report)
-            except (RepositoryToolError,OSError,ValueError,RuntimeError,subprocess.SubprocessError):
-                pass  # Keep the accepted map when retained source is unavailable.
+    """Opening a report never triggers whole-repository source discovery."""
+    architecture = report.get('architecture') or {}
+    if architecture.get('version') == ARCHITECTURE_VERSION or architecture.get('method') == 'semantic':
+        for edge in architecture.get('edges', []):
+            if edge.get('confidence') != 'LLM_INFERRED': edge.pop('label', None)
         return report
-    try:
-        report["architecture"] = report_architecture(report, root or head_worktree(report))
-    except (RepositoryToolError, OSError, ValueError, RuntimeError, subprocess.SubprocessError):
-        # Keep all changed files visible when old cache source is unavailable.
-        report["architecture"] = build_architecture(report.get("files", []), {})
-        report["architecture"]["version"] = 0
-        report["architecture"]["notes"] = ["Source relationships unavailable. Reanalyze this PR to restore its cached checkout."]
+    report['architecture'] = build_architecture(report.get('files', []), {})
+    for layer in report['architecture'].get('layers', []): layer['title'] = 'Changed files'
+    report['architecture'].update(method='manifest', notes=[
+        'Changed-file map only. Relationships have not been analyzed. Discover architecture or explore a symbol for surrounding source context.'
+    ])
     save_report(report)
     return report
+
+
+def _changed_structure(files, before, after, progress):
+    """Only diff paths enter declaration parsing; source access stays unrestricted."""
+    progress(f"Mapping declarations in {len(files)} changed {'file' if len(files) == 1 else 'files'}")
+    empty = {'nodes': [], 'edges': []}
+    nodes, edges, changed = identify_changes(files, before, after, empty, empty)
+    groups, overview = segment(nodes, edges, changed, files)
+    return nodes, edges, changed, groups, overview
 
 
 def save_report(report: dict):
@@ -351,10 +346,8 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
         result=ensure_complete_diff(read_report(report_id), after)
         result["meta"] = meta
         if result.get("symbol_mapping_version") != 2:
-            old=snapshot(before,git_repo.parent / "graphs",merge_base,progress)
-            new=snapshot(after,git_repo.parent / "graphs",meta["head"],progress)
-            nodes,edges,changed=identify_changes(result["files"],before,after,old,new)
-            groups,overview=segment(nodes,edges,changed,result["files"])
+            nodes,edges,changed,groups,overview=_changed_structure(result['files'],before,after,progress)
+            result['structure'] = {'scope': 'changed_files', 'relationships_complete': False, 'exploration': 'on_demand'}
             if result.get('ai'):
                 result.setdefault('previous_ai', []).append({'reason': 'Changed declaration mapping upgraded',
                     'ai': result['ai'], 'topics': result.get('topics'), 'symbol_mapping_version': result.get('symbol_mapping_version', 1)})
@@ -364,7 +357,6 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
                                    total_graph_nodes=len(nodes),total_graph_edges=len(edges))
         result=ensure_architecture(ensure_topics(ensure_evidence(result)), after)
         save_report(result)
-        exploration.prefetch(result)
         _publish_ready(report_id, progress)
         if req.harness != "none":
             _generate_guide(result, req, progress, after)
@@ -378,22 +370,16 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
     progress("Calculating PR diff")
     files=diff_files(git_repo,merge_base,meta["head"])
     if not files: raise RepoError("This PR has no diff against its merge-base.")
-    graph_cache=git_repo.parent / "graphs"
-    old=snapshot(before,graph_cache,merge_base,progress)
-    new=snapshot(after,graph_cache,meta["head"],progress)
-    progress("Mapping changed line ranges to classes and methods")
-    nodes,edges,changed=identify_changes(files,before,after,old,new)
-    progress("Finding structural change groups")
-    groups,overview=segment(nodes,edges,changed,files)
+    nodes,edges,changed,groups,overview=_changed_structure(files,before,after,progress)
     report={"id":report_id,"meta":meta,"created_at":datetime.now(timezone.utc).isoformat(),
             "stats":{"changed_files":len(files),"changed_symbols":len(changed),
-                     "groups":len(groups),"indexed_files":new["files_indexed"],
+                     "groups":len(groups),"indexed_files":len({n["path"] for n in nodes if n["kind"] != "file"}),
                      "total_graph_nodes":len(nodes),"total_graph_edges":len(edges)},
             "files":files,"groups":groups,"overview":overview,
             "evidence":collect_evidence(groups,files,before,after),"ai":None,
-            "topics":build_topics(groups,overview),"topics_version":5,"demo":False,"diff_version":1,"symbol_mapping_version":2}
+            "topics":build_topics(groups,overview),"topics_version":5,"demo":False,"diff_version":1,"symbol_mapping_version":2,
+            "structure":{"scope":"changed_files","relationships_complete":False,"exploration":"on_demand"}}
     ensure_architecture(report, after)
-    exploration.prefetch(report)
     save_report(report)
     _publish_ready(report_id, progress)
     if req.harness != "none":
@@ -471,7 +457,6 @@ def report(report_id:str):
                             if feedback['status'] == 'running': feedback['status'] = 'failed'
                     save_report(current)
                 data = current
-    if not data.get("demo"): exploration.prefetch(data)
     return data
 
 

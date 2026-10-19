@@ -13,15 +13,11 @@ Two detached worktrees (base + head) inside user cache
      |
 Git diff --unified=0 --find-renames (both old and new line ranges)
      |
-Graphify: extract(collect_files(root), root=root) for each revision
-     |                  [cached by SHA + Graphify version]
-Tree-sitter range analysis for changed source files
+Tree-sitter declaration/range analysis on changed paths only
+     |                  [no repository-wide Graphify extraction]
+Changed declaration/file anchors; per-file structural groups
      |
-Match changed declarations onto Graphify graph nodes by path/name/line
-     |
-Merge head graph + removed base-only edges; classify edge additions/removals
-     |
-Cluster change symbols + expand graph context; split oversized communities
+Complete changed-file manifest map; no inferred relationships
      |
 Roll up structural groups into reviewer topics (path-based fallback or validated AI suggestion)
      |
@@ -44,7 +40,7 @@ Persist AI narrative independently of deterministic graph
 
 Symbol exploration is a separate exact-revision enrichment index and progressive query layer under `backend/prism/exploration/`. It reuses pinned Graphify grammar/import facts and committed-source infrastructure without using the lossy report graph as semantic truth. Report-scoped resolve/expand/source APIs feed a stationary React popover in Topics. Field-aware identity/wrapping/construction facts determine eligible edges; grouping/changed-file filtering only projects them. See [the model, coverage, API and resource contract](SYMBOL_EXPLORATION.md).
 
-`Report` contains `meta`, `stats`, `files` (old/new hunk ranges + complete Git patch), `overview` (`nodes`/`edges`), `groups` (`id`, `title`, `changed_ids`, `files`, contextual `graph`), `topics` (a parent roll-up over existing groups with topic-scoped subgraphs), and `evidence` (line-numbered source excerpts from the actual base/head revisions), plus optional `ai` (a concise diff-grounded statement per changed symbol, optional reviewer notes and rationale, file review order, and suggested topic memberships). Legacy cached AI reports may also contain longer how-it-works and snippet explanations; those fields remain in the stored report for compatibility. Node IDs are from Graphify or prefixed `ast:` if a Tree-sitter declaration can't be associated to an existing graph node.
+`Report` contains `meta`, `stats`, `files` (old/new hunk ranges + complete Git patch), `overview` (`nodes`/`edges`), `groups` (`id`, `title`, `changed_ids`, `files`, contextual `graph`), `topics` (a parent roll-up over existing groups with topic-scoped subgraphs), and `evidence` (line-numbered source excerpts from the actual base/head revisions), plus optional `ai` (a concise diff-grounded statement per changed symbol, optional reviewer notes and rationale, file review order, and suggested topic memberships). Legacy cached AI reports may also contain longer how-it-works and snippet explanations; those fields remain in the stored report for compatibility. Fresh node IDs are `ast:` declaration anchors or `filechange:` fallback anchors. Existing saved reports retain their Graphify IDs and graphs. `structure.scope=changed_files` and `relationships_complete=false` explicitly distinguish lightweight navigation from a repository-wide relationship graph. Missing edges do not establish the absence of dependencies.
 
 A change group is a *cluster of changed symbols*, not necessarily a list of changed files. This makes multi-file feature refactors a single group when relationships support it. Source context can be displayed in several graphs. For oversized connected clusters, greedy modularity identifies candidate splits, followed by bounded connected neighborhoods.
 
@@ -68,7 +64,7 @@ Inline questions use the same endpoint and answer schema with an optional line a
 
 ## Cache details
 
-`~/.local/share/prism-pr-review/repos/<hash>/origin` is a normal Git clone, with detached worktrees under `worktrees/<sha>`. Graphs are cached as `graphs/graph-v2-<sha>-<graphify-version>.json`, containing the normalized Graphify extraction. Reports are separate, keyed by repository/PR/merge-base/head SHAs. AI runs can re-use persisted reports. Older reports are opportunistically enriched with source evidence and complete patches from retained Git objects without an AI run. `diff_version=1` records complete patches. Explicit Analyze refreshes old symbol mappings (`symbol_mapping_version=2`, all declarations overlapping a changed hunk) and archives incompatible prior AI guides under `previous_ai`; merely opening a report preserves saved notes.
+`~/.local/share/prism-pr-review/repos/<hash>/origin` is a normal Git clone, with detached worktrees under `worktrees/<sha>`. Legacy whole-repository graphs remain cached as `graphs/graph-v2-<sha>-<graphify-version>.json`; ordinary review preparation no longer builds or loads them. Symbol exploration builds its own full revision index only on the first request for that side. Reports are separate, keyed by repository/PR/merge-base/head SHAs. AI runs can re-use persisted reports. Older reports are opportunistically enriched with source evidence and complete patches from retained Git objects without an AI run. `diff_version=1` records complete patches. Explicit Analyze refreshes old symbol mappings (`symbol_mapping_version=2`, all declarations overlapping a changed hunk) and archives incompatible prior AI guides under `previous_ai`; merely opening a report preserves saved notes.
 
 Scanning doesn't execute repository scripts, tests, post-checkout hooks or dependency installs. It parses source files. Graph indexing skips symlinks and unusually large files. Repositories crossing graph caps return an explicit failure rather than silently indexing a subset. These indexing limits do not restrict review-workspace reads of an existing checkout. Git operations and blobs are currently materialized in memory before response pagination; very large repositories/results may exhaust resources or time out explicitly.
 
@@ -86,7 +82,7 @@ Only the backend accesses Git/processes or local report data. Frontend never exe
 ## Reviewer-focused AI reports
 
 - A review plan is published before detailed feedback. Semantic topics are enriched sequentially in recommended reading order; structural groups are packed together within each topic, with bounded batches for large assignments. The default per-symbol output is one short statement grounded in that symbol's actual diff hunks.
-- Prompts include every changed symbol ID, Graphify relationships, diff hunks, and bounded exact code excerpts (source material, treated as untrusted data). Each group check and the final topic synthesis can browse relevant callers, dependencies, tests, docs, and unchanged source through the same bounded repository tools used by architecture discovery. Prompts ask models to inspect missing context before reporting an evidence gap, using `revision=head` or `revision=base` as appropriate. Fresh analyses, cached analyses, and Explain reruns all enable these tools; unavailable retained checkouts fail explicitly rather than silently generating diff-only checks. Existing saved checks need an Explain rerun to benefit. Responses are paginated; source access is independent of graph inventory limits.
+- Prompts include every changed declaration/file anchor, available saved relationships, diff hunks, and bounded exact code excerpts (source material, treated as untrusted data). Each group check and the final topic synthesis can browse relevant callers, dependencies, tests, docs, and unchanged source through the same bounded repository tools used by architecture discovery. Prompts ask models to inspect missing context before reporting an evidence gap, using `revision=head` or `revision=base` as appropriate. Fresh analyses, cached analyses, and Explain reruns all enable these tools; unavailable retained checkouts fail explicitly rather than silently generating diff-only checks. Existing saved checks need an Explain rerun to benefit. Responses are paginated; source access is independent of graph inventory limits.
 - Intent is included only when the PR text states it or the diff strongly supports it. All substantive symbol-level reviewer notes are preserved for behavior, security, compatibility, correctness, or validation concerns; small diffs still receive a risk review.
 - Group and PR summaries, risks, and test suggestions are omitted when they add no distinct reviewer value. Group routes are omitted for one-file groups; the global route lists each affected file once and includes a reason only where the order is not self-evident.
 - The server verifies symbol IDs and file paths against the deterministic report. It fills omitted route paths without inventing rationale, preserving a complete review path.
@@ -121,3 +117,9 @@ The renderer consumes generic groups. It no longer special-cases migrations, tes
 Symbol exploration discovers Graphify native providers dynamically, including custom parsers/regex extractors and source-aware filename/shebang routing. Native facts retain provenance from an isolated committed-source tree; shared AST-shape enrichment adds value/field transfers. The complete registry and installed parser versions fingerprint revision caches. Setup discovers optional language-parser dependencies from Graphify metadata. See docs/SYMBOL_EXPLORATION.md for per-construct evidence and limits.
 
 Progressive jobs expose `report_id` while running. Reports carry a revision token and analysis job state; the UI polls updates in place and reconnects on reload. Topic feedback is persisted as pending/running/ready/failed. Questions use two separate workers while analysis jobs remain serialized. `ReadingPosition` captures visible diff lines before DOM mutations and compensates viewport movement without remounting the diff.
+
+## Diff-first preparation and lazy deep indexing
+
+Fresh analyses and old declaration-mapping upgrades parse only paths in the PR diff, retaining renamed/deleted declarations and file anchors for binary/configuration/unsupported-language changes. They never invoke Graphify collection/extraction. Initial architecture maps are marked `method=manifest`: every changed file is visible but no cross-file relationship is implied. Opening a report does not read all source blobs, hydrate old semantic-map facts, or queue either exploration index. Saved accepted maps and paid guides remain intact. Full source inspection/architecture discovery still runs after guide publication during AI Analyze, or on explicit Discover architecture. Full-repository exploration runs only for the requested Before/After revision.
+
+This removes full graph preparation rather than implementing incremental Graphify indexing. The first cold exploration can still be expensive. The lightweight structural graph omits unchanged callers and cross-file edges; semantic topic planning and questions retain complete source/search access and must inspect those relationships directly.

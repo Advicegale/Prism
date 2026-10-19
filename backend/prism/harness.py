@@ -323,6 +323,8 @@ REVIEW_REPOSITORY_GUIDANCE = (
     "read_context exposes full saved meta, files, groups, architecture, existing ai guide, and review_state "
     "with earlier group observations. If meta.body_complete is not true (legacy cache), use read_github resource=pr to recover the full description. "
     "Use architecture evidence to improve grouping, prerequisites and reading order. "
+    "A changed_files structure contains diff declaration/file anchors, not a repository-wide relationship graph. "
+    "Missing graph edges do not prove no callers or dependencies exist; inspect source/search to establish relationships. "
     "read_github retrieves full PR/issue descriptions, comments, reviews, commits, checks/statuses, workflow jobs/logs, "
     "and linked repository source at explicit SHAs; use its page and offset continuations. "
     "GitHub observations are timestamped and may have advanced beyond this pinned review; do not mix code revisions. "
@@ -350,6 +352,7 @@ def _workspace_seed(report: dict) -> str:
         "revisions": {k: meta.get(k) for k in ("head", "merge_base", "base")},
         "changed_files": selected, "total_changed_files": len(files), "manifest_seed_complete": len(selected) == len(files),
         "architecture_available": bool(architecture), "architecture_groups": layers[:30],
+        "structure": report.get("structure") or {"scope": "legacy_graph"},
         "full_context": "read_context sections meta/files/groups/architecture/ai/review_state; list_changes/read_diff for complete Git evidence",
     }, ensure_ascii=True) + "\n"
 
