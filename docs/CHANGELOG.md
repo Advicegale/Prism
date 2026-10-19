@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Replaced one model call per structural group with a whole-PR guide call returning topics, reading order, overview and all symbol/group notes together. Ordinary full analysis now uses architecture + guide (two provider sessions); Explain uses one. Large assignments use bounded batches and one final synthesis, preserving all observations and source access.
+- Added guide-phase call counts/timings in AI schema v8 and `PRISM_REVIEW_BATCH_SYMBOLS` (100 by default). Incomplete or duplicate group/symbol responses fail explicitly before replacing a saved guide, instead of filling omitted work with empty notes. No per-group repair loop.
+
 - Made repository access intrinsic to every AI interaction; removed the browsing toggle. PR and inline Q&A can inspect head/merge-base source, full diffs, history and unchanged dependencies.
 - Added complete paginated source/text/blob/diff/search/history and shared-report-context tools, plus authenticated read-only GitHub PR/issue discussions, reviews, checks, workflow jobs/logs and pinned linked source. Analysis-size and suffix filters no longer hide committed files from review tools; long lines have continuation.
 - Centered prompts on helping the human reviewer: coherent topics, useful entry points and file order, explanations and worthwhile questions. Synthesis can inspect architecture and earlier group observations, and all substantive notes/risks survive. Persisted AI schema v7 records source provenance without claiming exhaustive correctness coverage.

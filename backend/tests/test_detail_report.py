@@ -79,10 +79,11 @@ def test_validated_report_includes_all_changed_symbols_and_files(monkeypatch):
                            'changes':[{'symbol_id':'svc','diff_summary':'Calls the shared service.',
                                        'why':'Reduce duplication',
                                        'how_it_works':'Routes through service','snippet_explanation':'Calls helper'},
+                                      {'symbol_id':'call','diff_summary':'','why':'','review_notes':[]},
                                       {'symbol_id':'unknown','why':'Bad','how_it_works':'Bad','snippet_explanation':'Bad'}]}]}
     monkeypatch.setattr(harness,'run_harness',fake_run)
     result=harness.explain(report,'claude','default','high')
-    assert result['schema_version']==7
+    assert result['schema_version']==8
     assert [c['symbol_id'] for c in result['groups'][0]['changes']]==['svc','call']
     assert result['groups'][0]['changes'][0]['diff_summary']=='Calls the shared service.'
     assert result['groups'][0]['changes'][1]['diff_summary']==''
@@ -99,17 +100,15 @@ def test_multi_group_review_does_not_skip_segments(monkeypatch):
     asked=[]
     def fake_run(_h,_m,_e,prompt):
         asked.append(prompt)
-        if 'GROUPS:' in prompt:
-            g = group1 if '"group_id": "g1"' in prompt else group2
-            return {'overview':'Partial','key_changes':[],'review_order':[],
-                    'groups':[{'id':g['id'],'summary':g['title'], 'before_after':'A',
-                               'impact':'B','risks':[],'tests':[],
-                               'review_order':[],'changes':[]}]}
-        return {'overview':'Full','key_changes':['Two sections'],'review_order':[], 'groups':[]}
+        return {'overview':'Full','key_changes':['Two sections'],'review_order':[],
+                'groups':[{'id':g['id'],'summary':g['title'], 'before_after':'A',
+                           'impact':'B','risks':[],'tests':[], 'review_order':[],
+                           'changes':[{'symbol_id':g['changed_ids'][0],'diff_summary':'Changed','why':'','review_notes':[]}]}
+                          for g in (group1, group2)]}
     monkeypatch.setattr(harness,'run_harness',fake_run)
     result=harness.explain({'meta':{'title':'PR','body':''},'groups':[group1,group2],
                             'files':[],'evidence':{}},'codex','default','medium')
-    assert len(asked)==3
+    assert len(asked)==1
     assert len(result['groups'])==2
     assert len(result['review_order'])==2
     assert result['overview']=='Full'

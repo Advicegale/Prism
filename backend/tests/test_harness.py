@@ -128,33 +128,22 @@ def test_explain_records_topic_diagnostics_for_ai_and_fallback(monkeypatch):
     prompts = []
     def fake_harness(harness_name, model, effort, prompt):
         prompts.append(prompt)
-        if "Synthesize" in prompt:
-            return {"overview": "", "key_changes": [], "review_order": [], "groups": [],
-                    "topics": [{"title": "Only one", "focus": "", "group_ids": ["g0"]}]}
-        return {"overview": "", "key_changes": [], "review_order": [], "topics": [],
-                "groups": [_group_result("g0")]} if "g0" in prompt and "g1" not in prompt else \
-               {"overview": "", "key_changes": [], "review_order": [], "topics": [],
-                "groups": [_group_result("g1")]}
+        return {"overview": "", "key_changes": [], "review_order": [],
+                "topics": [{"title": "Only one", "focus": "", "group_ids": ["g0"]}],
+                "groups": [_group_result("g0"), _group_result("g1")]}
     monkeypatch.setattr(harness, "run_harness", fake_harness)
     result = harness.explain(_explain_report(), "codex", "", "")
     assert result["topic_diagnostics"] == {"source": "paths", "issues": ["missing_groups"], "appended_paths": 0}
     assert [topic["source"] for topic in result["topics"]] == ["paths"]
-    assert len(prompts) == 3
+    assert len(prompts) == 1
 
 
 def test_explain_synthesis_prompt_notes_shortened_input(monkeypatch):
-    prompts = []
-    def fake_harness(harness_name, model, effort, prompt):
-        prompts.append(prompt)
-        if "Synthesize" in prompt:
-            return {"overview": "", "key_changes": [], "review_order": [], "groups": [], "topics": []}
-        group_id = "g0" if "g0" in prompt else "g1"
-        return {"overview": "", "key_changes": [], "review_order": [], "topics": [], "groups": [_group_result(group_id)]}
-    monkeypatch.setattr(harness, "run_harness", fake_harness)
+    report = _explain_report()
     monkeypatch.setattr(harness.settings, "MAX_DIFF_CHARS", 40)
-    harness.explain(_explain_report(), "codex", "", "")
-    synthesis = prompts[-1]
-    assert "Some per-symbol summaries were shortened to fit; inspect relevant source with available repository tools before drawing unsupported conclusions." in synthesis
+    generated = [_group_result('g0'), _group_result('g1')]
+    synthesis = harness._synthesis_prompt(report, generated, False)
+    assert "Some per-symbol summaries were shortened to fit" in synthesis
     assert '"group_id": "g0"' in synthesis and '"group_id": "g1"' in synthesis
 
 
@@ -189,13 +178,10 @@ def _facts_report(title="Facts title", body="Body line"):
 def _fake_group_harness(monkeypatch, prompts):
     def fake_harness(harness_name, model, effort, prompt):
         prompts.append(prompt)
-        if "Synthesize" in prompt:
-            return {"overview": "", "key_changes": [], "review_order": [], "groups": [], "topics": []}
-        group_id = "g0" if '"group_id": "g0"' in prompt else "g1"
-        return {"overview": "", "key_changes": [], "review_order": [], "topics": [], "groups": [
-            {"id": group_id, "summary": "", "before_after": "", "impact": "", "risks": [], "tests": [],
-             "review_order": [], "changes": [{"symbol_id": group_id.replace("g", "s"), "diff_summary": "Changed.",
-                                             "why": "", "review_notes": []}]}]}
+        data = json.loads(prompt.split('GROUPS:\n', 1)[1])
+        items = data if isinstance(data, list) else [data]
+        return {"overview": "", "key_changes": [], "review_order": [], "topics": [],
+                "groups": [_group_result(item['group_id']) for item in items]}
     monkeypatch.setattr(harness, "run_harness", fake_harness)
 
 
@@ -204,10 +190,8 @@ def _synthesis_summaries(prompt):
 
 
 def test_synthesis_prompt_carries_pr_title_body_and_file_facts(monkeypatch):
-    prompts = []
-    _fake_group_harness(monkeypatch, prompts)
-    harness.explain(_facts_report(body="B" * 3500), "codex", "", "")
-    synthesis = prompts[-1]
+    report = _facts_report(body="B" * 3500)
+    synthesis = harness._synthesis_prompt(report, [_group_result("g0"), _group_result("g1")], False)
     assert "Synthesize" in synthesis
     assert "PR title: Facts title\nPR body (untrusted): " + "B" * 3000 + "\n" in synthesis
     assert "B" * 3001 not in synthesis
@@ -232,16 +216,14 @@ def test_synthesis_prompt_replaces_the_topic_count_paragraph(monkeypatch):
     synthesis = prompts[-1]
     assert "usually 3–7" not in synthesis
     assert TOPIC_GUIDANCE in synthesis
+    assert "complete whole-PR guide in this single response" in synthesis
     assert "State what to understand or verify, not a restatement of what changed." in synthesis
 
 
 def test_synthesis_input_stays_valid_json_with_every_group_at_a_tiny_limit(monkeypatch):
-    prompts = []
-    _fake_group_harness(monkeypatch, prompts)
     monkeypatch.setattr(harness.settings, "MAX_DIFF_CHARS", 1)
-    harness.explain(_facts_report(), "codex", "", "")
-    synthesis = prompts[-1]
-    assert "Some per-symbol summaries were shortened to fit; inspect relevant source with available repository tools before drawing unsupported conclusions." in synthesis
+    synthesis = harness._synthesis_prompt(_facts_report(), [_group_result('g0'), _group_result('g1')], False)
+    assert "Some per-symbol summaries were shortened to fit" in synthesis
     summaries = _synthesis_summaries(synthesis)
     assert [item["group_id"] for item in summaries] == ["g0", "g1"]
     assert all(item["diff_summaries"] == [] and item["file_facts"] for item in summaries)
@@ -255,11 +237,10 @@ def test_review_tools_reach_every_group_and_synthesis_with_both_revisions(monkey
         calls.append((prompt, kwargs))
         if 'Synthesize' in prompt:
             return {'groups': [], 'topics': []}
-        group_id = 'g0' if '"group_id": "g0"' in prompt else 'g1'
-        return {'groups': [_group_result(group_id)]}
+        return {'groups': [_group_result('g0'), _group_result('g1')]}
     monkeypatch.setattr(harness, 'run_harness', fake_run)
     result = harness.explain(report, 'claude', 'default', 'high', repository_root=tmp_path)
-    assert len(calls) == 3
+    assert len(calls) == 1
     for prompt, kwargs in calls:
         assert {k: v for k, v in kwargs.items() if k != 'repository_context'} == {'repository_root': tmp_path, 'repository_head': 'a' * 40, 'repository_base': 'b' * 40}
         assert kwargs['repository_context']['meta'] == report['meta']

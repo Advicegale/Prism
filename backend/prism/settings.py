@@ -10,3 +10,6 @@ MAX_DIFF_CHARS = int(os.getenv("PRISM_MAX_DIFF_CHARS", "70000"))
 
 # Per-call exploration budget; response pages never limit which content is accessible.
 REVIEW_MAX_TURNS = int(os.getenv("PRISM_REVIEW_MAX_TURNS", "48"))
+
+# Bound structured output per guide call, independent of source-access limits.
+REVIEW_BATCH_SYMBOLS = int(os.getenv("PRISM_REVIEW_BATCH_SYMBOLS", "100"))

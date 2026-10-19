@@ -138,6 +138,7 @@ def test_prompt_shortening_is_structured_and_honest(monkeypatch):
 
 def test_guide_synthesis_preserves_notes_and_shares_prior_observations(monkeypatch, tmp_path):
     from test_harness import _explain_report, _group_result
+    monkeypatch.setattr(settings, 'REVIEW_BATCH_SYMBOLS', 1)
     report = _explain_report(); report['meta'].update(head='a' * 40, merge_base='b' * 40)
     report['architecture'] = {'layers': [{'id': 'l1', 'title': 'Behavior thread'}]}
     calls = []
