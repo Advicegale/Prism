@@ -14,7 +14,8 @@
     "test:exploration": "node scripts/test-exploration.mjs",
     "test:reading": "node scripts/test-reading.mjs",
     "test:routes": "node scripts/test-routes.mjs",
-    "test:assistant": "node scripts/test-assistant.mjs"
+    "test:assistant": "node scripts/test-assistant.mjs",
+    "test:timing": "node scripts/test-analysis-timing.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

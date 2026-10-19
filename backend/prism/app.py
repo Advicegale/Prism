@@ -9,6 +9,7 @@ from pathlib import Path
 import os
 import re
 import threading
+import time
 import subprocess
 import uuid
 from typing import Literal
@@ -274,8 +275,10 @@ def save_report(report: dict):
 
 
 
-def _job(kind: str, callback):
+def _job(kind: str, callback, *, review_requested: bool = True):
     job_id=uuid.uuid4().hex
+    started = None
+    started_at = None
     with lock: jobs[job_id]={"id":job_id,"kind":kind,"state":"queued","message":"Queued","report_id":None,"result":None,"error":None}
     def update(message):
         with lock:
@@ -285,6 +288,14 @@ def _job(kind: str, callback):
         with report_lock:
             current = read_report(report_id)
             current['analysis'] = {'state': 'running', 'job_id': job_id}
+            elapsed = round(time.monotonic() - started, 3)
+            if kind == 'analysis':
+                current['analysis_timings'] = {'graph_seconds': elapsed, 'started_at': started_at,
+                    'review_status': 'running' if review_requested else 'not_requested', 'review_kind': 'analysis'}
+            elif kind == 'explanation':
+                previous = current.get('analysis_timings') or {}
+                current['analysis_timings'] = {'graph_seconds': previous.get('graph_seconds'),
+                    'started_at': started_at, 'review_status': 'running', 'review_kind': 'regenerated'}
             save_report(current)
         with lock: jobs[job_id]['report_id'] = report_id
     update.report_ready = report_ready
@@ -294,8 +305,24 @@ def _job(kind: str, callback):
             with report_lock:
                 current = read_report(report_id)
                 current['analysis'] = {'state': state, 'job_id': job_id, 'error': error}
+                timing = current.get('analysis_timings')
+                if timing and kind in {'analysis', 'explanation'}:
+                    elapsed = max(0, time.monotonic() - started)
+                    if kind == 'analysis':
+                        review_seconds = max(0, elapsed - timing['graph_seconds'])
+                    else:
+                        review_seconds = elapsed
+                    if kind == 'explanation' or review_requested:
+                        timing.update(review_seconds=round(review_seconds, 3),
+                                      review_status='completed' if state == 'completed' else 'failed')
+                    if state == 'completed':
+                        timing['completed_at'] = datetime.now(timezone.utc).isoformat()
+                        if kind == 'analysis': timing['total_seconds'] = round(elapsed, 3)
                 save_report(current)
     def work():
+        nonlocal started, started_at
+        started = time.monotonic()
+        started_at = datetime.now(timezone.utc).isoformat()
         try:
             update("Starting")
             result=callback(update)
@@ -415,7 +442,7 @@ def analyze(request: AnalyzeRequest):
         parse_pr_url(request.url)
     except RepoError as exc:
         raise HTTPException(400, str(exc)) from exc
-    return _job("analysis",lambda progress:run_analysis(request,progress))
+    return _job("analysis",lambda progress:run_analysis(request,progress), review_requested=request.harness != "none")
 
 @app.get("/api/jobs/{job_id}")
 def job_info(job_id: str):
@@ -450,6 +477,8 @@ def report(report_id:str):
                 if current.get('analysis') == data['analysis']:
                     message = 'Analysis interrupted when Prism stopped. Saved guide and feedback are available; regenerate to continue.'
                     current['analysis'] = dict(current['analysis'], state='failed', error=message)
+                    timing = current.get('analysis_timings') or {}
+                    if timing.get('review_status') == 'running': timing['review_status'] = 'failed'
                     state = (current.get('ai') or {}).get('review_state') or {}
                     if state.get('feedback_status') == 'running':
                         state.update(feedback_status='failed', error=message)
