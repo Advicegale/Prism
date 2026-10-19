@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowUp, ChevronDown, LoaderCircle, MessageSquareText, Sparkles, X } from 'lucide-react'
 import type { DiffLineAnchor, Harnesses, Job, QuestionAnswer, ReviewAssistantSettings } from '../types'
 import { MarkdownContent } from './MarkdownContent'
@@ -41,6 +41,11 @@ function anchorLabel(anchor: DiffLineAnchor) {
 function providerLabel(harness: string) { return harness === 'claude' ? 'Claude Code' : 'Codex' }
 
 export function InlineDiffChat({ reportId, anchor, assistant, harnesses, onAssistantChange, onConversationStarted, onClose }: Props) {
+  const composer = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => {
+    composer.current?.focus({preventScroll: true})
+    composer.current?.closest('.inline-diff-chat')?.scrollIntoView({block: 'nearest', inline: 'nearest'})
+  }, [])
   const [turns, setTurns] = useState<Turn[]>([])
   const [question, setQuestion] = useState('')
   const [busy, setBusy] = useState(false)
@@ -123,7 +128,7 @@ export function InlineDiffChat({ reportId, anchor, assistant, harnesses, onAssis
 
     {!installed && <p className="inline-diff-chat-unavailable">{harnesses ? `${providerLabel(assistant.harness)} is not installed. Choose an available assistant from the Assistant button in the top bar.` : 'Checking available assistants…'}</p>}
     <form className="inline-diff-chat-composer" onSubmit={event => { event.preventDefault(); void ask() }}>
-      <textarea aria-label="Question about selected diff lines" rows={2} maxLength={2000} value={question} disabled={!installed || busy} onChange={event => setQuestion(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); void ask() } }} placeholder="What should I know about this change?"/>
+      <textarea ref={composer} aria-label="Question about selected diff lines" rows={2} maxLength={2000} value={question} disabled={!installed || busy} onChange={event => setQuestion(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); void ask() } }} placeholder="What should I know about this change?"/>
       <div className="inline-diff-chat-footer">
         <span className={error ? 'inline-diff-chat-status-error' : undefined} role={error ? 'alert' : undefined}>{error || `${providerLabel(assistant.harness)} CLI`}</span>
         <div className="inline-diff-chat-settings" aria-label="Inline chat model and reasoning effort">

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed line-chat panels appearing at the end of a diff block. They now open directly below the selected row/range in Unified and Split views, focus the composer, and preserve drafts/conversations while moving the range or switching layouts.
+
 - Removed whole-repository Graphify extraction from fresh review preparation and old symbol-mapping upgrades. Parse changed paths only, retaining declaration/file anchors for all changed files. Initial maps are labeled Changed-file map; full architecture discovery follows the early guide.
 - Removed automatic head/base exploration prefetch on analysis and report loading. Symbol exploration builds only its requested revision on demand. Saved guides/maps are preserved without implicit full-source fact hydration; models retain unrestricted read-only repository access.
 

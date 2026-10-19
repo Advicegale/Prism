@@ -234,6 +234,13 @@ export function CodeDiff({patch, path, oldPath, lineReferences, inlineQuestion, 
       {inlineQuestion && row.kind !== 'meta' && hasAnchor && <button className="diff-ask-line" type="button" aria-label={`Ask about ${label}`} title="Ask about this diff line · Shift-click another line on this side to include a range" onClick={event => selectLine(row.index, side, event)}><MessageSquareText size={13}/></button>}
     </div>
   }
+  // Keep chats as keyed siblings of all visual rows. Moving a range or switching
+  // layouts moves the existing conversation instead of remounting its state.
+  function chatsAfter(indices: (number | undefined)[]) {
+    if (!inlineQuestion) return []
+    return chatSlots.filter(slot => indices.includes(Math.max(slot.start, slot.end))).map(slot =>
+      <InlineDiffChat key={`chat-${slot.id}`} reportId={inlineQuestion.reportId} anchor={diffAnchor(path, allRows, slot.start, slot.end, slot.side)} assistant={inlineQuestion.assistant} harnesses={inlineQuestion.harnesses} onAssistantChange={inlineQuestion.onAssistantChange} onConversationStarted={() => setChatSlots(current => current.map(item => item.id === slot.id ? {...item, locked: true} : item))} onClose={() => closeSlot(slot.id)}/>)
+  }
   return <div className="diff-review-patch">
     {interactive && <div className="diff-reader-controls">
       <div className="diff-mode-controls" role="group" aria-label="Diff layout"><button type="button" aria-pressed={mode === 'unified'} onClick={() => chooseMode('unified')}>Unified</button><button type="button" aria-pressed={mode === 'split'} onClick={() => chooseMode('split')}>Split</button></div>
@@ -243,13 +250,20 @@ export function CodeDiff({patch, path, oldPath, lineReferences, inlineQuestion, 
     </div>}
     <div className={`diff-code${mode === 'split' ? ' diff-code-split' : ''}${wrap ? '' : ' diff-no-wrap'}`} ref={scroller} style={{'--diff-pane-width': `calc(${longestLine}ch + 80px)`} as CSSProperties} role="region" aria-label={`Code diff for ${path}`} tabIndex={0}>
       {mode === 'split' && <div className="diff-split-heading"><span>Before · base</span><span>After · head</span></div>}
-      <div className="diff-lines">{blocks.map(block => <div className="diff-block" key={block.start}>
-        <div className="diff-block-source">{mode === 'unified' ? block.rows.map(row => <div className="diff-row-wrap" key={row.index}>{sourceLine(row, 'both', changesByIndex.get(row.index))}</div>) : splitBlocks.get(block.start)!.map((pair, index) => pair.note ? <div className="diff-row-wrap" key={`note-${pair.note.index}`}>{sourceLine(pair.note, 'both')}</div> : <div className="diff-split-row diff-row-wrap" key={index}>
-          {pair.left ? sourceLine(pair.left, 'old', pair.leftChanges) : <div className="diff-split-gap" aria-hidden="true"/>}
-          {pair.right ? sourceLine(pair.right, 'new', pair.rightChanges) : <div className="diff-split-gap" aria-hidden="true"/>}
-        </div>)}</div>
-        {inlineQuestion && chatSlots.filter(slot => Math.max(slot.start, slot.end) >= block.start && Math.max(slot.start, slot.end) <= block.end).map(slot => <InlineDiffChat key={slot.id} reportId={inlineQuestion.reportId} anchor={diffAnchor(path, allRows, slot.start, slot.end, slot.side)} assistant={inlineQuestion.assistant} harnesses={inlineQuestion.harnesses} onAssistantChange={inlineQuestion.onAssistantChange} onConversationStarted={() => setChatSlots(current => current.map(item => item.id === slot.id ? {...item, locked: true} : item))} onClose={() => closeSlot(slot.id)}/>)}
-      </div>)}</div>
+      <div className="diff-lines"><div className="diff-block-source">{blocks.flatMap(block => mode === 'unified'
+        ? block.rows.flatMap(row => [
+          <div className="diff-row-wrap" key={`unified-${row.index}`}>{sourceLine(row, 'both', changesByIndex.get(row.index))}</div>,
+          ...chatsAfter([row.index]),
+        ])
+        : splitBlocks.get(block.start)!.flatMap(pair => [
+          pair.note
+            ? <div className="diff-row-wrap" key={`note-${pair.note.index}`}>{sourceLine(pair.note, 'both')}</div>
+            : <div className="diff-split-row diff-row-wrap" key={`split-${pair.left?.index ?? 'gap'}-${pair.right?.index ?? 'gap'}`}>
+              {pair.left ? sourceLine(pair.left, 'old', pair.leftChanges) : <div className="diff-split-gap" aria-hidden="true"/>}
+              {pair.right ? sourceLine(pair.right, 'new', pair.rightChanges) : <div className="diff-split-gap" aria-hidden="true"/>}
+            </div>,
+          ...chatsAfter([pair.note?.index, pair.left?.index, pair.right?.index]),
+        ]))}</div></div>
     </div>
     {!expanded && visibleCount < allRows.length && <div className="diff-more-lines"><span>{visibleCount} of {allRows.length} diff lines shown</span><button type="button" onClick={() => setLimit(Math.min(allRows.length, visibleCount + 160))}>Show {Math.min(160, allRows.length - visibleCount)} more lines</button></div>}
   </div>
