@@ -232,7 +232,7 @@ def test_synthesis_prompt_replaces_the_topic_count_paragraph(monkeypatch):
     synthesis = prompts[-1]
     assert "usually 3–7" not in synthesis
     assert TOPIC_GUIDANCE in synthesis
-    assert "State what to verify, not a restatement of what changed." in synthesis
+    assert "State what to understand or verify, not a restatement of what changed." in synthesis
 
 
 def test_synthesis_input_stays_valid_json_with_every_group_at_a_tiny_limit(monkeypatch):
@@ -261,7 +261,9 @@ def test_review_tools_reach_every_group_and_synthesis_with_both_revisions(monkey
     result = harness.explain(report, 'claude', 'default', 'high', repository_root=tmp_path)
     assert len(calls) == 3
     for prompt, kwargs in calls:
-        assert kwargs == {'repository_root': tmp_path, 'repository_head': 'a' * 40, 'repository_base': 'b' * 40}
+        assert {k: v for k, v in kwargs.items() if k != 'repository_context'} == {'repository_root': tmp_path, 'repository_head': 'a' * 40, 'repository_base': 'b' * 40}
+        assert kwargs['repository_context']['meta'] == report['meta']
+        assert kwargs['repository_context']['review_state']['groups']
         assert 'including unchanged files outside this group' in prompt
         assert 'revision=base' in prompt and 'revision=head' in prompt
         assert 'Repository tools are unavailable' not in prompt

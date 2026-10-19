@@ -17,7 +17,7 @@ import re
 import subprocess
 from . import settings
 from .symbols import LANGUAGES
-from .sourcefiles import eligible_path
+from .sourcefiles import eligible_path, git_lines
 
 VERSION = 4
 # Source-only fallback has one neutral group. Architectural roles are discovered
@@ -199,7 +199,7 @@ def sql_tables(text: str) -> list[str]:
 def extract(sources: dict[str, str], structural: dict | None = None, side='head', focus: dict | None = None) -> list[dict]:
     edges = {}; mapping = aliases(sources); html = {}; css = {}; facts = {}; routes = defaultdict(list); tables = defaultdict(list)
     def evidence(path, line):
-        rows = sources[path].splitlines()
+        rows = git_lines(sources[path])
         return {'path':path, 'line':line, 'side':side, 'code':rows[line-1].strip()[:240] if 0 < line <= len(rows) else ''}
     def add(src, dst, relation, line, target_line=1, detail='', contract=False):
         if src == dst: return
@@ -228,7 +228,7 @@ def extract(sources: dict[str, str], structural: dict | None = None, side='head'
             clean = re.sub(r'--[^\n]*|/\*.*?\*/', '', text, flags=re.S)
             for m in re.finditer(r'\b(?:create|alter)\s+table(?:\s+if\s+not\s+exists)?\s+["`]?([\w]+)', clean, re.I):
                 # Find line in original rather than relying on comment-stripped offsets.
-                line = next((i for i,row in enumerate(text.splitlines(),1) if re.search(r'\b'+re.escape(m.group(1))+r'\b',row,re.I)),1)
+                line = next((i for i,row in enumerate(git_lines(text),1) if re.search(r'\b'+re.escape(m.group(1))+r'\b',row,re.I)),1)
                 tables[m.group(1).lower()].append((path,line))
         fs = js_facts(path, text); facts[path] = fs
         for kind, value, line in fs:

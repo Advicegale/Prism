@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Made repository access intrinsic to every AI interaction; removed the browsing toggle. PR and inline Q&A can inspect head/merge-base source, full diffs, history and unchanged dependencies.
+- Added complete paginated source/text/blob/diff/search/history and shared-report-context tools, plus authenticated read-only GitHub PR/issue discussions, reviews, checks, workflow jobs/logs and pinned linked source. Analysis-size and suffix filters no longer hide committed files from review tools; long lines have continuation.
+- Centered prompts on helping the human reviewer: coherent topics, useful entry points and file order, explanations and worthwhile questions. Synthesis can inspect architecture and earlier group observations, and all substantive notes/risks survive. Persisted AI schema v7 records source provenance without claiming exhaustive correctness coverage.
+- Removed the stored patch cap and fixed one-hunk sibling declaration loss. Old saved patches hydrate from exact retained Git objects without another AI call; explicit reanalysis upgrades declaration mappings and regenerates incompatible guide data.
+- Both CLI prompts use stdin. Claude's per-call tool budget is configurable via `PRISM_REVIEW_MAX_TURNS` (48 by default). See [implemented access and remaining work](REVIEW_WORKSPACE.md).
+
 - AI group checks and topic synthesis can now inspect repository context beyond their supplied diff, including unchanged callers, dependencies, tests and docs at the exact PR head or merge-base. Enabled for fresh/cached analyses and Explain reruns; existing saved checks need regeneration.
 
 - Topics show the **group checks** the analysis already wrote: a collapsed **Group checks** list above each topic's files for risks shared by its multi-file groups, and a file without saved review notes shows its one-file group's risks under **Worth checking** (labelled *from group analysis*).

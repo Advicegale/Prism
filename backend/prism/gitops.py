@@ -34,15 +34,15 @@ def parse_pr_url(url: str) -> tuple[str, str, int]:
 
 def command(args: list[str], *, cwd: Path | None = None, timeout: int = 180, input: str | None = None) -> str:
     try:
-        p = subprocess.run(args, cwd=cwd, input=input, text=True, capture_output=True,
+        p = subprocess.run(args, cwd=cwd, input=input.encode("utf-8") if input is not None else None, capture_output=True,
                            timeout=timeout, check=False, env={**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_LFS_SKIP_SMUDGE": "1"})
     except FileNotFoundError as exc:
         raise RepoError(f"Missing command: {args[0]}") from exc
     except subprocess.TimeoutExpired as exc:
         raise RepoError(f"Command timed out: {args[0]} {args[1] if len(args)>1 else ''}") from exc
     if p.returncode:
-        raise RepoError((p.stderr or p.stdout or "Command failed").strip()[:1000])
-    return p.stdout
+        raise RepoError((p.stderr or p.stdout or b"Command failed").decode("utf-8", errors="replace").strip()[:1000])
+    return p.stdout.decode("utf-8", errors="surrogateescape")
 
 
 def github_token() -> str | None:
@@ -75,7 +75,7 @@ def pr_metadata(owner: str, repo: str, number: int) -> dict:
     if not SHA_RE.fullmatch(base) or not SHA_RE.fullmatch(head):
         raise RepoError("GitHub returned invalid revision data")
     return {"owner":owner,"repo":repo,"number":number,"title":info.get("title", ""),
-            "body": (info.get("body") or "")[:12000],"url":info.get("html_url", ""),
+            "body": info.get("body") or "","body_complete":True,"url":info.get("html_url", ""),
             "base":base,"head":head,"base_ref":info.get("base",{}).get("ref", ""),
             "head_ref":info.get("head",{}).get("ref", ""),
             "state":info.get("state", ""),"draft":info.get("draft",False),
@@ -114,44 +114,34 @@ def prepare_worktrees(meta: dict) -> tuple[Path, Path, Path, str]:
 
 
 def diff_files(repo: Path, base_sha: str, head_sha: str) -> list[dict]:
-    """Parse unified zero-context hunks and track line ranges on both sides."""
-    content = command(["git", "-C", str(repo), "diff", "--no-ext-diff", "--no-color", "--find-renames", "--unified=0", base_sha, head_sha, "--"], timeout=120)
-    results: list[dict] = []
-    current: dict | None = None
+    """Keep complete Git patches; use the NUL manifest for exact/binary/mode-only paths."""
+    git = ["git", "--literal-pathspecs", "-C", str(repo), "diff", "--no-ext-diff", "--no-textconv", "--find-renames"]
+    manifest = command([*git, "--name-status", "-z", base_sha, head_sha, "--"], timeout=120).split("\0")
+    results = []; index = 0
+    while index < len(manifest) and manifest[index]:
+        status, path = manifest[index:index + 2]; index += 2
+        old_path = path
+        if status[0] in "RC": path = manifest[index]; index += 1
+        results.append({"path": "" if status == "D" else path,
+                        "old_path": "" if status == "A" else old_path,
+                        "status": {"A": "added", "D": "deleted", "R": "renamed"}.get(status[0], "modified"),
+                        "new_ranges": [], "old_ranges": [], "patch": "", "patch_truncated": False})
+    content = command([*git, "--no-color", "--unified=0", base_sha, head_sha, "--"], timeout=120)
+    current = None; file_index = 0
     hunk = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
-    for line in content.splitlines():
+    for line in re.findall(r"[^\n]*\n|[^\n]+$", content):
         if line.startswith("diff --git "):
-            current = {"path": "", "old_path": "", "status":"modified", "new_ranges": [], "old_ranges": [], "patch": "", "patch_truncated": False}
-            results.append(current)
-        elif current is None:
-            continue
-        elif line.startswith("+++ b/"):
-            current["path"] = line[6:]
-        elif line.startswith("--- a/"):
-            current["old_path"] = line[6:]
-        elif line.startswith("new file mode"):
-            current["status"] = "added"
-        elif line.startswith("deleted file mode"):
-            current["status"] = "deleted"
-        elif line.startswith("rename from "):
-            current["old_path"] = line[12:]
-            current["status"] = "renamed"
-        elif line.startswith("rename to "):
-            current["path"] = line[10:]
+            if file_index >= len(results): raise RepoError("Git diff and changed-file inventory disagree.")
+            current = results[file_index]; file_index += 1
+        if current is None: continue
+        current["patch"] += line
         match = hunk.match(line)
-        if match and current:
-            start_old, old_count, start_new, new_count = [int(match.group(i) or ("1" if i in (2,4) else "0")) for i in range(1,5)]
-            if new_count:
-                current["new_ranges"].append([start_new, start_new + new_count - 1])
-            if old_count:
-                current["old_ranges"].append([start_old, start_old + old_count - 1])
-        if current:
-            # Include metadata and diff text, with per-file cap to bound stored reports.
-            if len(current["patch"]) < 16000:
-                current["patch"] += line + "\n"
-            else:
-                current["patch_truncated"] = True
-    return [r for r in results if r["path"] or r["old_path"]]
+        if match:
+            start_old, old_count, start_new, new_count = [int(match.group(i) or "1") for i in range(1, 5)]
+            if new_count: current["new_ranges"].append([start_new, start_new + new_count - 1])
+            if old_count: current["old_ranges"].append([start_old, start_old + old_count - 1])
+    if file_index != len(results): raise RepoError("Git omitted changed files from its patch output.")
+    return results
 
 
 def _github_graphql(query: str, variables: dict) -> dict:

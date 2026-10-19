@@ -34,7 +34,6 @@ function label(harness: string) { return harness === 'claude' ? 'Claude Code' : 
 export function ReviewQuestionPanel({ report, harnesses, assistant, onOpenAssistant, onCitationClick }: Props) {
   const [turns, setTurns] = useState<Turn[]>([])
   const [question, setQuestion] = useState('')
-  const [includeRepositoryContext, setIncludeRepositoryContext] = useState(false)
   const { harness, model, effort } = assistant
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState('')
@@ -48,7 +47,6 @@ export function ReviewQuestionPanel({ report, harnesses, assistant, onOpenAssist
   useEffect(() => {
     setTurns([])
     setQuestion('')
-    setIncludeRepositoryContext(false)
     setBusy(false)
     setProgress('')
     setError('')
@@ -63,14 +61,13 @@ export function ReviewQuestionPanel({ report, harnesses, assistant, onOpenAssist
     setQuestion('')
     setError('')
     setBusy(true)
-    setProgress(includeRepositoryContext ? 'Opening read-only repository tools' : 'Sending report context to the selected CLI')
+    setProgress('Reading PR and repository context')
     try {
       const response = await call<{ job_id: string }>(`/reports/${report.id}/questions`, {
         method: 'POST',
         body: JSON.stringify({
           harness, model: model.trim() || 'default', effort,
           question: text,
-          include_repository_context: includeRepositoryContext,
           history: turns.filter(turn => turn.answer).slice(-6).map(turn => ({ question: turn.question, answer: turn.answer!.answer })),
         }),
       })
@@ -112,7 +109,7 @@ export function ReviewQuestionPanel({ report, harnesses, assistant, onOpenAssist
     <div className="review-questions-heading">
       <div className="review-questions-title">
         <span className="review-question-icon"><MessageSquareText size={17}/></span>
-        <div><h3>Ask this PR</h3><p>Get a focused answer from changed code, with optional repository browsing.</p></div>
+        <div><h3>Ask this PR</h3><p>Explore this change and its surrounding implementation.</p></div>
       </div>
       <div className="assistant-line"><span>Assistant: <strong>{assistantSummary(assistant)}</strong>{harnesses && !installed ? ' · not installed' : ''}</span><button type="button" className="assistant-change-btn" aria-label="Change assistant" onClick={onOpenAssistant}>Change</button></div>
     </div>
@@ -138,11 +135,7 @@ export function ReviewQuestionPanel({ report, harnesses, assistant, onOpenAssist
       <textarea ref={textarea} aria-label="Question about the pull request" rows={2} maxLength={2000} value={question} onChange={event => setQuestion(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); void ask() } }} placeholder="Ask about behavior, dependencies, or a review concern…" disabled={!installed || busy}/>
       <div className="review-question-compose-footer">
         <div className="review-question-footer-info">
-          <label className="review-question-context-toggle" title="Allow the selected CLI to browse tracked source files at this PR revision through read-only Prism tools. Retrieved code is sent to that CLI.">
-            <input type="checkbox" checked={includeRepositoryContext} disabled={!installed || busy} onChange={event => setIncludeRepositoryContext(event.target.checked)}/>
-            <span>Allow repository browsing</span>
-          </label>
-          <span className="review-question-compose-note">{error ? <span className="review-question-error">{error}</span> : includeRepositoryContext ? 'Retrieved source excerpts go to the selected CLI.' : 'PR excerpts and diffs go to the selected CLI.'}</span>
+          <span className="review-question-compose-note">{error ? <span className="review-question-error">{error}</span> : 'Relevant PR and repository context goes to your assistant.'}</span>
         </div>
         <button type="submit" disabled={!installed || busy || !question.trim()}>{busy ? <LoaderCircle size={15} className="spinning"/> : <ArrowUp size={15}/>}<span>{busy ? 'Thinking' : 'Ask'}</span></button>
       </div>

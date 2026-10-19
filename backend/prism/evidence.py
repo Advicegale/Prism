@@ -4,6 +4,7 @@ Only reads files in the previously prepared detached worktrees. Unlike AI-genera
 snippets, these excerpts are exact source text with stable line references.
 """
 from __future__ import annotations
+from .sourcefiles import git_lines
 from pathlib import Path
 
 
@@ -34,7 +35,7 @@ def collect_evidence(groups: list[dict], files: list[dict], before: Path, after:
             if path.stat().st_size > 600_000:
                 continue
             try:
-                lines = path.read_text(encoding='utf-8').splitlines()
+                lines = git_lines(path.read_bytes().decode('utf-8'))
             except (OSError, UnicodeError):
                 continue
             if not lines:

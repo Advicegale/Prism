@@ -82,7 +82,7 @@ def test_validated_report_includes_all_changed_symbols_and_files(monkeypatch):
                                       {'symbol_id':'unknown','why':'Bad','how_it_works':'Bad','snippet_explanation':'Bad'}]}]}
     monkeypatch.setattr(harness,'run_harness',fake_run)
     result=harness.explain(report,'claude','default','high')
-    assert result['schema_version']==6
+    assert result['schema_version']==7
     assert [c['symbol_id'] for c in result['groups'][0]['changes']]==['svc','call']
     assert result['groups'][0]['changes'][0]['diff_summary']=='Calls the shared service.'
     assert result['groups'][0]['changes'][1]['diff_summary']==''

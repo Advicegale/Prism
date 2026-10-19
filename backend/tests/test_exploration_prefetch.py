@@ -159,6 +159,7 @@ def test_explain_rerun_resolves_report_checkout(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, 'DATA_DIR', tmp_path)
     rid = '4' * 24
     write_report(tmp_path, rid, demo=False)
+    saved=api.read_report(rid);saved['diff_version']=1;api.save_report(saved)
     calls = []
     def root(report):
         calls.append(('root', report['id']))
@@ -176,3 +177,17 @@ def test_explain_rerun_resolves_report_checkout(tmp_path, monkeypatch):
     response = TestClient(api.app).post(f'/api/reports/{rid}/explain', json={'harness': 'codex'})
     assert response.status_code == 202
     assert calls == [('root', rid), ('explain', rid)]
+
+
+def test_reanalysis_archives_guide_before_mapping_upgrade(pr_repo):
+    req=api.AnalyzeRequest(url=URL)
+    rid = api.run_analysis(req, lambda _: None)
+    report = api.read_report(rid)
+    report['ai'] = {'overview': 'saved paid guide', 'topics': report['topics']}
+    report['symbol_mapping_version'] = 1
+    api.save_report(report)
+    assert api.run_analysis(req, lambda _: None) == rid
+    migrated = api.read_report(rid)
+    assert migrated['symbol_mapping_version'] == 2
+    assert migrated['ai'] is None
+    assert migrated['previous_ai'][-1]['ai']['overview'] == 'saved paid guide'

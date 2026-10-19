@@ -11,3 +11,10 @@ def eligible_path(path: str) -> bool:
     pure = PurePosixPath(path)
     return not (pure.is_absolute() or '..' in pure.parts or SKIP_DIRS.intersection(pure.parts)
                 or pure.suffix.lower() in BINARY_SUFFIXES)
+
+
+def git_lines(text: str) -> list[str]:
+    """Git/Tree-sitter coordinates count LF only, not Python's Unicode separators."""
+    if not text: return []
+    rows = text.split("\n")
+    return rows[:-1] if rows[-1] == "" else rows

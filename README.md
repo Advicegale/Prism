@@ -51,7 +51,7 @@ Prism **does not install or sign you in** to third-party coding harnesses. Insta
 
 The Configuration page detects available executables on the backend's `PATH`. Codex model and effort selections are populated from the installed app-server's `model/list` response when available. Claude Code doesn't offer a verified stable account-level CLI model-list interface; Prism uses CLI aliases / custom model IDs with user-selectable effort. When an API isn't available, fields remain editable/defaultable rather than pretending to know your account's models.
 
-**Privacy:** Graph construction and symbol mapping run locally. Selecting Codex/Claude sends bounded PR context to the provider via that CLI. PR questions include the PR body, report summaries, and verified excerpts/diffs for changed symbols; inline questions also include the selected line-anchored diff excerpt. Architecture discovery always uses restricted read-only source browsing at the exact head/base commits. For Q&A, if **Allow repository browsing** is checked, the selected CLI can request tracked source from the exact PR-head commit through Prism's read-only file, symbol, relationship, and source tools. Prism sends only the requested excerpts; it does not give the CLI shell or `gh` access. Prism doesn't independently contact LLM APIs.
+**Privacy:** Graph construction and symbol mapping run locally. Enabling AI review notes or asking a question gives the selected Codex/Claude CLI complete read-only access to the pinned PR/repository through Prism tools, including unchanged and historical source. The CLI can search source, retrieve complete diffs and read GitHub PR/issue discussions, checks and linked repository code using your existing GitHub access. Requested context goes to that CLI's provider. Authentication remains in Prism's backend; the CLI gets no shell, GitHub CLI or write access. Repository access is part of every AI interaction. Prism doesn't independently contact LLM APIs. See [the access contract and current limits](docs/REVIEW_WORKSPACE.md).
 
 ## Interface
 
@@ -78,6 +78,7 @@ PORT=4780
 # PRISM_DATA_DIR=/custom/path
 # PRISM_MAX_FILES=2500
 # PRISM_MAX_TOTAL_BYTES=35000000
+# PRISM_REVIEW_MAX_TURNS=48
 ```
 
 The `PORT` setting changes the production server's port. The frontend API is relative to the current origin. In development, the Vite dev server uses `http://127.0.0.1:5173` and proxies `/api` to `4780`.

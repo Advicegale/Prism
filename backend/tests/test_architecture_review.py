@@ -79,7 +79,7 @@ def test_arbitrary_text_and_exact_base_are_available_to_tools(tmp_path):
     (tmp_path/'Player.gd').write_text('local edit')
     tools=RepositoryTools(tmp_path,head,tmp_path/'audit.jsonl',base)
     assert 'unknown.customlang' in tools.list_files({})['files']
-    assert 'picture.png' not in tools.list_files({})['files']
+    assert 'picture.png' in tools.list_files({})['files']
     assert not tools.list_symbols({'path':'Player.gd'})['symbols']
     read=tools.read_source({'path':'Player.gd','revision':'base','start_line':1,'end_line':2})
     assert 'speed = 1' in read['code'] and read['side']=='base'

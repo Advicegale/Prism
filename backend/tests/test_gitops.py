@@ -42,7 +42,7 @@ def test_diff_detects_additions_and_deletions(tmp_path):
     assert 'return 4' in files[0]['patch']
 
 
-def test_diff_flags_patches_cut_at_the_stored_cap(tmp_path):
+def test_diff_preserves_patches_beyond_the_former_stored_cap(tmp_path):
     git(tmp_path,'init')
     git(tmp_path,'config','user.email','test@example.org')
     git(tmp_path,'config','user.name','Test')
@@ -59,8 +59,8 @@ def test_diff_flags_patches_cut_at_the_stored_cap(tmp_path):
     git(tmp_path,'commit','-m','update')
     head=git(tmp_path,'rev-parse','HEAD')
     files={f['path']:f for f in diff_files(tmp_path,base,head)}
-    assert files['big.txt']['patch_truncated'] is True
+    assert files['big.txt']['patch_truncated'] is False
     assert len(files['big.txt']['patch'])>=16000
-    assert 'added line 01199' not in files['big.txt']['patch']
+    assert 'added line 01199' in files['big.txt']['patch']
     assert files['small.txt']['patch_truncated'] is False
     assert 'short addition' in files['small.txt']['patch']

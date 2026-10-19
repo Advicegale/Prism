@@ -73,12 +73,9 @@ def changed_symbols(root: Path, path: str, ranges: list[list[int]]) -> list[dict
     for a, b in ranges:
         overlapping = [s for s in symbols if s["start"] <= b and a <= s["end"]]
         if overlapping:
-            # Select innermost symbols and their enclosing classes; don't flag sibling methods.
-            innermost = sorted(overlapping, key=lambda s: (s["end"]-s["start"], -len(s["qualified"])))[0]
-            selected = [innermost]
-            if innermost["parent"]:
-                selected += [s for s in overlapping if s["kind"] == "class" and
-                             (innermost["qualified"].startswith(s["qualified"] + "."))]
+            # Include every declaration touched by the hunk. A whole-file hunk
+            # can add many sibling functions; choosing one loses review content.
+            selected = overlapping
             for item in selected:
                 if not any(x["qualified"] == item["qualified"] and x["kind"] == item["kind"] for x in hits):
                     hits.append(item)

@@ -1,5 +1,6 @@
 """Local-only FastAPI application; frontend and API share port 4780 in production."""
 from __future__ import annotations
+from .sourcefiles import git_lines
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import hashlib
@@ -29,6 +30,7 @@ from .exploration import service as exploration
 app = FastAPI(title="Prism PR Review", version="0.2.0", docs_url="/api/docs", openapi_url="/api/openapi.json")
 executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="prism-job")
 lock = threading.Lock()
+report_lock = threading.RLock()
 jobs: dict[str,dict] = {}
 
 class AnalyzeRequest(BaseModel):
@@ -76,7 +78,6 @@ class QuestionRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
     history: list[QuestionTurn] = Field(default_factory=list, max_length=6)
     anchor: DiffLineAnchor | None = None
-    include_repository_context: bool = False
 
 
 _QUESTION_HUNK_HEADER = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
@@ -101,7 +102,7 @@ def _verified_diff_anchor(report: dict, anchor: DiffLineAnchor) -> dict:
 
     rows: list[dict] = []
     old_line = new_line = None
-    for raw in (file.get("patch") or "").splitlines():
+    for raw in git_lines(file.get("patch") or ""):
         header = _QUESTION_HUNK_HEADER.match(raw)
         if header:
             old_line = int(header.group(1))
@@ -190,6 +191,23 @@ def ensure_evidence(report: dict) -> dict:
     return report
 
 
+def ensure_complete_diff(report: dict, root: Path | None = None) -> dict:
+    """Recover old capped patches from retained Git objects without an AI run."""
+    if report.get('demo') or report.get('diff_version') == 1: return report
+    meta = report.get('meta') or {}
+    if not meta.get('head') or not meta.get('merge_base'): return report
+    root = root or head_worktree(report)
+    files = diff_files(root, meta['merge_base'], meta['head'])
+    with report_lock:
+        # An old-report GET must not overwrite a guide completed during Git IO.
+        latest = read_report(report['id']) if report.get('id') and report_path(report['id']).exists() else report
+        latest['files'] = files
+        latest['diff_version'] = 1
+        save_report(latest)
+        report.update(latest)
+    return report
+
+
 def _store_ai(report: dict, ai: dict) -> None:
     """Store an AI result; a non-empty AI topic plan also becomes the top-level topics."""
     report["ai"] = ai
@@ -251,10 +269,12 @@ def ensure_architecture(report: dict, root: Path | None = None) -> dict:
 
 
 def save_report(report: dict):
-    path=report_path(report["id"])
-    tmp=path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(report,ensure_ascii=False))
-    tmp.replace(path)
+    with report_lock:
+        path=report_path(report["id"])
+        tmp=path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(report,ensure_ascii=True))
+        tmp.replace(path)
+
 
 
 def _job(kind: str, callback):
@@ -288,7 +308,22 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
     report_id=hashlib.sha256(f"{owner}/{repo}/{number}/{merge_base}/{meta['head']}".encode()).hexdigest()[:24]
     path=report_path(report_id)
     if path.exists():
-        result=ensure_architecture(ensure_topics(ensure_evidence(read_report(report_id))), after)
+        result=ensure_complete_diff(read_report(report_id), after)
+        result["meta"] = meta
+        if result.get("symbol_mapping_version") != 2:
+            old=snapshot(before,git_repo.parent / "graphs",merge_base,progress)
+            new=snapshot(after,git_repo.parent / "graphs",meta["head"],progress)
+            nodes,edges,changed=identify_changes(result["files"],before,after,old,new)
+            groups,overview=segment(nodes,edges,changed,result["files"])
+            if result.get('ai'):
+                result.setdefault('previous_ai', []).append({'reason': 'Changed declaration mapping upgraded',
+                    'ai': result['ai'], 'topics': result.get('topics'), 'symbol_mapping_version': result.get('symbol_mapping_version', 1)})
+            result.update(groups=groups,overview=overview,evidence=collect_evidence(groups,result["files"],before,after),
+                          ai=None,topics=build_topics(groups,overview),topics_version=5,symbol_mapping_version=2)
+            result["stats"].update(changed_symbols=len(changed),groups=len(groups),
+                                   total_graph_nodes=len(nodes),total_graph_edges=len(edges))
+        result=ensure_architecture(ensure_topics(ensure_evidence(result)), after)
+        save_report(result)
         exploration.prefetch(result)
         if req.harness != "none":
             result["architecture"]=discover_architecture(result,after,req.harness,req.model,req.effort,progress)
@@ -313,7 +348,7 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
                      "total_graph_nodes":len(nodes),"total_graph_edges":len(edges)},
             "files":files,"groups":groups,"overview":overview,
             "evidence":collect_evidence(groups,files,before,after),"ai":None,
-            "topics":build_topics(groups,overview),"topics_version":5,"demo":False}
+            "topics":build_topics(groups,overview),"topics_version":5,"demo":False,"diff_version":1,"symbol_mapping_version":2}
     ensure_architecture(report, after)
     exploration.prefetch(report)
     if req.harness != "none":
@@ -368,6 +403,10 @@ def reports():
 @app.get("/api/reports/{report_id}")
 def report(report_id:str):
     data=ensure_architecture(ensure_topics(ensure_evidence(read_report(report_id))))
+    try: data=ensure_complete_diff(data)
+    except (RepositoryToolError, RepoError) as exc:
+        # Saved reports remain readable offline, with an explicit access gap.
+        data['workspace_warning'] = str(exc)
     if not data.get("demo"): exploration.prefetch(data)
     return data
 
@@ -426,10 +465,14 @@ def ask_question(report_id:str, request:QuestionRequest):
     if not question:
         raise HTTPException(422,"Enter a question about this pull request.")
     history=[turn.model_dump() for turn in request.history]
-    anchor = _verified_diff_anchor(read_report(report_id), request.anchor) if request.anchor else None
+    try:
+        anchor = _verified_diff_anchor(ensure_complete_diff(read_report(report_id)), request.anchor) if request.anchor else None
+    except (RepositoryToolError, RepoError) as exc:
+        raise HTTPException(409, str(exc)) from exc
     def work(progress):
         data=ensure_topics(ensure_evidence(read_report(report_id)))
-        repository_root = head_worktree(data) if request.include_repository_context else None
+        repository_root = head_worktree(data)
+        data=ensure_complete_diff(data, repository_root)
         return answer_question(data,request.harness,request.model,request.effort,question,history,progress,anchor,repository_root)
     return _job("question",work)
 
@@ -452,7 +495,9 @@ def explain_report(report_id:str, request:ExplainRequest):
     read_report(report_id)
     def work(progress):
         data=ensure_topics(ensure_evidence(read_report(report_id)))
-        _store_ai(data,explain(data,request.harness,request.model,request.effort,progress,head_worktree(data)))
+        root=head_worktree(data)
+        data=ensure_complete_diff(data, root)
+        _store_ai(data,explain(data,request.harness,request.model,request.effort,progress,root))
         save_report(data)
         return report_id
     return _job("explanation",work)
