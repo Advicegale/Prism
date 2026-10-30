@@ -166,7 +166,7 @@ def test_explain_rerun_resolves_report_checkout(tmp_path, monkeypatch):
         assert args[-1] == tmp_path
         calls.append(('explain', report['id']))
         return {'topics': []}
-    def job(kind, work):
+    def job(kind, work, **options):
         work(lambda _: None)
         return {'job_id': 'test'}
     monkeypatch.setattr(api, 'head_worktree', root)

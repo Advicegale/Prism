@@ -8,18 +8,20 @@ interface Props {
   busy: boolean
   canGenerate: boolean
   onGenerate: () => void
+  onGenerateOutline: () => void
 }
 
 // The brief sits above the Ask bar: a clamped overview that expands on demand, or a one-line prompt to generate notes.
-export function ReportBrief({ report, busy, canGenerate, onGenerate }: Props) {
+export function ReportBrief({ report, busy, canGenerate, onGenerate, onGenerateOutline }: Props) {
   const [expanded, setExpanded] = useState(false)
   const bodyId = useId()
   const ai = report.ai
   if (!ai) {
     if (report.demo) return null
-    return <div className="review-summary-empty"><p>File diffs are ready. Generate review notes to add change summaries and a suggested reading order.</p><button type="button" className="secondary-btn" disabled={busy || !canGenerate} onClick={onGenerate}><Sparkles size={14}/> Generate review notes</button></div>
+    return <div className="review-summary-empty"><p>File diffs are ready. Generate review notes to add change summaries and a suggested reading order.</p><button type="button" className="secondary-btn" disabled={busy || !canGenerate} onClick={onGenerate}><Sparkles size={14}/> Generate review notes</button><button type="button" className="secondary-btn" disabled={busy || !canGenerate} onClick={onGenerateOutline} title="Only the topics and a suggested reading order; no per-topic detail">Topics &amp; reading order only</button></div>
   }
   const changes = ai.key_changes || []
+  const outlineOnly = ai.review_state?.feedback_status === 'outline_only'
   const expandable = !!ai.overview || !!changes.length
   return <section className="report-brief" aria-label="Pull request brief">
     <div className="report-brief-head"><h3>Pull request brief</h3>{expandable && <button type="button" aria-expanded={expanded} aria-controls={bodyId} onClick={() => setExpanded(value => !value)}>{expanded ? 'Show less' : 'Show more'}<ChevronDown size={14}/></button>}</div>
@@ -27,5 +29,6 @@ export function ReportBrief({ report, busy, canGenerate, onGenerate }: Props) {
       {ai.overview && <MarkdownContent text={ai.overview}/>}
       {expanded && !!changes.length && <ul aria-label="Key changes">{changes.map((change, index) => <li key={index}><MarkdownContent text={change}/></li>)}</ul>}
     </div>
+    {outlineOnly && <p className="report-brief-note">Topics and reading order only. <button type="button" className="link-btn" disabled={busy || !canGenerate} onClick={onGenerate}>Generate detailed notes</button></p>}
   </section>
 }

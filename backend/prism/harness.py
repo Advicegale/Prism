@@ -8,7 +8,9 @@ import selectors
 import shutil
 import subprocess
 import sys
+import signal
 import tempfile
+import threading
 import time
 import re
 import tomllib
@@ -76,6 +78,52 @@ QUESTION_SCHEMA = {
  },
  "required":["answer","citations"],
 }
+
+
+class JobCancelled(RuntimeError):
+    """The user stopped the running job."""
+
+
+# A job thread binds its cancel event here; CLI calls made from that thread then become stoppable.
+_cancel = threading.local()
+
+
+def bind_cancel(event: threading.Event | None) -> None:
+    _cancel.event = event
+
+
+def check_cancelled() -> None:
+    event = getattr(_cancel, 'event', None)
+    if event is not None and event.is_set():
+        raise JobCancelled('Stopped by user')
+
+
+def _run_cli(args, prompt: str, cwd, timeout):
+    """subprocess.run equivalent that kills the CLI and its children when the bound job is cancelled."""
+    env = {**os.environ, "NO_COLOR": "1"}
+    event = getattr(_cancel, 'event', None)
+    if event is None:
+        return subprocess.run(args, input=prompt, text=True, cwd=cwd, capture_output=True, timeout=timeout, env=env)
+    proc = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            text=True, cwd=cwd, env=env, start_new_session=True)
+    def kill():
+        try: os.killpg(proc.pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError): proc.kill()
+        proc.communicate()
+    deadline = time.monotonic() + timeout
+    pending = prompt
+    while True:
+        try:
+            stdout, stderr = proc.communicate(pending, timeout=0.4)
+            return subprocess.CompletedProcess(args, proc.returncode, stdout, stderr)
+        except subprocess.TimeoutExpired:
+            pending = None
+            if event.is_set():
+                kill()
+                raise JobCancelled('Stopped by user')
+            if time.monotonic() >= deadline:
+                kill()
+                raise subprocess.TimeoutExpired(args, timeout)
 
 
 def _discover_codex() -> dict:
@@ -284,9 +332,8 @@ def run_harness(harness: str, model: str, effort: str, prompt: str, timeout=360,
             if effort and effort != "default":args.extend(["--effort",effort])
             # Both CLIs accept piped prompt text; avoid OS argument-size limits.
         try:
-            proc = subprocess.run(args, input=prompt,
-                                  text=True, cwd=temp, capture_output=True, timeout=timeout,
-                                  env={**os.environ, "NO_COLOR":"1"})
+            check_cancelled()
+            proc = _run_cli(args, prompt, temp, timeout)
         except subprocess.TimeoutExpired as exc:
             raise RuntimeError(f"{harness} timed out after {timeout} seconds") from exc
         if proc.returncode:
@@ -825,8 +872,8 @@ def explain(report: dict, harness: str, model: str, effort: str, progress=lambda
 
 
 def explain_progressively(report: dict, harness: str, model: str, effort: str, progress=lambda _: None,
-                          repository_root: Path | None = None, publish=lambda _: None) -> dict:
-    """Publish a stable reading plan, then enrich semantic topics in that exact order."""
+                          repository_root: Path | None = None, publish=lambda _: None, outline_only: bool = False) -> dict:
+    """Publish a stable reading plan, then enrich semantic topics in that exact order (unless outline_only)."""
     import copy
     groups = report['groups']
     if not groups: raise RuntimeError('No change groups to explain')
@@ -883,6 +930,10 @@ def explain_progressively(report: dict, harness: str, model: str, effort: str, p
         shared['review_state'] = state
         publish(copy.deepcopy(ai))
 
+    if outline_only:
+        state.update(feedback_status='outline_only', topic_feedback=[])
+        emit()
+        return ai
     emit()
     by_id = {g['id']: g for g in groups}
     rank = {step['path']: i for i, step in enumerate(route)}
@@ -925,10 +976,11 @@ def explain_progressively(report: dict, harness: str, model: str, effort: str, p
         emit()
         return ai
     except Exception as exc:
-        state['feedback_status'] = 'failed'
+        cancelled = isinstance(exc, JobCancelled)
+        state['feedback_status'] = 'cancelled' if cancelled else 'failed'
         state['error'] = str(exc)[:1100]
         for feedback in state['topic_feedback']:
-            if feedback['status'] == 'running': feedback['status'] = 'failed'
+            if feedback['status'] == 'running': feedback['status'] = 'cancelled' if cancelled else 'failed'
         emit()
         raise
 

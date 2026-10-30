@@ -175,3 +175,50 @@ def test_invalid_plan_uses_ordered_complete_fallback_without_skipping_feedback(m
     assert 'missing_groups' in result['topic_diagnostics']['issues']
     assert {g['id'] for g in result['groups']} == {'g0', 'g1', 'g2'}
     assert result['review_state']['feedback_status'] == 'complete'
+
+
+def test_outline_only_publishes_plan_and_skips_topic_feedback(monkeypatch, tmp_path):
+    report = make_report(3); snapshots = []; calls = []
+    def run(*args, **kwargs):
+        calls.append(kwargs.get('required_field'))
+        return plan_for(report)
+    monkeypatch.setattr(harness, 'run_harness', run)
+    result = harness.explain_progressively(report, 'codex', '', '', repository_root=tmp_path,
+                                           publish=snapshots.append, outline_only=True)
+    assert calls == ['topics']
+    assert result['groups'] == [] and result['topics'] and result['review_order']
+    assert result['review_state']['feedback_status'] == 'outline_only'
+    assert result['review_state']['topic_feedback'] == []
+
+
+def test_cancel_kills_running_cli_and_marks_feedback_cancelled(monkeypatch, tmp_path):
+    import sys
+    event = threading.Event()
+    harness.bind_cancel(event)
+    try:
+        started = time.monotonic()
+        threading.Timer(0.5, event.set).start()
+        with pytest.raises(harness.JobCancelled):
+            harness._run_cli([sys.executable, '-c', 'import time; time.sleep(60)'], '', tmp_path, 120)
+        assert time.monotonic() - started < 5
+    finally:
+        harness.bind_cancel(None)
+
+
+def test_cancel_endpoint_stops_job(monkeypatch):
+    started = threading.Event()
+    def slow(progress):
+        started.set()
+        for _ in range(100):
+            progress('working'); time.sleep(0.05)
+        return 'done'
+    job_id = api._job('question', slow)['job_id']
+    assert started.wait(5)
+    client = TestClient(api.app)
+    assert client.post(f'/api/jobs/{job_id}/cancel').status_code == 200
+    for _ in range(100):
+        info = client.get(f'/api/jobs/{job_id}').json()
+        if info['state'] == 'cancelled': break
+        time.sleep(0.05)
+    assert info['state'] == 'cancelled' and info['error'] is None
+    assert client.post('/api/jobs/missing/cancel').status_code == 404

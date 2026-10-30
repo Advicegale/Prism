@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added Stop for running jobs (analysis, review notes, architecture, questions): `POST /api/jobs/{id}/cancel` kills the Codex/Claude CLI process group, keeps whatever was already published, and marks the job/report `cancelled`. Added a "Topics and reading order only" scope (`scope: "outline"` on analyze/explain) that publishes the plan and skips per-topic detail and architecture discovery; detailed notes can be generated later (this re-plans).
+
 - Added an Analyzed-date tooltip with persisted time until the graph/report became viewable, total time until the review finalized, and review work after the graph checkpoint. Includes metadata/Git/preparation and architecture; excludes queue waiting. Running, interrupted, graph-only, regenerated and legacy unmeasured reports have explicit labels.
 
 - Fixed line-chat panels appearing at the end of a diff block. They now open directly below the selected row/range in Unified and Split views, focus the composer, and preserve drafts/conversations while moving the range or switching layouts.

@@ -20,7 +20,7 @@ from . import settings
 from .gitops import (RepoError, parse_pr_url, pr_metadata, prepare_worktrees, diff_files,
                      github_viewed_file_states, set_github_file_viewed)
 from .graph import identify_changes, segment
-from .harness import available_harnesses, explain_progressively as explain, answer_question
+from .harness import available_harnesses, explain_progressively as explain, answer_question, bind_cancel, JobCancelled
 from .evidence import collect_evidence
 from .topics import build_topics
 from .repository_tools import head_worktree, RepositoryToolError
@@ -34,17 +34,20 @@ question_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="prism-
 lock = threading.Lock()
 report_lock = threading.RLock()
 jobs: dict[str,dict] = {}
+cancel_events: dict[str,threading.Event] = {}
 
 class AnalyzeRequest(BaseModel):
     url: str = Field(min_length=25, max_length=400)
     harness: Literal["none","claude","codex"] = "none"
     model: str = Field(default="default", max_length=120)
     effort: str = Field(default="default", max_length=32)
+    scope: Literal["full","outline"] = "full"
 
 class ExplainRequest(BaseModel):
     harness: Literal["claude","codex"]
     model: str = Field(default="default", max_length=120)
     effort: str = Field(default="default", max_length=32)
+    scope: Literal["full","outline"] = "full"
 
 class ViewedFileRequest(BaseModel):
     path: str = Field(min_length=1, max_length=1000)
@@ -275,12 +278,17 @@ def save_report(report: dict):
 
 
 
-def _job(kind: str, callback, *, review_requested: bool = True):
+def _job(kind: str, callback, *, review_requested: bool = True, outline: bool = False):
     job_id=uuid.uuid4().hex
     started = None
     started_at = None
-    with lock: jobs[job_id]={"id":job_id,"kind":kind,"state":"queued","message":"Queued","report_id":None,"result":None,"error":None}
+    cancel = threading.Event()
+    with lock:
+        jobs[job_id]={"id":job_id,"kind":kind,"state":"queued","message":"Queued","report_id":None,"result":None,"error":None}
+        cancel_events[job_id]=cancel
     def update(message):
+        # Progress reports double as cancellation checkpoints between non-CLI steps.
+        if cancel.is_set(): raise JobCancelled("Stopped by user")
         with lock:
             jobs[job_id]["state"]="running"
             jobs[job_id]["message"]=message
@@ -291,11 +299,13 @@ def _job(kind: str, callback, *, review_requested: bool = True):
             elapsed = round(time.monotonic() - started, 3)
             if kind == 'analysis':
                 current['analysis_timings'] = {'graph_seconds': elapsed, 'started_at': started_at,
-                    'review_status': 'running' if review_requested else 'not_requested', 'review_kind': 'analysis'}
+                    'review_status': 'running' if review_requested else 'not_requested',
+                    'review_kind': 'outline' if outline else 'analysis'}
             elif kind == 'explanation':
                 previous = current.get('analysis_timings') or {}
                 current['analysis_timings'] = {'graph_seconds': previous.get('graph_seconds'),
-                    'started_at': started_at, 'review_status': 'running', 'review_kind': 'regenerated'}
+                    'started_at': started_at, 'review_status': 'running',
+                    'review_kind': 'outline' if outline else 'regenerated'}
             save_report(current)
         with lock: jobs[job_id]['report_id'] = report_id
     update.report_ready = report_ready
@@ -314,7 +324,7 @@ def _job(kind: str, callback, *, review_requested: bool = True):
                         review_seconds = elapsed
                     if kind == 'explanation' or review_requested:
                         timing.update(review_seconds=round(review_seconds, 3),
-                                      review_status='completed' if state == 'completed' else 'failed')
+                                      review_status={'completed': 'completed', 'cancelled': 'cancelled'}.get(state, 'failed'))
                     if state == 'completed':
                         timing['completed_at'] = datetime.now(timezone.utc).isoformat()
                         if kind == 'analysis': timing['total_seconds'] = round(elapsed, 3)
@@ -323,7 +333,9 @@ def _job(kind: str, callback, *, review_requested: bool = True):
         nonlocal started, started_at
         started = time.monotonic()
         started_at = datetime.now(timezone.utc).isoformat()
+        bind_cancel(cancel)
         try:
+            if cancel.is_set(): raise JobCancelled("Stopped by user")
             update("Starting")
             result=callback(update)
             finish_report("completed")
@@ -332,9 +344,14 @@ def _job(kind: str, callback, *, review_requested: bool = True):
                                     report_id=result if isinstance(result,str) else None,
                                     result=None if isinstance(result,str) else result)
         except Exception as e:
-            try: finish_report("failed", str(e)[:1100])
+            cancelled = isinstance(e, JobCancelled) or cancel.is_set()
+            try: finish_report("cancelled" if cancelled else "failed", None if cancelled else str(e)[:1100])
             finally:
-                with lock:jobs[job_id].update(state="failed",message="Analysis failed",error=str(e)[:1100])
+                with lock:
+                    if cancelled: jobs[job_id].update(state="cancelled",message="Stopped",error=None)
+                    else: jobs[job_id].update(state="failed",message="Analysis failed",error=str(e)[:1100])
+        finally:
+            bind_cancel(None)
     (question_executor if kind == "question" else executor).submit(work)
     return {"job_id":job_id}
 
@@ -356,8 +373,18 @@ def _generate_guide(report, request, progress, root):
             first_publication = False
             _store_ai(current, ai)
             save_report(current)
-    ai = explain(report, request.harness, request.model, request.effort, progress, root, publish=publish)
+    ai = explain(report, request.harness, request.model, request.effort, progress, root, publish=publish,
+                 outline_only=request.scope == 'outline')
     publish(ai)
+
+
+def _discover_and_store(report_id, root, req, progress):
+    current = read_report(report_id)
+    architecture = discover_architecture(current,root,req.harness,req.model,req.effort,progress)
+    with report_lock:
+        current = read_report(report_id)
+        current['architecture'] = architecture
+        save_report(current)
 
 
 def run_analysis(req: AnalyzeRequest, progress) -> str:
@@ -387,12 +414,7 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
         _publish_ready(report_id, progress)
         if req.harness != "none":
             _generate_guide(result, req, progress, after)
-            current = read_report(report_id)
-            architecture = discover_architecture(current,after,req.harness,req.model,req.effort,progress)
-            with report_lock:
-                current = read_report(report_id)
-                current['architecture'] = architecture
-                save_report(current)
+            if req.scope != "outline": _discover_and_store(report_id, after, req, progress)
         return report_id
     progress("Calculating PR diff")
     files=diff_files(git_repo,merge_base,meta["head"])
@@ -411,12 +433,7 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
     _publish_ready(report_id, progress)
     if req.harness != "none":
         _generate_guide(report, req, progress, after)
-        current = read_report(report_id)
-        architecture = discover_architecture(current,after,req.harness,req.model,req.effort,progress)
-        with report_lock:
-            current = read_report(report_id)
-            current['architecture'] = architecture
-            save_report(current)
+        if req.scope != "outline": _discover_and_store(report_id, after, req, progress)
     return report_id
 
 
@@ -442,7 +459,19 @@ def analyze(request: AnalyzeRequest):
         parse_pr_url(request.url)
     except RepoError as exc:
         raise HTTPException(400, str(exc)) from exc
-    return _job("analysis",lambda progress:run_analysis(request,progress), review_requested=request.harness != "none")
+    return _job("analysis",lambda progress:run_analysis(request,progress), review_requested=request.harness != "none", outline=request.scope == "outline")
+
+@app.post("/api/jobs/{job_id}/cancel")
+def cancel_job(job_id: str):
+    with lock:
+        job=jobs.get(job_id)
+        if not job:raise HTTPException(404,"Unknown job")
+        if job["state"] in ("queued","running"):
+            # Running CLI calls are killed by the worker within a fraction of a second.
+            queued = job["state"]=="queued"
+            job["state"]="cancelled" if queued else "cancelling"; job["message"]="Stopped" if queued else "Stopping"
+            cancel_events[job_id].set()
+        return dict(job)
 
 @app.get("/api/jobs/{job_id}")
 def job_info(job_id: str):
@@ -579,7 +608,7 @@ def explain_report(report_id:str, request:ExplainRequest):
         _publish_ready(report_id, progress)
         _generate_guide(data, request, progress, root)
         return report_id
-    return _job("explanation",work)
+    return _job("explanation",work,outline=request.scope == "outline")
 
 @app.get("/api/demo")
 def demo():

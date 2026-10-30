@@ -1,6 +1,6 @@
 import {StrictMode,useEffect,useMemo,useRef,useState} from 'react'
 import {createRoot} from 'react-dom/client'
-import {ArrowRight,Check,CheckCircle2,ChevronRight,Clock3,Copy,Download,EyeOff,ExternalLink,FileCode2,GitBranch,GitPullRequest,Layers3,LoaderCircle,Menu,Network,Play,Plus,RefreshCcw,Settings2,ShieldCheck,Sparkles,Terminal,X,AlertCircle} from 'lucide-react'
+import {ArrowRight,Check,CheckCircle2,ChevronRight,Clock3,Copy,Download,EyeOff,ExternalLink,FileCode2,GitBranch,GitPullRequest,Layers3,LoaderCircle,Menu,Network,Play,Plus,RefreshCcw,Settings2,ShieldCheck,Sparkles,Square,Terminal,X,AlertCircle} from 'lucide-react'
 import {ArchitectureMap} from './components/ArchitectureMap'
 import {TopicReview} from './components/TopicReview'
 import {ReviewQuestionPanel} from './components/ReviewQuestionPanel'
@@ -50,6 +50,8 @@ function App(){
  const [assistantState,setAssistantState]=useState<AssistantState>(()=>{try{return loadAssistantState(localStorage)}catch{return {assistant:{...DEFAULT_ASSISTANT},analyzeWithAi:false}}})
  const {assistant,analyzeWithAi}=assistantState
  const setAssistant=(next:AssistantSetting)=>setAssistantState(current=>({...current,assistant:next}))
+ const [outlineOnly,setOutlineOnlyState]=useState(()=>{try{return localStorage.getItem('prism:outline-only')==='true'}catch{return false}})
+ const setOutlineOnly=(value:boolean)=>{setOutlineOnlyState(value);try{localStorage.setItem('prism:outline-only',String(value))}catch{}}
  const setAnalyzeWithAi=(value:boolean)=>setAssistantState(current=>({...current,analyzeWithAi:value}))
  const [assistantOpen,setAssistantOpen]=useState(false)
  const assistantReady=!!models?.[assistant.harness]?.installed
@@ -166,7 +168,7 @@ function App(){
       if(latest.name==='report'&&latest.id===next.id)setReport(previous=>previous?.id===next.id&&previous.revision&&previous.revision===next.revision?previous:next)
      }
     }
-    if(current.state==='completed'||current.state==='failed'){
+    if(current.state==='completed'||current.state==='failed'||current.state==='cancelled'){
      if(poll.current)clearInterval(poll.current);poll.current=null;watchedJob.current=null
      if(current.state==='failed')setError(current.error||'Analysis failed')
      await refreshHistory()
@@ -180,13 +182,19 @@ function App(){
 
  async function begin(){
   setError('');setJob(null)
-  try{const result=await call<{job_id:string}>('/analyze',{method:'POST',body:JSON.stringify({url:prUrl,harness:analyzeWithAi?assistant.harness:'none',model:assistant.model,effort:assistant.effort})});await watchJob(result.job_id,true)}
+  try{const result=await call<{job_id:string}>('/analyze',{method:'POST',body:JSON.stringify({url:prUrl,harness:analyzeWithAi?assistant.harness:'none',model:assistant.model,effort:assistant.effort,scope:analyzeWithAi&&outlineOnly?'outline':'full'})});await watchJob(result.job_id,true)}
   catch(e){setError(e instanceof Error?e.message:String(e))}
  }
- async function explain(){
+ async function explain(scope:'full'|'outline'='full'){
   if(!report||report.demo||!assistantReady)return
   setError('');setJob(null)
-  try{const result=await call<{job_id:string}>(`/reports/${report.id}/explain`,{method:'POST',body:JSON.stringify(assistant)});await watchJob(result.job_id)}
+  try{const result=await call<{job_id:string}>(`/reports/${report.id}/explain`,{method:'POST',body:JSON.stringify({...assistant,scope})});await watchJob(result.job_id)}
+  catch(e){setError(e instanceof Error?e.message:String(e))}
+ }
+ async function stopJob(){
+  const id=job?.id||watchedJob.current
+  if(!id)return
+  try{setJob(await call<Job>(`/jobs/${id}/cancel`,{method:'POST'}))}
   catch(e){setError(e instanceof Error?e.message:String(e))}
  }
  async function redetectHarnesses(){try{setModels(await call<Harnesses>('/harnesses'));return true}catch{return false}}
@@ -224,7 +232,9 @@ function App(){
  const architectureHiddenPaths=useMemo(()=>new Set(hideViewedFiles?reportPaths.filter(path=>viewedFiles?.states[path]==='VIEWED'):[]),[report,hideViewedFiles,viewedFiles])
  function inspectArchitectureFile(path:string){const file=reportPathFor(report,path);setHideViewedFiles(false);setReviewFocus(current=>({path:file,request:(current?.request||0)+1}));if(report&&!report.demo)navigate({name:'report',id:report.id,view:'topics',file});window.setTimeout(()=>document.querySelector('.topic-review')?.scrollIntoView({behavior:'smooth',block:'start'}),0)}
  function navigateToCitation(symbolId:string){const node=report?.overview.nodes.find(n=>n.id===symbolId)||report?.groups.flatMap(g=>g.graph.nodes).find(n=>n.id===symbolId);if(node)inspectArchitectureFile(node.path)}
- const busy=job?.state==='running'||job?.state==='queued'
+ const busy=job?.state==='running'||job?.state==='queued'||job?.state==='cancelling'
+ const stopping=job?.state==='cancelling'
+ const stopButton=<button type="button" className="small-btn stop-btn" disabled={stopping} onClick={stopJob}><Square size={13}/> {stopping?'Stopping…':'Stop'}</button>
  return <div className={'app'+(focusMode?' focus-mode':'')}>
   <aside className={'sidebar '+(!sidebar||focusMode?'sidebar-hidden':'')}>
    <div className="brand"><div className="brand-icon"><Network size={22}/></div><div><strong>prism<span className="brand-period">.</span></strong><small>Structural PR review</small></div></div>
@@ -251,9 +261,10 @@ function App(){
      {(!report||showAnalyzeForm)&&<section className={'analyze-box'+(report?' analyze-box-compact':'')}><div className="section-top"><div className="section-title"><GitPullRequest size={17}/><strong>Analyze a pull request</strong></div></div>
        <form onSubmit={e=>{e.preventDefault();begin()}} className="analyze-form"><div className="url-row"><div className="url-input-wrap"><GitPullRequest size={19}/><input id="pr-url" type="url" aria-label="Pull request URL" value={prUrl} onChange={e=>setPrUrl(e.target.value)} placeholder="https://github.com/owner/repository/pull/123" required/></div><button className="primary-btn" disabled={busy} type="submit">{busy?<LoaderCircle className="spinning" size={17}/>:<Play size={16} fill="currentColor"/>}<span>{busy?'Analyzing':'Analyze PR'}</span><ArrowRight size={16}/></button></div>
         <div className="analyze-options"><div className="analyze-ai-row"><label className="analyze-ai-toggle"><input type="checkbox" checked={analyzeWithAi} onChange={e=>setAnalyzeWithAi(e.target.checked)}/><span>Generate AI review notes</span></label><button type="button" className="assistant-summary" onClick={()=>setAssistantOpen(true)} aria-haspopup="dialog" aria-expanded={assistantOpen} title="Change the assistant"><Sparkles size={13}/><span>Using {assistantSummary(assistant)}</span></button></div>
+        <label className={'analyze-ai-toggle'+(analyzeWithAi?'':' disabled')} title="Skip detailed per-topic and per-file notes and the architecture pass"><input type="checkbox" checked={outlineOnly} disabled={!analyzeWithAi} onChange={e=>setOutlineOnly(e.target.checked)}/><span>Topics and reading order only</span></label>
         <span className="analysis-caption"><ShieldCheck size={14}/> {analyzeWithAi?'AI reads relevant source through the selected CLI':'Source extraction runs locally'}</span></div>
        </form>
-       {busy&&<div className="job-progress"><LoaderCircle className="spinning" size={16}/><span>{job?.message||'Preparing analysis...'}</span></div>}
+       {busy&&<div className="job-progress"><LoaderCircle className="spinning" size={16}/><span>{job?.message||'Preparing analysis...'}</span>{stopButton}</div>}
        {error&&<div className="error-banner"><AlertCircle size={16}/><span>{error}</span><button onClick={()=>setError('')} aria-label="Dismiss error"><X size={15}/></button></div>}
      </section>}
      {!report&&recent.length>0&&<section className="home-recent" aria-label="Recent reports"><div className="home-recent-heading"><h2>Recent reports</h2><button onClick={()=>navigate({name:'history'})}>View all <ArrowRight size={13}/></button></div><div className="home-recent-list">{recent.slice(0,3).map(item=><button className="home-report" key={item.id} onClick={()=>navigate({name:'report',id:item.id,view:'architecture'})}><GitPullRequest size={16}/><span className="home-report-copy"><strong>{item.meta.title}</strong><small>{item.meta.owner}/{item.meta.repo} · #{item.meta.number} · {prettyDate(item.created_at)}</small></span><span className="home-report-count">{item.stats.changed_files} changed files</span><AiStatus hasAi={item.has_ai}/><ChevronRight size={15}/></button>)}</div></section>}
@@ -261,9 +272,10 @@ function App(){
       <div className="report-header"><div><div className="section-topline"><span className="eyebrow">{report.demo?'Example report':`${report.meta.owner}/${report.meta.repo} · PR #${report.meta.number}`}</span>{report.demo?<span className="demo-tag">Sample data</span>:<span className="real-tag"><CheckCircle2 size={12}/> Ready to review</span>}</div><h2>{report.meta.title}</h2><div className="report-meta"><span title={analysisDurationTooltip(report)} tabIndex={0} aria-label={`Analyzed ${prettyDate(report.analysis_timings?.started_at||report.created_at)}. ${analysisDurationTooltip(report).replace(/\n/g, '. ')}`} style={{cursor:'help'}}><Clock3 size={14}/> Analyzed {prettyDate(report.analysis_timings?.started_at||report.created_at)}</span></div></div><div className="report-buttons">{!report.demo&&<button className="small-btn" onClick={copyLink} title="Copy a link to this view">{copied?<Check size={15}/>:<Copy size={15}/>}<span>{copied?'Copied':'Copy link'}</span></button>}<button className="small-btn" onClick={downloadHtml} disabled={htmlExportBusy}>{htmlExportBusy?<LoaderCircle className="spinning" size={15}/>:<Download size={15}/>} {htmlExportBusy?'Exporting…':'Export HTML'}</button><button className="small-btn" onClick={download}><Download size={15}/> Export JSON</button>{!report.demo&&<a className="small-btn" href={report.meta.url} target="_blank" rel="noreferrer"><ExternalLink size={15}/> GitHub</a>}</div></div>
       {htmlExportError&&<p className="error-banner" role="alert">{htmlExportError}</p>}
       <div className="report-facts" aria-label="Pull request change totals"><span><strong>{report.stats.changed_files}</strong> changed files</span><span><strong>{topics.length}</strong> review {topics.length===1?'topic':'topics'}</span>{!report.demo&&<div className="report-review-controls"><span className={'github-viewed-summary'+(viewedFiles?.available?'':' unavailable')} title={viewedFiles?.reason||''}>{viewedFilesLoading?'Checking GitHub…':viewedFiles?.available?`${viewedCount} of ${reportPaths.length} viewed in GitHub`:'GitHub viewed status unavailable'}</span><button className="github-viewed-refresh" type="button" aria-label="Refresh viewed file status from GitHub" title="Refresh status from GitHub" disabled={viewedFilesLoading} onClick={refreshViewedStatus}><RefreshCcw size={13}/></button><label className={'review-viewed-toggle'+(hideViewedFiles?' active':'')} title={viewedFiles?.available?'Hide files already marked viewed in GitHub':viewedFiles?.reason||'Install GitHub CLI and sign in with gh auth login'}><input type="checkbox" aria-label="Hide files viewed in GitHub" checked={hideViewedFiles} onChange={event=>setHideViewedFiles(event.target.checked)} disabled={!viewedFiles?.available}/><EyeOff size={14}/><span>Hide viewed</span><b>{viewedCount}</b></label></div>}</div>
-      {report.analysis?.state==='running'&&<div className="job-progress" role="status"><LoaderCircle className="spinning" size={16}/><span>{job?.message||'Analysis continues in the background'}. You can review now; feedback follows the suggested topic order.</span></div>}
-      {report.analysis?.state==='failed'&&<p className="error-banner" role="alert">{report.analysis.error||'Analysis stopped.'} Saved feedback is available. <button type="button" className="small-btn" disabled={!!busy||!assistantReady} onClick={explain}>Regenerate review notes</button></p>}
-      <ReportBrief key={'brief-'+report.id} report={report} busy={!!busy} canGenerate={assistantReady} onGenerate={explain}/>
+      {report.analysis?.state==='running'&&<div className="job-progress" role="status"><LoaderCircle className="spinning" size={16}/><span>{job?.message||'Analysis continues in the background'}. You can review now; feedback follows the suggested topic order.</span>{stopButton}</div>}
+      {report.analysis?.state==='cancelled'&&<p className="error-banner" role="status">Analysis stopped. Anything already generated is saved. <button type="button" className="small-btn" disabled={!!busy||!assistantReady} onClick={()=>explain()}>Generate full notes</button></p>}
+      {report.analysis?.state==='failed'&&<p className="error-banner" role="alert">{report.analysis.error||'Analysis stopped.'} Saved feedback is available. <button type="button" className="small-btn" disabled={!!busy||!assistantReady} onClick={()=>explain()}>Regenerate review notes</button></p>}
+      <ReportBrief key={'brief-'+report.id} report={report} busy={!!busy} canGenerate={assistantReady} onGenerate={()=>explain()} onGenerateOutline={()=>explain('outline')}/>
       {!report.demo&&<AskShell key={'ask-'+report.id}><ReviewQuestionPanel report={report} harnesses={models} assistant={assistant} onOpenAssistant={()=>setAssistantOpen(true)} onCitationClick={navigateToCitation}/></AskShell>}
       <div className="section-heading"><div><h3>Review workspace</h3><p>Orient in the architecture. Review changes by topic.</p></div><div className="graph-meta"><span className="status-pulse"/> {report.architecture?.method==='manifest'?'Changed files · explore for relationships':'Source-backed relationships'}</div></div>
       {report.architecture&&<div className="architecture-view-switch" aria-label="Change map view"><button className={mapView==='architecture'?'active':''} onClick={()=>navigate({name:'report',id:report.id,view:'architecture'})}><Layers3 size={15}/> Architecture</button><button className={mapView==='topics'?'active':''} onClick={()=>navigate({name:'report',id:report.id,view:'topics'})}><FileCode2 size={15}/> Topics</button><span>Understand the connections, then review the files</span></div>}
