@@ -1251,3 +1251,5 @@ select option,select optgroup{background:#151e28;color:#e1eaf2}
 .link-btn{background:none;border:0;padding:0;color:#38cdb4;font:inherit;cursor:pointer;text-decoration:underline}
 .link-btn:disabled{opacity:.5;cursor:not-allowed}
 .job-progress:has(.stop-btn){display:flex;align-items:center;gap:10px}
+.agent-activity{margin:6px 0;font-size:12px;color:#9aa4ab}.agent-activity>summary{cursor:pointer;padding:3px 0}.agent-activity pre{margin:4px 0 0;max-height:220px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#101214;border:1px solid #2b2f33;border-radius:5px;padding:8px 10px;font:11.5px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;color:#c4cbd0}
+.assistant-menu-panel .timeout-hint{margin:4px 0 0;font-size:12px;color:#8d979e}

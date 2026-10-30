@@ -252,7 +252,7 @@ def test_question_endpoint_cannot_disable_repository_access(monkeypatch, tmp_pat
     report = {'meta': {}, 'files': [], 'groups': [], 'evidence': {}, 'topics_version': 5, 'diff_version': 1}
     monkeypatch.setattr(api, 'read_report', lambda _: report)
     monkeypatch.setattr(api, 'head_worktree', lambda r: tmp_path)
-    monkeypatch.setattr(api, '_job', lambda kind, work: work(lambda _: None))
+    monkeypatch.setattr(api, '_job', lambda kind, work, **kw: work(lambda _: None))
     def answer(*args):
         assert args[-1] == tmp_path
         return {'answer': 'Repository available'}

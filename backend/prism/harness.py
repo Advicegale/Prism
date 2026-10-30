@@ -85,11 +85,20 @@ class JobCancelled(RuntimeError):
 
 
 # A job thread binds its cancel event here; CLI calls made from that thread then become stoppable.
+# It may also bind an activity sink (live CLI output) and a timeout override (seconds; 0 = no limit).
 _cancel = threading.local()
 
 
 def bind_cancel(event: threading.Event | None) -> None:
     _cancel.event = event
+    if event is None:
+        _cancel.activity = None
+        _cancel.timeout = None
+
+
+def bind_run_options(activity=None, timeout: int | None = None) -> None:
+    _cancel.activity = activity
+    _cancel.timeout = timeout
 
 
 def check_cancelled() -> None:
@@ -98,32 +107,83 @@ def check_cancelled() -> None:
         raise JobCancelled('Stopped by user')
 
 
+def effective_timeout(default=None):
+    """Seconds a CLI call may run, or None for no limit. A job override beats the caller and the server default."""
+    override = getattr(_cancel, 'timeout', None)
+    value = override if override is not None else (default if default is not None else settings.AGENT_TIMEOUT)
+    return value if value and value > 0 else None
+
+
+def _describe_event(line: str) -> list[str]:
+    """Turn one streamed CLI event (Claude stream-json or Codex --json) into short readable lines."""
+    line = line.strip()
+    if not line: return []
+    try: event = json.loads(line)
+    except ValueError: return [line[:300]]
+    if not isinstance(event, dict): return []
+    out: list[str] = []
+    kind = event.get('type')
+    if kind == 'assistant':
+        for block in (event.get('message') or {}).get('content') or []:
+            if not isinstance(block, dict): continue
+            if block.get('type') == 'text' and str(block.get('text') or '').strip():
+                out.append(str(block['text']).strip()[:400])
+            elif block.get('type') == 'tool_use':
+                name = str(block.get('name') or 'tool').split('__')[-1]
+                if name == 'StructuredOutput': continue
+                args = block.get('input') or {}
+                detail = ', '.join(f'{k}={str(v)[:60]}' for k, v in list(args.items())[:3]) if isinstance(args, dict) else ''
+                out.append(f'→ {name}({detail})')
+    elif kind in ('item.started', 'item.completed'):
+        item = event.get('item') or {}
+        itype = item.get('type')
+        if kind == 'item.started' and itype == 'mcp_tool_call':
+            out.append(f"→ {item.get('tool') or 'tool'}({str(item.get('arguments') or '')[:100]})")
+        elif kind == 'item.completed' and itype in ('agent_message', 'reasoning') and str(item.get('text') or '').strip():
+            out.append(str(item['text']).strip()[:400])
+        elif kind == 'item.started' and itype == 'command_execution':
+            out.append(f"$ {str(item.get('command') or '')[:200]}")
+    return out
+
+
 def _run_cli(args, prompt: str, cwd, timeout):
-    """subprocess.run equivalent that kills the CLI and its children when the bound job is cancelled."""
+    """subprocess.run equivalent that kills the CLI and its children when the bound job is cancelled
+    and forwards each stdout line to the bound activity sink. timeout=None disables the time limit."""
     env = {**os.environ, "NO_COLOR": "1"}
     event = getattr(_cancel, 'event', None)
-    if event is None:
+    activity = getattr(_cancel, 'activity', None)
+    if event is None and activity is None:
         return subprocess.run(args, input=prompt, text=True, cwd=cwd, capture_output=True, timeout=timeout, env=env)
     proc = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                             text=True, cwd=cwd, env=env, start_new_session=True)
+    out_lines: list[str] = []; err_lines: list[str] = []
+    def pump(stream, sink, emit):
+        for raw in stream:
+            sink.append(raw)
+            if emit and activity:
+                try:
+                    for text in _describe_event(raw): activity(text)
+                except Exception: pass
+    readers = [threading.Thread(target=pump, args=(proc.stdout, out_lines, True), daemon=True),
+               threading.Thread(target=pump, args=(proc.stderr, err_lines, False), daemon=True)]
+    for reader in readers: reader.start()
+    def feed():
+        try: proc.stdin.write(prompt); proc.stdin.close()
+        except (BrokenPipeError, OSError, ValueError): pass
+    threading.Thread(target=feed, daemon=True).start()
     def kill():
         try: os.killpg(proc.pid, signal.SIGKILL)
         except (ProcessLookupError, PermissionError): proc.kill()
-        proc.communicate()
-    deadline = time.monotonic() + timeout
-    pending = prompt
-    while True:
-        try:
-            stdout, stderr = proc.communicate(pending, timeout=0.4)
-            return subprocess.CompletedProcess(args, proc.returncode, stdout, stderr)
-        except subprocess.TimeoutExpired:
-            pending = None
-            if event.is_set():
-                kill()
-                raise JobCancelled('Stopped by user')
-            if time.monotonic() >= deadline:
-                kill()
-                raise subprocess.TimeoutExpired(args, timeout)
+        proc.wait()
+    deadline = time.monotonic() + timeout if timeout else None
+    while proc.poll() is None:
+        time.sleep(0.2)
+        if event is not None and event.is_set():
+            kill(); raise JobCancelled('Stopped by user')
+        if deadline is not None and time.monotonic() >= deadline:
+            kill(); raise subprocess.TimeoutExpired(args, timeout)
+    for reader in readers: reader.join(timeout=5)
+    return subprocess.CompletedProcess(args, proc.returncode, ''.join(out_lines), ''.join(err_lines))
 
 
 def _discover_codex() -> dict:
@@ -258,7 +318,7 @@ def _repository_audit(path: Path) -> list[dict]:
     return sources
 
 
-def run_harness(harness: str, model: str, effort: str, prompt: str, timeout=360,
+def run_harness(harness: str, model: str, effort: str, prompt: str, timeout=None,
                 schema: dict = SCHEMA, required_field: str = "groups",
                 repository_root: Path | None = None, repository_head: str | None = None,
                 repository_base: str | None = None, repository_context: dict | None = None) -> dict:
@@ -266,6 +326,8 @@ def run_harness(harness: str, model: str, effort: str, prompt: str, timeout=360,
         raise ValueError("Choose Codex or Claude Code")
     if len(model) > 120 or len(effort) > 32 or not all(c.isalnum() or c in "-_." for c in model+effort):
         raise ValueError("Invalid model/effort identifier")
+    streaming = getattr(_cancel, 'activity', None) is not None
+    timeout = effective_timeout(timeout)
     binary = shutil.which("codex" if harness == "codex" else "claude")
     if not binary:
         raise RuntimeError(f"{harness} CLI not found on PATH; install and authenticate it first")
@@ -295,6 +357,7 @@ def run_harness(harness: str, model: str, effort: str, prompt: str, timeout=360,
         if harness == "codex":
             args = [binary,"exec","--sandbox","read-only","--skip-git-repo-check","--ephemeral",
                     "--output-schema",str(schema_path),"--output-last-message",str(output)]
+            if streaming: args.append("--json")
             if repository_root is not None:
                 # Disable shell, browser, app, and global MCP tools. Prism supplies
                 # the only tools this review turn can use: bounded local source reads.
@@ -320,7 +383,9 @@ def run_harness(harness: str, model: str, effort: str, prompt: str, timeout=360,
             if effort and effort != "default":args.extend(["-c",f"model_reasoning_effort={effort}"])
             args.append("-")
         else:
-            args = [binary,"-p","--output-format","json","--json-schema",json.dumps(schema),
+            args = [binary,"-p","--output-format","stream-json" if streaming else "json"]
+            if streaming: args.append("--verbose")
+            args += ["--json-schema",json.dumps(schema),
                     "--permission-mode","plan","--tools",""]
             if repository_root is not None:
                 args.extend(["--restricted", "--strict-mcp-config", "--mcp-config", str(temp / "repository-mcp.json"),
@@ -335,11 +400,19 @@ def run_harness(harness: str, model: str, effort: str, prompt: str, timeout=360,
             check_cancelled()
             proc = _run_cli(args, prompt, temp, timeout)
         except subprocess.TimeoutExpired as exc:
-            raise RuntimeError(f"{harness} timed out after {timeout} seconds") from exc
+            raise RuntimeError(f"{harness} timed out after {timeout} seconds. Raise or disable the timeout in the Assistant menu "
+                               "(or PRISM_AGENT_TIMEOUT), or use the describe-only / outline options for very large PRs.") from exc
         if proc.returncode:
             # Do not return stdout or prompts to clients; stderr may include sensitive content.
             raise RuntimeError(f"{harness} exited with status {proc.returncode}. Check CLI login/model settings. {proc.stderr[-450:]}")
         response = output.read_text(encoding="utf-8") if output.exists() else proc.stdout
+        if streaming and harness == "claude":
+            # stream-json: the final "result" event carries the same payload the json format returned.
+            for raw in reversed(response.splitlines()):
+                try: event = json.loads(raw)
+                except ValueError: continue
+                if isinstance(event, dict) and event.get("type") == "result":
+                    response = raw; break
         try:
             result = _parse_response(response, required_field)
             if repository_root is not None:
@@ -402,6 +475,13 @@ def _workspace_seed(report: dict) -> str:
         "structure": report.get("structure") or {"scope": "legacy_graph"},
         "full_context": "read_context sections meta/files/groups/architecture/ai/review_state; list_changes/read_diff for complete Git evidence",
     }, ensure_ascii=True) + "\n"
+
+
+DESCRIBE_GUIDANCE = (
+    "DESCRIBE-ONLY MODE: only describe what each change does, using the supplied diffs and excerpts. "
+    "Do not look for bugs, risks, missing cross-checks, callers, tests or follow-up review questions; "
+    "leave every concerns, risks and review-question field empty. Do not open other files. Keep each description factual and short. "
+)
 
 
 GUIDE_GUIDANCE = (
@@ -872,7 +952,8 @@ def explain(report: dict, harness: str, model: str, effort: str, progress=lambda
 
 
 def explain_progressively(report: dict, harness: str, model: str, effort: str, progress=lambda _: None,
-                          repository_root: Path | None = None, publish=lambda _: None, outline_only: bool = False) -> dict:
+                          repository_root: Path | None = None, publish=lambda _: None, outline_only: bool = False,
+                          describe_only: bool = False) -> dict:
     """Publish a stable reading plan, then enrich semantic topics in that exact order (unless outline_only)."""
     import copy
     groups = report['groups']
@@ -882,6 +963,8 @@ def explain_progressively(report: dict, harness: str, model: str, effort: str, p
     started = time.monotonic()
     shared = copy.deepcopy(report)
     options = {}
+    # Describe-only: no repository exploration or cross-checking, so large PRs finish quickly.
+    if describe_only: repository_root = None
     if repository_root is not None:
         meta = report.get('meta') or {}
         if not meta.get('head') or not meta.get('merge_base'):
@@ -894,7 +977,7 @@ def explain_progressively(report: dict, harness: str, model: str, effort: str, p
                 for g in groups]
     plan_schema = {**SCHEMA, 'properties': {k: v for k, v in SCHEMA['properties'].items() if k != 'groups'},
                    'required': [k for k in SCHEMA['required'] if k != 'groups']}
-    prompt = (REVIEW_OBJECTIVE + 'Create an initial, evidence-backed reading plan now, before detailed review. '
+    prompt = (REVIEW_OBJECTIVE + (DESCRIBE_GUIDANCE if describe_only else '') + 'Create an initial, evidence-backed reading plan now, before detailed review. '
               'Read enough source/diffs to identify coherent behavioral threads and useful prerequisites. '
               'Do not perform exhaustive correctness investigation or write per-symbol feedback yet. '
               'Return overview, key_changes, review_order and topics. The plan will be frozen while the user reads; '
@@ -914,7 +997,7 @@ def explain_progressively(report: dict, harness: str, model: str, effort: str, p
           'overview': str(plan.get('overview') or '').strip()[:1200],
           'key_changes': [x.strip()[:500] for x in plan.get('key_changes', []) if isinstance(x, str) and x.strip()][:3],
           'review_order': route, 'groups': [], 'topics': topics, 'topic_diagnostics': diagnostics, 'schema_version': 9,
-          'review_state': {'strategy': 'progressive_topics', 'guide_status': 'ready', 'feedback_status': 'running',
+          'review_state': {'strategy': 'progressive_topics', 'describe_only': describe_only, 'guide_status': 'ready', 'feedback_status': 'running',
                            'correctness_coverage': 'not_measured', 'access_version': 1, 'groups': [], 'sources': sources,
                            'topic_feedback': [{'topic_id': t['id'], 'status': 'pending'} for t in topics],
                            'model_calls': 1, 'batch_count': 0, 'timings': timings,
@@ -946,7 +1029,7 @@ def explain_progressively(report: dict, harness: str, model: str, effort: str, p
             for index, batch in enumerate(batches):
                 progress(f"{harness}: feedback for {topic['title']} ({index + 1}/{len(batches)})")
                 call_started = time.monotonic()
-                prompt = ('The initial reading plan is already visible to the user. Deepen this topic in its recommended '
+                prompt = ((DESCRIBE_GUIDANCE if describe_only else '') + 'The initial reading plan is already visible to the user. Deepen this topic in its recommended '
                           'file order; keep all topic membership, titles and the global reading route unchanged. '
                           'Explain behavior and useful review questions as well as concrete concerns. '
                           'Prior topic observations and the full plan are available through read_context. '

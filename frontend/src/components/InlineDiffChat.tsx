@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowUp, ChevronDown, LoaderCircle, MessageSquareText, Sparkles, X } from 'lucide-react'
 import type { DiffLineAnchor, Harnesses, Job, QuestionAnswer, ReviewAssistantSettings } from '../types'
 import { MarkdownContent } from './MarkdownContent'
+import { AgentActivity } from './AgentActivity'
 
 interface Props {
   reportId: string
@@ -50,6 +51,7 @@ export function InlineDiffChat({ reportId, anchor, assistant, harnesses, onAssis
   const [question, setQuestion] = useState('')
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState('')
+  const [activity, setActivity] = useState<string[]>([])
   const [error, setError] = useState('')
   const [editingCustomModel, setEditingCustomModel] = useState(false)
   const reportIdRef = useRef(reportId)
@@ -72,6 +74,7 @@ export function InlineDiffChat({ reportId, anchor, assistant, harnesses, onAssis
     setQuestion('')
     setError('')
     setBusy(true)
+    setActivity([])
     setProgress('Reading selected lines and repository context')
     try {
       const response = await call<{ job_id: string }>(`/reports/${reportId}/questions`, {
@@ -80,6 +83,7 @@ export function InlineDiffChat({ reportId, anchor, assistant, harnesses, onAssis
           harness: assistant.harness,
           model: assistant.model.trim() || 'default',
           effort: assistant.effort,
+          timeout_seconds: assistant.timeout_seconds,
           question: text,
           anchor,
           history: history.map(turn => ({ question: turn.question, answer: turn.answer!.answer })),
@@ -90,6 +94,7 @@ export function InlineDiffChat({ reportId, anchor, assistant, harnesses, onAssis
         const job = await call<Job>(`/jobs/${response.job_id}`)
         if (reportIdRef.current !== reportId) return
         setProgress(job.message)
+        setActivity(job.activity || [])
         if (job.state === 'failed') throw new Error(job.error || 'The assistant could not answer this question.')
         if (job.state === 'completed') {
           if (!job.result?.answer) throw new Error('The assistant returned no answer.')
@@ -122,7 +127,7 @@ export function InlineDiffChat({ reportId, anchor, assistant, harnesses, onAssis
           <div className="inline-diff-chat-provider"><Sparkles size={12}/>{providerLabel(turn.answer.harness)} · {turn.answer.model}</div>
           <MarkdownContent className="inline-diff-chat-copy" text={turn.answer.answer}/>
           {!!turn.answer.citations.length && <div className="inline-diff-chat-citations">Grounded in {turn.answer.citations.map((citation, index) => <span key={`${citation.path}-${citation.line}-${index}`}><code>{citation.path.split(/[\\/]/).pop()}:{citation.line}</code>{index < turn.answer!.citations.length - 1 ? ', ' : ''}</span>)}</div>}
-        </div> : <div className="inline-diff-chat-pending"><LoaderCircle size={13} className="spinning"/>{busy ? progress || 'Reading the selected lines' : 'Waiting for an answer'}</div>}
+        </div> : <div className="inline-diff-chat-pending"><LoaderCircle size={13} className="spinning"/>{busy ? progress || 'Reading the selected lines' : 'Waiting for an answer'}{busy && <AgentActivity lines={activity}/>}</div>}
       </article>)}
     </div>}
 

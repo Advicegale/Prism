@@ -256,3 +256,41 @@ def test_review_refuses_missing_revision_before_starting_provider(monkeypatch, t
     monkeypatch.setattr(harness, 'run_harness', lambda *a, **kw: pytest.fail('provider must not start'))
     with pytest.raises(RuntimeError, match='PR-head and merge-base'):
         harness.explain(_explain_report(), 'codex', '', '', repository_root=tmp_path)
+
+
+def test_effective_timeout_resolution(monkeypatch):
+    monkeypatch.setattr(harness.settings, 'AGENT_TIMEOUT', 1800)
+    harness.bind_run_options(None, None)
+    assert harness.effective_timeout() == 1800
+    assert harness.effective_timeout(600) == 600
+    harness.bind_run_options(None, 0)
+    assert harness.effective_timeout(600) is None  # job override of 0 disables the limit
+    harness.bind_run_options(None, 90)
+    assert harness.effective_timeout() == 90
+    harness.bind_run_options(None, None)
+
+
+def test_run_cli_streams_activity_and_honours_disabled_timeout(tmp_path):
+    import sys, threading
+    seen = []
+    harness.bind_cancel(threading.Event())
+    harness.bind_run_options(seen.append, None)
+    try:
+        script = ("import json,sys,time;sys.stdin.read();"
+                  "print(json.dumps({'type':'assistant','message':{'content':[{'type':'tool_use','name':'mcp__x__read_source','input':{'path':'a.py'}}]}}),flush=True);"
+                  "time.sleep(1.3);print('{\"type\":\"result\"}')")
+        proc = harness._run_cli([sys.executable, '-c', script], 'prompt', tmp_path, None)  # no time limit
+    finally:
+        harness.bind_cancel(None)
+    assert proc.returncode == 0 and '"result"' in proc.stdout
+    assert seen == ['→ read_source(path=a.py)']
+
+
+def test_run_cli_times_out(tmp_path):
+    import sys, threading, subprocess, pytest
+    harness.bind_cancel(threading.Event())
+    try:
+        with pytest.raises(subprocess.TimeoutExpired):
+            harness._run_cli([sys.executable, '-c', 'import time;time.sleep(30)'], '', tmp_path, 1)
+    finally:
+        harness.bind_cancel(None)

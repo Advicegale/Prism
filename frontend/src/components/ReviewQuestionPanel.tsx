@@ -3,6 +3,7 @@ import { ArrowUp, CircleHelp, ExternalLink, LoaderCircle, MessageSquareText, Spa
 import type { Harnesses, Job, QuestionAnswer, Report, ReviewAssistantSettings } from '../types'
 import { assistantSummary } from '../assistantSettings'
 import { MarkdownContent } from './MarkdownContent'
+import { AgentActivity } from './AgentActivity'
 
 interface Props {
   report: Report
@@ -37,6 +38,7 @@ export function ReviewQuestionPanel({ report, harnesses, assistant, onOpenAssist
   const { harness, model, effort } = assistant
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState('')
+  const [activity, setActivity] = useState<string[]>([])
   const [error, setError] = useState('')
   const reportId = useRef(report.id)
   const textarea = useRef<HTMLTextAreaElement>(null)
@@ -61,12 +63,13 @@ export function ReviewQuestionPanel({ report, harnesses, assistant, onOpenAssist
     setQuestion('')
     setError('')
     setBusy(true)
+    setActivity([])
     setProgress('Reading PR and repository context')
     try {
       const response = await call<{ job_id: string }>(`/reports/${report.id}/questions`, {
         method: 'POST',
         body: JSON.stringify({
-          harness, model: model.trim() || 'default', effort,
+          harness, model: model.trim() || 'default', effort, timeout_seconds: assistant.timeout_seconds,
           question: text,
           history: turns.filter(turn => turn.answer).slice(-6).map(turn => ({ question: turn.question, answer: turn.answer!.answer })),
         }),
@@ -76,6 +79,7 @@ export function ReviewQuestionPanel({ report, harnesses, assistant, onOpenAssist
         const job = await call<Job>(`/jobs/${response.job_id}`)
         if (reportId.current !== report.id) return
         setProgress(job.message)
+        setActivity(job.activity || [])
         if (job.state === 'failed') throw new Error(job.error || 'The selected CLI could not answer this question.')
         if (job.state === 'completed') {
           const answer = job.result
@@ -125,7 +129,7 @@ export function ReviewQuestionPanel({ report, harnesses, assistant, onOpenAssist
           {!!turn.answer.citations.length && <div className="review-answer-citations"><span>Source</span>{turn.answer.citations.map((citation, index) => citation.symbol_id ? <button key={`${citation.symbol_id}-${index}`} type="button" onClick={() => onCitationClick(citation.symbol_id!)} title={citation.reason || `${citation.path}:${citation.line}`}>
             <span>{citation.path.split(/[\\/]/).pop()}:{citation.line}</span><ArrowUp size={12}/>
           </button> : <span className="review-answer-source" key={`${citation.path}-${citation.line}-${index}`} title={citation.reason}>{citation.path.split(/[\\/]/).pop()}:{citation.line}</span>)}</div>}
-        </div> : <div className="review-answer-pending"><LoaderCircle size={14} className="spinning"/><span>{busy ? progress || 'Reading the report evidence' : 'Waiting for an answer'}</span></div>}
+        </div> : <div className="review-answer-pending"><LoaderCircle size={14} className="spinning"/><span>{busy ? progress || 'Reading the report evidence' : 'Waiting for an answer'}</span>{busy && <AgentActivity lines={activity}/>}</div>}
       </article>)}
     </div>}
 

@@ -23,6 +23,7 @@ function parseAssistant(raw: string): AssistantSetting {
     harness: isHarness(record.harness) ? record.harness : DEFAULT_ASSISTANT.harness,
     model: text(record.model, DEFAULT_ASSISTANT.model),
     effort: text(record.effort, DEFAULT_ASSISTANT.effort),
+    ...(typeof record.timeout_seconds === 'number' && record.timeout_seconds >= 0 ? {timeout_seconds: record.timeout_seconds} : {}),
   }
 }
 
@@ -62,9 +63,15 @@ export function loadAssistantState(storage: ReadableStorage): AssistantState {
 }
 
 export function saveAssistantState(storage: WritableStorage, state: AssistantState): void {
-  storage.setItem(ASSISTANT_KEY, JSON.stringify({harness: state.assistant.harness, model: state.assistant.model, effort: state.assistant.effort}))
+  storage.setItem(ASSISTANT_KEY, JSON.stringify({harness: state.assistant.harness, model: state.assistant.model, effort: state.assistant.effort, timeout_seconds: state.assistant.timeout_seconds}))
   storage.setItem(ANALYZE_AI_KEY, String(state.analyzeWithAi))
 }
+
+// Per-call limit for the assistant CLI. undefined = Prism's server default (30 min); 0 = no limit.
+export const TIMEOUT_OPTIONS: {value: number | undefined; label: string}[] = [
+  {value: undefined, label: 'Server default (30 min)'}, {value: 600, label: '10 minutes'}, {value: 1800, label: '30 minutes'},
+  {value: 3600, label: '1 hour'}, {value: 14400, label: '4 hours'}, {value: 0, label: 'No limit'},
+]
 
 export function harnessLabel(harness: Harness): string {
   return harness === 'claude' ? 'Claude Code' : 'Codex'

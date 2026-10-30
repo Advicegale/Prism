@@ -20,7 +20,7 @@ from . import settings
 from .gitops import (RepoError, parse_pr_url, pr_metadata, prepare_worktrees, diff_files,
                      github_viewed_file_states, set_github_file_viewed)
 from .graph import identify_changes, segment
-from .harness import available_harnesses, explain_progressively as explain, answer_question, bind_cancel, JobCancelled
+from .harness import available_harnesses, explain_progressively as explain, answer_question, bind_cancel, bind_run_options, JobCancelled
 from .evidence import collect_evidence
 from .topics import build_topics
 from .repository_tools import head_worktree, RepositoryToolError
@@ -42,12 +42,16 @@ class AnalyzeRequest(BaseModel):
     model: str = Field(default="default", max_length=120)
     effort: str = Field(default="default", max_length=32)
     scope: Literal["full","outline"] = "full"
+    style: Literal["review","describe"] = "review"
+    timeout_seconds: int | None = Field(default=None, ge=0, le=86400)  # None: server default; 0: no limit
 
 class ExplainRequest(BaseModel):
     harness: Literal["claude","codex"]
     model: str = Field(default="default", max_length=120)
     effort: str = Field(default="default", max_length=32)
     scope: Literal["full","outline"] = "full"
+    style: Literal["review","describe"] = "review"
+    timeout_seconds: int | None = Field(default=None, ge=0, le=86400)  # None: server default; 0: no limit
 
 class ViewedFileRequest(BaseModel):
     path: str = Field(min_length=1, max_length=1000)
@@ -81,6 +85,7 @@ class QuestionRequest(BaseModel):
     model: str = Field(default="default", max_length=120)
     effort: str = Field(default="default", max_length=32)
     question: str = Field(min_length=1, max_length=2000)
+    timeout_seconds: int | None = Field(default=None, ge=0, le=86400)  # None: server default; 0: no limit
     history: list[QuestionTurn] = Field(default_factory=list, max_length=6)
     anchor: DiffLineAnchor | None = None
 
@@ -278,13 +283,13 @@ def save_report(report: dict):
 
 
 
-def _job(kind: str, callback, *, review_requested: bool = True, outline: bool = False):
+def _job(kind: str, callback, *, review_requested: bool = True, outline: bool = False, timeout: int | None = None):
     job_id=uuid.uuid4().hex
     started = None
     started_at = None
     cancel = threading.Event()
     with lock:
-        jobs[job_id]={"id":job_id,"kind":kind,"state":"queued","message":"Queued","report_id":None,"result":None,"error":None}
+        jobs[job_id]={"id":job_id,"kind":kind,"state":"queued","message":"Queued","report_id":None,"result":None,"error":None,"activity":[]}
         cancel_events[job_id]=cancel
     def update(message):
         # Progress reports double as cancellation checkpoints between non-CLI steps.
@@ -309,6 +314,12 @@ def _job(kind: str, callback, *, review_requested: bool = True, outline: bool = 
             save_report(current)
         with lock: jobs[job_id]['report_id'] = report_id
     update.report_ready = report_ready
+    def activity(text):
+        # Keep the most recent CLI output lines for the UI's live agent-output panel.
+        with lock:
+            lines = jobs[job_id]["activity"]
+            lines.append(text)
+            del lines[:-200]
     def finish_report(state, error=None):
         with lock: report_id = jobs[job_id]['report_id']
         if report_id:
@@ -334,6 +345,7 @@ def _job(kind: str, callback, *, review_requested: bool = True, outline: bool = 
         started = time.monotonic()
         started_at = datetime.now(timezone.utc).isoformat()
         bind_cancel(cancel)
+        bind_run_options(activity, timeout)
         try:
             if cancel.is_set(): raise JobCancelled("Stopped by user")
             update("Starting")
@@ -374,7 +386,7 @@ def _generate_guide(report, request, progress, root):
             _store_ai(current, ai)
             save_report(current)
     ai = explain(report, request.harness, request.model, request.effort, progress, root, publish=publish,
-                 outline_only=request.scope == 'outline')
+                 outline_only=request.scope == 'outline', describe_only=request.style == 'describe')
     publish(ai)
 
 
@@ -414,7 +426,7 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
         _publish_ready(report_id, progress)
         if req.harness != "none":
             _generate_guide(result, req, progress, after)
-            if req.scope != "outline": _discover_and_store(report_id, after, req, progress)
+            if req.scope != "outline" and req.style != "describe": _discover_and_store(report_id, after, req, progress)
         return report_id
     progress("Calculating PR diff")
     files=diff_files(git_repo,merge_base,meta["head"])
@@ -433,7 +445,7 @@ def run_analysis(req: AnalyzeRequest, progress) -> str:
     _publish_ready(report_id, progress)
     if req.harness != "none":
         _generate_guide(report, req, progress, after)
-        if req.scope != "outline": _discover_and_store(report_id, after, req, progress)
+        if req.scope != "outline" and req.style != "describe": _discover_and_store(report_id, after, req, progress)
     return report_id
 
 
@@ -459,7 +471,7 @@ def analyze(request: AnalyzeRequest):
         parse_pr_url(request.url)
     except RepoError as exc:
         raise HTTPException(400, str(exc)) from exc
-    return _job("analysis",lambda progress:run_analysis(request,progress), review_requested=request.harness != "none", outline=request.scope == "outline")
+    return _job("analysis",lambda progress:run_analysis(request,progress), review_requested=request.harness != "none", outline=request.scope == "outline", timeout=request.timeout_seconds)
 
 @app.post("/api/jobs/{job_id}/cancel")
 def cancel_job(job_id: str):
@@ -471,13 +483,14 @@ def cancel_job(job_id: str):
             queued = job["state"]=="queued"
             job["state"]="cancelled" if queued else "cancelling"; job["message"]="Stopped" if queued else "Stopping"
             cancel_events[job_id].set()
-        return dict(job)
+        return {**job,"activity":list(job["activity"])}
 
 @app.get("/api/jobs/{job_id}")
 def job_info(job_id: str):
-    with lock: job=jobs.get(job_id)
-    if not job:raise HTTPException(404,"Unknown job")
-    return dict(job)
+    with lock:
+        job=jobs.get(job_id)
+        if not job:raise HTTPException(404,"Unknown job")
+        return {**job,"activity":list(job["activity"])}
 
 @app.get("/api/reports")
 def reports():
@@ -581,7 +594,7 @@ def ask_question(report_id:str, request:QuestionRequest):
         repository_root = head_worktree(data)
         data=ensure_complete_diff(data, repository_root)
         return answer_question(data,request.harness,request.model,request.effort,question,history,progress,anchor,repository_root)
-    return _job("question",work)
+    return _job("question",work,timeout=request.timeout_seconds)
 
 @app.post("/api/reports/{report_id}/architecture",status_code=202)
 def organize_architecture(report_id: str, request: ExplainRequest):
@@ -595,7 +608,7 @@ def organize_architecture(report_id: str, request: ExplainRequest):
         current["architecture"] = architecture
         save_report(current)
         return report_id
-    return _job("architecture", work)
+    return _job("architecture", work, timeout=request.timeout_seconds)
 
 
 @app.post("/api/reports/{report_id}/explain",status_code=202)
@@ -608,7 +621,7 @@ def explain_report(report_id:str, request:ExplainRequest):
         _publish_ready(report_id, progress)
         _generate_guide(data, request, progress, root)
         return report_id
-    return _job("explanation",work,outline=request.scope == "outline")
+    return _job("explanation",work,outline=request.scope == "outline",timeout=request.timeout_seconds)
 
 @app.get("/api/demo")
 def demo():

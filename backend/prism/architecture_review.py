@@ -208,7 +208,7 @@ def discover_architecture(report:dict, root:Path, harness:str, model:str, effort
     facts=build_architecture(report.get('files',[]),head,base,report.get('overview'),include_all_edges=True)
     prompt,catalog,fact_map=discovery_prompt(report,sources,facts)
     progress(f'{harness}: tracing source and organizing this repository')
-    raw=run_harness(harness,model,effort,prompt,timeout=600,schema=SCHEMA,required_field='groups',
+    raw=run_harness(harness,model,effort,prompt,schema=SCHEMA,required_field='groups',
                     repository_root=root,repository_head=report['meta']['head'],repository_base=report['meta']['merge_base'],
                     repository_context=report)
     inspected = raw.pop('__repository_sources', [])

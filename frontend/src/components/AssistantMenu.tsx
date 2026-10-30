@@ -1,7 +1,7 @@
 import {useEffect,useId,useRef,useState} from 'react'
 import {ChevronDown,LoaderCircle,RefreshCcw,Sparkles} from 'lucide-react'
 import type {Harnesses} from '../types'
-import {assistantEffortOptions,assistantModelOptions,assistantSummary,harnessLabel,type AssistantSetting} from '../assistantSettings'
+import {assistantEffortOptions,assistantModelOptions,assistantSummary,harnessLabel,TIMEOUT_OPTIONS,type AssistantSetting} from '../assistantSettings'
 
 interface Props {
   assistant: AssistantSetting
@@ -57,7 +57,7 @@ export function AssistantMenu({assistant, harnesses, open, onOpenChange, onChang
 
   function chooseHarness(value: AssistantSetting['harness']) {
     setCustomOpen(false)
-    onChange({harness: value, model: 'default', effort: 'default'})
+    onChange({harness: value, model: 'default', effort: 'default', timeout_seconds: assistant.timeout_seconds})
   }
 
   function chooseModel(value: string) {
@@ -101,6 +101,13 @@ export function AssistantMenu({assistant, harnesses, open, onOpenChange, onChang
           <option value="default">CLI default</option>
           {efforts.map(item => <option key={item} value={item}>{item.charAt(0).toUpperCase() + item.slice(1)}</option>)}
         </select><ChevronDown size={15}/></div>
+      </div>
+      <div className="form-field">
+        <label htmlFor={`${baseId}-timeout`}>Time limit per assistant call</label>
+        <div className="select-wrap"><select id={`${baseId}-timeout`} value={assistant.timeout_seconds === undefined ? 'default' : String(assistant.timeout_seconds)} onChange={event => { const {timeout_seconds: _drop, ...rest} = assistant; onChange(event.target.value === 'default' ? rest : {...rest, timeout_seconds: Number(event.target.value)}) }}>
+          {TIMEOUT_OPTIONS.map(item => <option key={item.label} value={item.value === undefined ? 'default' : String(item.value)}>{item.label}</option>)}
+        </select><ChevronDown size={15}/></div>
+        <p className="timeout-hint">Large PRs can need longer. "No limit" lets the assistant run until you press Stop.</p>
       </div>
       <div className="assistant-menu-status">
         <span className={'status-tag ' + (installed ? 'ok' : '')} role="status">{harnesses ? (installed ? 'Detected' : 'Not detected') : 'Checking…'}</span>

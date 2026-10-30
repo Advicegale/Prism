@@ -24,12 +24,12 @@ export interface ExplorationCoverage {complete:boolean;languages:Record<string,n
 export interface ExplorationProjection {query_id:string;root:ExplorationRoot;revision:string;side:'old'|'new';direction:'consumers'|'origins';changed_only:boolean;nodes:ExplorationNode[];connections:ExplorationConnection[];boundaries:ExplorationBoundary[];has_more:boolean;status:string;coverage:ExplorationCoverage}
 export interface ExplorationResult {status:string;root?:ExplorationRoot;projection?:ExplorationProjection;projections?:Partial<Record<'consumers'|'origins',ExplorationProjection>>;revision?:string;side?:'old'|'new';occurrence?:SourceAnchor;name?:string;reason?:string;message?:string;error?:string}
 export interface ExplorationSource {status:string;revision:string;side:'old'|'new';path:string;start_line:number;end_line:number;code:string;anchors:SourceAnchor[];bounded:boolean}
-export interface ReviewAssistantSettings {harness:'codex'|'claude';model:string;effort:string}
+export interface ReviewAssistantSettings {harness:'codex'|'claude';model:string;effort:string;timeout_seconds?:number}
 export interface DiffLineAnchor {path:string;old_lines:number[];new_lines:number[]}
 export interface QuestionCitation {symbol_id?:string|null;path:string;line:number;end_line:number;label:string;reason:string;old_lines?:number[];new_lines?:number[]}
 export interface QuestionAnswer {answer:string;citations:QuestionCitation[];harness:string;model:string}
 export interface ViewedFiles {available:boolean;states:Record<string,'VIEWED'|'UNVIEWED'|'DISMISSED'>;reason?:string}
-export interface Job {id:string;kind:string;state:'queued'|'running'|'cancelling'|'completed'|'failed'|'cancelled';message:string;report_id:string|null;result?:QuestionAnswer|null;error:string|null}
+export interface Job {id:string;kind:string;state:'queued'|'running'|'cancelling'|'completed'|'failed'|'cancelled';message:string;report_id:string|null;result?:QuestionAnswer|null;error:string|null;activity?:string[]}
 export interface HarnessInfo {installed:boolean;models:{id:string;label:string;efforts:string[];default_effort:string;is_default:boolean}[];aliases?:string[];efforts?:string[];discovery:string}
 export interface Harnesses {claude:HarnessInfo;codex:HarnessInfo}
 export interface ArchitectureEvidence {path:string;line:number;side:'head'|'base';code:string}

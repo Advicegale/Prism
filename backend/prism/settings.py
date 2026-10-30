@@ -13,3 +13,6 @@ REVIEW_MAX_TURNS = int(os.getenv("PRISM_REVIEW_MAX_TURNS", "48"))
 
 # Bound structured output per guide call, independent of source-access limits.
 REVIEW_BATCH_SYMBOLS = int(os.getenv("PRISM_REVIEW_BATCH_SYMBOLS", "100"))
+
+# Seconds one assistant CLI call may run; 0 disables the limit. Requests can override this per job.
+AGENT_TIMEOUT = int(os.getenv("PRISM_AGENT_TIMEOUT", "1800"))
