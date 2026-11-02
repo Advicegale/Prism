@@ -4,6 +4,17 @@ from types import SimpleNamespace
 from prism import harness
 
 
+def _prompt_file(args):
+    # Codex carries the prompt server in --config args; Claude in --mcp-config.
+    if '--mcp-config' in args:
+        servers=json.loads(Path(args[args.index('--mcp-config')+1]).read_text())['mcpServers']
+        script=next(v['args'] for k,v in servers.items() if k.startswith('prism_prompt_'))
+    else:
+        raw=next(a for a in args if '.args=' in a and 'prompt_tools.py' in a)
+        script=json.loads(raw.split('.args=',1)[1])
+    return Path(script[script.index('--file')+1]).read_text()
+
+
 def structured():
     return {"overview":"Changed service dependency", "key_changes":["Uses validator"],
             "groups":[{"id":"test","summary":"A","before_after":"B","impact":"C","risks":[],"tests":[]}]}
@@ -15,7 +26,8 @@ def test_codex_invocation_uses_readonly_sandbox(monkeypatch):
         assert args[1:4] == ['exec','--sandbox','read-only']
         assert '--output-schema' in args and '--output-last-message' in args
         assert args[-1]=='-'
-        assert kwargs['input']=='Review this change'
+        assert 'read_prompt' in kwargs['input'] and 'Review this change' not in kwargs['input']
+        assert _prompt_file(args)=='Review this change'
         Path(args[args.index('--output-last-message')+1]).write_text(json.dumps(structured()))
         return SimpleNamespace(returncode=0,stdout='',stderr='')
     monkeypatch.setattr(harness.subprocess,'run',fake_run)
@@ -30,6 +42,7 @@ def test_claude_disables_tools(monkeypatch):
         assert '--tools' in args and args[args.index('--tools')+1]==''
         assert '--permission-mode' in args and args[args.index('--permission-mode')+1]=='plan'
         assert kwargs['cwd']
+        assert 'read_prompt' in kwargs['input'] and _prompt_file(args)=='Review this change'
         return SimpleNamespace(returncode=0,stdout=json.dumps({'structured_output':structured()}),stderr='')
     monkeypatch.setattr(harness.subprocess,'run',fake_run)
     result=harness.run_harness('claude','default','default','Review this change')
@@ -294,3 +307,16 @@ def test_run_cli_times_out(tmp_path):
             harness._run_cli([sys.executable, '-c', 'import time;time.sleep(30)'], '', tmp_path, 1)
     finally:
         harness.bind_cancel(None)
+
+
+def test_prompt_server_serves_full_prompt_in_pages(tmp_path):
+    import io, sys
+    from prism import prompt_tools
+    prompt = 'é' * (prompt_tools.PAGE_CHARS * 2 + 5)
+    path = tmp_path / 'prompt.md'; path.write_text(prompt, encoding='utf-8')
+    assert prompt_tools.page_count(len(prompt)) == 3
+    text, offset = '', 0
+    while offset is not None:
+        page = prompt_tools.prompt_page(prompt, {'offset': offset})
+        text += page['text']; offset = page['next_offset']
+    assert text == prompt

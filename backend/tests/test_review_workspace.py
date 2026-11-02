@@ -174,15 +174,16 @@ def test_provider_tools_context_and_stdin_match_for_both_clis(monkeypatch, tmp_p
     monkeypatch.setattr(harness.shutil, 'which', lambda x: '/fake/' + x)
     monkeypatch.setattr(harness, '_codex_user_mcp_override', lambda: None)
     def run(args, **kwargs):
-        assert kwargs['input'] == 'prompt' and args[-1] != 'prompt'
+        assert 'read_prompt' in kwargs['input'] and args[-1] != 'prompt'
         if args[0].endswith('claude'):
             allowed = args[args.index('--allowedTools') + 1]
             assert all('__' + name in allowed for name in TOOL_NAMES)
             config = json.loads(Path(args[args.index('--mcp-config') + 1]).read_text())
-            server = next(iter(config['mcpServers'].values())); server_args = server['args']
+            server = next(v for k, v in config['mcpServers'].items() if k.startswith('prism_repository_')); server_args = server['args']
+            assert any(k.startswith('prism_prompt_') for k in config['mcpServers'])
             context = json.loads(Path(server_args[server_args.index('--context') + 1]).read_text())
             assert context['meta']['body'] == 'complete body'
-            assert args[args.index('--max-turns') + 1] == str(settings.REVIEW_MAX_TURNS)
+            assert args[args.index('--max-turns') + 1] == str(settings.REVIEW_MAX_TURNS + 1)  # + one prompt page
         else:
             assert any('enabled_tools=' in a and 'search_source' in a and 'read_github' in a for a in args)
         return SimpleNamespace(returncode=0, stdout=json.dumps({'groups': []}), stderr='')

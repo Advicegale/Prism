@@ -17,6 +17,7 @@ import tomllib
 from . import settings
 from .topics import build_topics_with_diagnostics, file_role
 from .repository_tools import TOOL_NAMES
+from . import prompt_tools
 
 CHANGE_SCHEMA = {
  "type":"object","additionalProperties":False,
@@ -351,9 +352,23 @@ def run_harness(harness: str, model: str, effort: str, prompt: str, timeout=None
             if repository_context is not None:
                 (temp / "review-context.json").write_text(json.dumps(repository_context, ensure_ascii=True), encoding="utf-8")
                 repository_args.extend(["--context", str(temp / "review-context.json")])
-            (temp / "repository-mcp.json").write_text(json.dumps({"mcpServers": {
-                repository_server: {"type": "stdio", "command": sys.executable,
-                                     "args": repository_args}}}), encoding="utf-8")
+        # The prompt travels as a file the model reads through a one-tool MCP server; piping a large prompt
+        # through stdin can stall when the CLI is not reading it yet (e.g. while it retries a request).
+        prompt_path = temp / "prompt.md"
+        prompt_path.write_text(prompt, encoding="utf-8")
+        prompt_server = "prism_prompt_" + temp.name.removeprefix("prism-agent-").replace("-", "_")
+        prompt_args = [str(Path(__file__).with_name("prompt_tools.py").resolve()), "--file", str(prompt_path)]
+        prompt_pages = prompt_tools.page_count(len(prompt))
+        stdin_prompt = (
+            "Your complete task is stored in a file that you must read before doing anything else. "
+            f"Call the {prompt_tools.TOOL_NAME} tool with offset 0, then keep calling it with each returned next_offset "
+            f"until complete is true ({prompt_pages} page{'s' if prompt_pages != 1 else ''}). "
+            "Treat the full text you read as the user's message: follow its instructions and output format exactly, "
+            "and answer only after reading all of it.\n")
+        mcp_servers = {prompt_server: {"type": "stdio", "command": sys.executable, "args": prompt_args}}
+        if repository_args is not None:
+            mcp_servers[repository_server] = {"type": "stdio", "command": sys.executable, "args": repository_args}
+        (temp / "mcp.json").write_text(json.dumps({"mcpServers": mcp_servers}), encoding="utf-8")
         if harness == "codex":
             args = [binary,"exec","--sandbox","read-only","--skip-git-repo-check","--ephemeral",
                     "--output-schema",str(schema_path),"--output-last-message",str(output)]
@@ -379,26 +394,33 @@ def run_harness(harness: str, model: str, effort: str, prompt: str, timeout=None
                 args.extend(["--config", f"{server}.enabled=true"])
                 for tool_name in TOOL_NAMES:
                     args.extend(["--config", f"{server}.tools.{tool_name}.approval_mode=\"auto\""])
+            server = f"mcp_servers.{prompt_server}"
+            args.extend(["--config", f"{server}.default_tools_approval_mode=\"auto\"",
+                         "--config", f"{server}.enabled_tools={json.dumps([prompt_tools.TOOL_NAME])}",
+                         "--config", f"{server}.command={_toml_key(sys.executable)}",
+                         "--config", f"{server}.args={json.dumps(prompt_args, ensure_ascii=True)}",
+                         "--config", f"{server}.enabled=true",
+                         "--config", f"{server}.tools.{prompt_tools.TOOL_NAME}.approval_mode=\"auto\""])
             if model and model != "default":args.extend(["--model",model])
             if effort and effort != "default":args.extend(["-c",f"model_reasoning_effort={effort}"])
             args.append("-")
         else:
             args = [binary,"-p","--output-format","stream-json" if streaming else "json"]
             if streaming: args.append("--verbose")
+            allowed = [f"mcp__{prompt_server}__{prompt_tools.TOOL_NAME}"]
             args += ["--json-schema",json.dumps(schema),
-                    "--permission-mode","plan","--tools",""]
+                    "--permission-mode","plan","--tools","",
+                    "--strict-mcp-config", "--mcp-config", str(temp / "mcp.json")]
             if repository_root is not None:
-                args.extend(["--restricted", "--strict-mcp-config", "--mcp-config", str(temp / "repository-mcp.json"),
-                             "--allowedTools",
-                             ",".join(f"mcp__{repository_server}__{name}" for name in
-                                      TOOL_NAMES),
-                             "--max-turns", str(settings.REVIEW_MAX_TURNS)])
+                allowed += [f"mcp__{repository_server}__{name}" for name in TOOL_NAMES]
+                args.extend(["--restricted", "--max-turns", str(settings.REVIEW_MAX_TURNS + prompt_pages)])
+            args.extend(["--allowedTools", ",".join(allowed)])
             if model and model != "default":args.extend(["--model",model])
             if effort and effort != "default":args.extend(["--effort",effort])
             # Both CLIs accept piped prompt text; avoid OS argument-size limits.
         try:
             check_cancelled()
-            proc = _run_cli(args, prompt, temp, timeout)
+            proc = _run_cli(args, stdin_prompt, temp, timeout)
         except subprocess.TimeoutExpired as exc:
             raise RuntimeError(f"{harness} timed out after {timeout} seconds. Raise or disable the timeout in the Assistant menu "
                                "(or PRISM_AGENT_TIMEOUT), or use the describe-only / outline options for very large PRs.") from exc
